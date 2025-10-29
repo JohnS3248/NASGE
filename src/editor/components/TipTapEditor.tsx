@@ -81,7 +81,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }
       }),
       Table.configure({
-        resizable: true,
+        resizable: false,
         HTMLAttributes: {
           class: "nasge-table"
         }
