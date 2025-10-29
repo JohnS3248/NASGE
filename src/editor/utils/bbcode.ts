@@ -31,7 +31,7 @@ function serializeNode(node: HTMLElement | Text): string {
   const tagName = node.tagName.toLowerCase();
 
   if (tagName === "p") {
-    return `${serializeChildren(node)}\n`;
+    return `${serializeChildren(node)}\n\n`;
   }
 
   if (tagName === "h1" || tagName === "h2" || tagName === "h3") {
@@ -131,6 +131,10 @@ export function bbcodeToHtml(bbcode: string): string {
   // Links
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
+  html = html
+    .replace(/\[quote=([^\]]*)]/gi, '<blockquote class="nasge-quote"><div class="nasge-quote__meta">引用自 <span>$1</span>：</div><div class="nasge-quote__body">')
+    .replace(/\[quote]/gi, '<blockquote class="nasge-quote"><div class="nasge-quote__body">')
+    .replace(/\[\/quote]/gi, "</div></blockquote>");
 
   const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr)/i.test(html);
   if (hasBlock) {
