@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -26,7 +27,8 @@ const toolbarButton: React.CSSProperties = {
 
 type TipTapEditorProps = {
   initialContent?: string;
-  onUpdate?: (html: string) => void;
+  externalHTML?: string;
+  onUpdate?: (payload: { html: string; json: JSONContent }) => void;
 };
 
 type ContextMenuState = {
@@ -38,6 +40,7 @@ type ContextMenuState = {
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   initialContent = "<p>欢迎使用 NASGE。这里是 Sprint 1 的 Tiptap 最小可行版本。</p>",
+  externalHTML,
   onUpdate
 }) => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -82,7 +85,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       }
     },
     onUpdate: ({ editor }) => {
-      onUpdate?.(editor.getHTML());
+      onUpdate?.({
+        html: editor.getHTML(),
+        json: editor.getJSON()
+      });
     }
   });
 
@@ -157,6 +163,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   useEffect(() => {
     return () => editor?.destroy();
   }, [editor]);
+
+  useEffect(() => {
+    if (!editor || externalHTML === undefined) return;
+    editor.commands.setContent(externalHTML || "<p></p>");
+  }, [editor, externalHTML]);
 
   if (!editor) return null;
 

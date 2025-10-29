@@ -1,8 +1,12 @@
 import React, { useState } from "react";
 import TipTapEditor from "./components/TipTapEditor";
+import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
 
 const App: React.FC = () => {
   const [htmlPreview, setHtmlPreview] = useState<string>("");
+  const [bbcodePreview, setBbcodePreview] = useState<string>("");
+  const [externalHtml, setExternalHtml] = useState<string>("");
+  const [bbcodeInput, setBbcodeInput] = useState<string>("");
 
   const sectionStyle: React.CSSProperties = {
     borderRadius: "1.05rem",
@@ -105,7 +109,13 @@ const App: React.FC = () => {
           映射、章节同步等功能。
         </p>
 
-        <TipTapEditor onUpdate={setHtmlPreview} />
+        <TipTapEditor
+          externalHTML={externalHtml}
+          onUpdate={({ html }) => {
+            setHtmlPreview(html);
+            setBbcodePreview(htmlToBBCode(html));
+          }}
+        />
 
         <div
           style={{
@@ -123,6 +133,75 @@ const App: React.FC = () => {
           }}
         >
           {htmlPreview || "<p>编辑器输出将实时展示在此。</p>"}
+        </div>
+        <div
+          style={{
+            marginTop: "1rem",
+            background: "rgba(6, 14, 25, 0.9)",
+            border: "1px solid rgba(102, 192, 244, 0.15)",
+            borderRadius: "0.75rem",
+            padding: "0.9rem",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
+            fontSize: "0.78rem",
+            color: "#7ea0c6",
+            lineHeight: 1.6,
+            maxHeight: "160px",
+            overflowY: "auto"
+          }}
+        >
+          {bbcodePreview || "BBCode 将展示在此。"}
+        </div>
+
+        <div
+          style={{
+            marginTop: "1.4rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.6rem"
+          }}
+        >
+          <label style={{ color: "#9eb4d4", fontSize: "0.9rem" }}>
+            从 BBCode 导入
+          </label>
+          <textarea
+            value={bbcodeInput}
+            onChange={(event) => setBbcodeInput(event.target.value)}
+            placeholder="[b]示例[/b]"
+            style={{
+              width: "100%",
+              minHeight: "120px",
+              background: "rgba(6, 14, 25, 0.85)",
+              border: "1px solid rgba(102, 192, 244, 0.18)",
+              borderRadius: "0.75rem",
+              padding: "0.75rem",
+              color: "#d7e8ff",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
+              fontSize: "0.85rem",
+              lineHeight: 1.6,
+              resize: "vertical"
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const html = bbcodeToHtml(bbcodeInput);
+              setExternalHtml(html);
+            }}
+            style={{
+              alignSelf: "flex-start",
+              padding: "0.6rem 1.2rem",
+              borderRadius: "0.6rem",
+              border: "none",
+              background:
+                "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+              color: "#06101e",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 10px 20px rgba(32, 64, 99, 0.3)"
+            }}
+          >
+            应用 BBCode
+          </button>
         </div>
       </section>
     </div>
