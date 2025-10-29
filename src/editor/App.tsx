@@ -1,12 +1,30 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import TipTapEditor from "./components/TipTapEditor";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
+import { useGuideStore } from "./stores/useGuideStore";
 
 const App: React.FC = () => {
   const [htmlPreview, setHtmlPreview] = useState<string>("");
   const [bbcodePreview, setBbcodePreview] = useState<string>("");
   const [externalHtml, setExternalHtml] = useState<string>("");
   const [bbcodeInput, setBbcodeInput] = useState<string>("");
+
+  const { chapters, activeId, addChapter, selectChapter, updateChapter, deleteChapter, restoreChapter } = useGuideStore();
+
+  const activeChapter = useMemo(() => chapters.find((chapter) => chapter.id === activeId) ?? chapters[0], [chapters, activeId]);
+
+  useEffect(() => {
+    if (activeChapter && activeChapter.bbcode) {
+      const html = bbcodeToHtml(activeChapter.bbcode);
+      setExternalHtml(html);
+      setHtmlPreview(html);
+      setBbcodePreview(activeChapter.bbcode);
+    } else {
+      setExternalHtml('');
+      setHtmlPreview('');
+      setBbcodePreview('');
+    }
+  }, [activeChapter?.id]);
 
   const sectionStyle: React.CSSProperties = {
     borderRadius: "1.05rem",
@@ -63,12 +81,128 @@ const App: React.FC = () => {
         </p>
       </header>
 
-      <section style={sectionStyle}>
+      <section
+        style={{
+          ...sectionStyle,
+          display: "grid",
+          gridTemplateColumns: "280px 1fr",
+          gap: "1.5rem",
+          alignItems: "start"
+        }}
+      >
+        <aside
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem"
+          }}
+        >
+          <button
+            type="button"
+            onClick={addChapter}
+            style={{
+              height: "2.4rem",
+              borderRadius: "0.75rem",
+              border: "none",
+              background:
+                "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+              color: "#06101e",
+              fontWeight: 600,
+              cursor: "pointer",
+              boxShadow: "0 12px 22px rgba(32, 64, 99, 0.35)"
+            }}
+          >
+            新增章节
+          </button>
+
+          <div
+            style={{
+              background: "rgba(8, 14, 23, 0.85)",
+              border: "1px solid rgba(102, 192, 244, 0.18)",
+              borderRadius: "0.75rem",
+              overflow: "hidden"
+            }}
+          >
+            {chapters.map((chapter) => (
+              <button
+                key={chapter.id}
+                onClick={() => selectChapter(chapter.id)}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  background:
+                    activeChapter?.id === chapter.id
+                      ? "rgba(102, 192, 244, 0.22)"
+                      : "transparent",
+                  color: "#d7e8ff",
+                  textAlign: "left",
+                  padding: "0.7rem 0.9rem",
+                  fontSize: "0.9rem",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  cursor: "pointer"
+                }}
+              >
+                <span style={{ flex: 1, marginRight: "0.5rem" }}>{chapter.title}</span>
+                <span
+                  style={{
+                    fontSize: "0.75rem",
+                    opacity: 0.6
+                  }}
+                >
+                  {new Date(chapter.updatedAt).toLocaleTimeString()}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem"
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                if (activeChapter) {
+                  const newTitle = window.prompt("章节标题", activeChapter.title);
+                  if (newTitle) {
+                    updateChapter(activeChapter.id, { title: newTitle });
+                  }
+                }
+              }}
+              style={subActionButtonStyle}
+            >
+              重命名
+            </button>
+            <button
+              type="button"
+              onClick={() => activeChapter && deleteChapter(activeChapter.id)}
+              style={subActionButtonStyle}
+            >
+              删除
+            </button>
+            <button
+              type="button"
+              onClick={() => restoreChapter()}
+              style={subActionButtonStyle}
+            >
+              撤销删除
+            </button>
+          </div>
+        </aside>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
         <TipTapEditor
           externalHTML={externalHtml}
           onUpdate={({ html }) => {
             setHtmlPreview(html);
             setBbcodePreview(htmlToBBCode(html));
+            if (activeChapter) {
+              updateChapter(activeChapter.id, { bbcode: htmlToBBCode(html) });
+            }
           }}
         />
 
@@ -141,6 +275,9 @@ const App: React.FC = () => {
             onClick={() => {
               const html = bbcodeToHtml(bbcodeInput);
               setExternalHtml(html);
+              if (activeChapter) {
+                updateChapter(activeChapter.id, { bbcode: bbcodeInput });
+              }
             }}
             style={{
               alignSelf: "flex-start",
@@ -158,9 +295,21 @@ const App: React.FC = () => {
             应用 BBCode
           </button>
         </div>
+        </div>
       </section>
     </div>
   );
 };
 
 export default App;
+
+const subActionButtonStyle: React.CSSProperties = {
+  flex: 1,
+  border: "none",
+  borderRadius: "0.65rem",
+  padding: "0.55rem 0.75rem",
+  background: "rgba(20, 33, 52, 0.85)",
+  color: "#d7e8ff",
+  cursor: "pointer",
+  fontSize: "0.85rem"
+};

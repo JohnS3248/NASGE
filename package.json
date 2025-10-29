@@ -27,7 +27,8 @@
     "@tiptap/react": "^3.9.0",
     "@tiptap/starter-kit": "^3.9.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.2.1",
