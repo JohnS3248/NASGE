@@ -7,10 +7,12 @@ import Strike from "@tiptap/extension-strike";
 import Heading from "@tiptap/extension-heading";
 import Link from "@tiptap/extension-link";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import Blockquote from "@tiptap/extension-blockquote";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
+import Image from "@tiptap/extension-image";
 
 import Spoiler from "../extensions/spoiler";
 
@@ -53,7 +55,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: false
+        heading: false,
+        strike: false,
+        horizontalRule: false,
+        underline: false,
+        link: false,
+        blockquote: false
       }),
       Underline,
       Strike,
@@ -67,6 +74,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       }),
       Spoiler,
       HorizontalRule,
+      Blockquote,
+      Image.configure({
+        HTMLAttributes: {
+          class: "nasge-image"
+        }
+      }),
       Table.configure({
         resizable: true,
         HTMLAttributes: {
@@ -154,6 +167,32 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     setContextMenu((prev) => ({ ...prev, visible: false }));
   }, []);
 
+  const insertImage = useCallback(() => {
+    if (!editor) return;
+    const src = window.prompt("输入图片链接", "https://")?.trim();
+    if (!src) return;
+    const alt = window.prompt("图片描述（可选）", "") ?? "";
+    editor.chain().focus().setImage({ src, alt }).run();
+  }, [editor]);
+
+  const insertQuote = useCallback(() => {
+    editor?.chain().focus().toggleBlockquote().run();
+  }, [editor]);
+
+  const insertCodeBlock = useCallback(() => {
+    editor?.chain().focus().toggleCodeBlock().run();
+  }, [editor]);
+
+  const clearFormatting = useCallback(() => {
+    editor
+      ?.chain()
+      .focus()
+      .unsetAllMarks()
+      .clearNodes()
+      .setParagraph()
+      .run();
+  }, [editor]);
+
   useEffect(() => {
     const listener = () => closeContextMenu();
     window.addEventListener("click", listener);
@@ -198,136 +237,112 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       <div
         style={{
           display: "flex",
-          gap: "0.5rem",
+          alignItems: "center",
+          gap: "0.25rem",
           flexWrap: "wrap",
-          background: "rgba(15, 26, 41, 0.8)",
+          background: "rgba(15, 26, 41, 0.82)",
           borderRadius: "0.75rem",
-          padding: "0.35rem",
+          padding: "0.4rem 0.5rem",
           border: "1px solid rgba(102, 192, 244, 0.18)"
         }}
       >
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("bold")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
+        <select
+          value={
+            editor.isActive("heading", { level: 1 })
+              ? "h1"
+              : editor.isActive("heading", { level: 2 })
+              ? "h2"
+              : editor.isActive("heading", { level: 3 })
+              ? "h3"
+              : "paragraph"
+          }
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === "paragraph") {
+              editor.chain().focus().setParagraph().run();
+            } else {
+              const level = Number(value.slice(1)) as 1 | 2 | 3;
+              editor.chain().focus().setHeading({ level }).run();
+            }
           }}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          加粗
-        </button>
-        <button
-          type="button"
           style={{
-            ...toolbarButton,
-            background: editor.isActive("underline")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
+            background: "transparent",
+            border: "none",
+            color: "#d7e8ff",
+            fontSize: "0.85rem",
+            fontWeight: 600,
+            padding: "0.35rem 0.6rem",
+            borderRadius: "0.6rem"
           }}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
         >
-          下划线
-        </button>
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("italic")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          斜体
-        </button>
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("strike")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        >
-          删除线
-        </button>
+          <option value="paragraph">Normal</option>
+          <option value="h1">H1</option>
+          <option value="h2">H2</option>
+          <option value="h3">H3</option>
+        </select>
 
-        {headingButtons.map(({ label, level }) => (
-          <button
-            key={label}
-            type="button"
-            style={{
-              ...toolbarButton,
-              background: editor.isActive("heading", { level })
-                ? "rgba(102, 192, 244, 0.18)"
-                : "transparent"
-            }}
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
-          >
-            {label}
-          </button>
-        ))}
-
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("bulletList")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
+        <ToolbarIcon
+          label="•"
+          active={editor.isActive("bulletList")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-        >
-          无序列表
-        </button>
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("orderedList")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        >
-          有序列表
-        </button>
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("codeBlock")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        >
-          代码块
-        </button>
-        <button type="button" style={toolbarButton} onClick={toggleLink}>
-          链接
-        </button>
-        <button
-          type="button"
-          style={{
-            ...toolbarButton,
-            background: editor.isActive("spoiler")
-              ? "rgba(102, 192, 244, 0.18)"
-              : "transparent"
-          }}
+        />
+        <ToolbarIcon
+          label="B"
+          active={editor.isActive("bold")}
+          onClick={() => editor.chain().focus().toggleBold().run()}
+        />
+        <ToolbarIcon
+          label="I"
+          active={editor.isActive("italic")}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+        />
+        <ToolbarIcon
+          label="U"
+          active={editor.isActive("underline")}
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+        />
+        <ToolbarIcon
+          label="S"
+          active={editor.isActive("strike")}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        />
+        <ToolbarIcon
+          label="🙈"
+          title="隐藏文本"
+          active={editor.isActive("spoiler")}
           onClick={toggleSpoiler}
-        >
-          隐藏文本
-        </button>
-        <button type="button" style={toolbarButton} onClick={insertHorizontalRule}>
-          分割线
-        </button>
-        <button type="button" style={toolbarButton} onClick={insertTable}>
-          表格
-        </button>
+        />
+        <ToolbarIcon label="🔗" title="插入链接" onClick={toggleLink} />
+        <ToolbarIcon
+          label="❝"
+          active={editor.isActive("blockquote")}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        />
+        <ToolbarIcon
+          label="<>"
+          active={editor.isActive("codeBlock")}
+          onClick={insertCodeBlock}
+        />
+        <ToolbarIcon label="—" onClick={insertHorizontalRule} />
+        {headingButtons.map(({ label, level }) => (
+          <ToolbarIcon
+            key={label}
+            label={label}
+            active={editor.isActive("heading", { level })}
+            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
+          />
+        ))}
+        <ToolbarIcon
+          label="•⋮"
+          active={editor.isActive("bulletList")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+        />
+        <ToolbarIcon
+          label="1."
+          active={editor.isActive("orderedList")}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        />
+        <ToolbarIcon label="Tx" title="清除格式" onClick={clearFormatting} />
       </div>
 
       <div
@@ -374,13 +389,28 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           {contextMenu.mode === "selection" ? (
             <>
               <MenuItem
-                label="加粗"
-                onClick={() => editor.chain().focus().toggleBold().run()}
+                label="一级标题"
+                onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()}
                 onComplete={closeContextMenu}
               />
               <MenuItem
-                label="下划线"
-                onClick={() => editor.chain().focus().toggleUnderline().run()}
+                label="二级标题"
+                onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()}
+                onComplete={closeContextMenu}
+              />
+              <MenuItem
+                label="三级标题"
+                onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()}
+                onComplete={closeContextMenu}
+              />
+              <MenuItem
+                label="隐藏文本"
+                onClick={toggleSpoiler}
+                onComplete={closeContextMenu}
+              />
+              <MenuItem
+                label="加粗"
+                onClick={() => editor.chain().focus().toggleBold().run()}
                 onComplete={closeContextMenu}
               />
               <MenuItem
@@ -388,17 +418,27 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 onClick={() => editor.chain().focus().toggleStrike().run()}
                 onComplete={closeContextMenu}
               />
-              <MenuItem label="隐藏文本" onClick={toggleSpoiler} onComplete={closeContextMenu} />
+              <MenuItem
+                label="下划线"
+                onClick={() => editor.chain().focus().toggleUnderline().run()}
+                onComplete={closeContextMenu}
+              />
               <MenuItem label="插入链接" onClick={toggleLink} onComplete={closeContextMenu} />
             </>
           ) : (
             <>
-              <MenuItem label="插入表格" onClick={insertTable} onComplete={closeContextMenu} />
+              <MenuItem label="插入图片" onClick={insertImage} onComplete={closeContextMenu} />
               <MenuItem
-                label="插入分割线"
-                onClick={insertHorizontalRule}
+                label="插入代码块"
+                onClick={insertCodeBlock}
                 onComplete={closeContextMenu}
               />
+              <MenuItem
+                label="插入引用"
+                onClick={insertQuote}
+                onComplete={closeContextMenu}
+              />
+              <MenuItem label="插入表格" onClick={insertTable} onComplete={closeContextMenu} />
             </>
           )}
         </div>
@@ -433,6 +473,29 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete }) => (
     onMouseDown={(event) => {
       event.preventDefault();
     }}
+  >
+    {label}
+  </button>
+);
+
+type ToolbarIconProps = {
+  label: string;
+  onClick: () => void;
+  active?: boolean;
+  title?: string;
+};
+
+const ToolbarIcon: React.FC<ToolbarIconProps> = ({ label, onClick, active, title }) => (
+  <button
+    type="button"
+    title={title}
+    style={{
+      ...toolbarButton,
+      fontWeight: 600,
+      fontSize: label.length > 2 ? "0.8rem" : "0.9rem",
+      background: active ? "rgba(102, 192, 244, 0.2)" : "transparent"
+    }}
+    onClick={onClick}
   >
     {label}
   </button>

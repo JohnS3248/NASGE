@@ -66,6 +66,11 @@ function serializeNode(node: HTMLElement | Text): string {
     return `[table]${serializeChildren(node)}[/table]`;
   }
 
+  if (tagName === "img") {
+    const src = node.getAttribute("src") ?? "";
+    return src ? `[img]${src}[/img]` : "";
+  }
+
   if (tagName === "tr") {
     return `[tr]${serializeChildren(node)}[/tr]`;
   }
@@ -125,6 +130,7 @@ export function bbcodeToHtml(bbcode: string): string {
 
   // Links
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
+  html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
 
   const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr)/i.test(html);
   if (hasBlock) {
