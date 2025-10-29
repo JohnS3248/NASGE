@@ -1,7 +1,6 @@
 import Blockquote from "@tiptap/extension-blockquote";
 
 const SteamBlockquote = Blockquote.extend({
-  name: "steamBlockquote",
   addAttributes() {
     return {
       author: {
