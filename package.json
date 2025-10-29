@@ -1,0 +1,32 @@
+{
+  "name": "nasge",
+  "version": "1.0.0",
+  "description": "创建者友好的 Steam 指南编辑浏览器扩展",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:extension": "vite build --watch --mode development",
+    "build": "npm run type-check && vite build",
+    "type-check": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.2.1",
+    "@types/chrome": "^0.1.27",
+    "@types/node": "^24.9.2",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "tslib": "^2.8.1",
+    "type-fest": "^5.1.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
+  }
+}
