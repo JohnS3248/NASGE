@@ -177,11 +177,23 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const insertQuote = useCallback(() => {
     if (!editor) return;
     const author = window.prompt("引用来源（可选）", "") ?? "";
-    editor.chain().focus().setBlockquote().run();
-    if (author) {
-      const meta = `引用自 ${author}：`;
-      editor.commands.insertContent(`<p class="nasge-quote__meta">${meta}</p>`);
-    }
+    editor
+      .chain()
+      .focus()
+      .insertContent({
+        type: "blockquote",
+        attrs: { author },
+        content: [
+          ...(author
+            ? [{
+                type: "paragraph",
+                content: [{ type: "text", text: `引用自 ${author}：` }]
+              }]
+            : []),
+          { type: "paragraph", content: [] }
+        ]
+      })
+      .run();
   }, [editor]);
 
   const insertCodeBlock = useCallback(() => {
