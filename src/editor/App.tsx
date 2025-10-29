@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
+import TipTapEditor from "./components/TipTapEditor";
 
 const App: React.FC = () => {
+  const [htmlPreview, setHtmlPreview] = useState<string>("");
+
   const sectionStyle: React.CSSProperties = {
     borderRadius: "1.05rem",
     background: "rgba(20, 33, 52, 0.88)",
@@ -85,6 +88,42 @@ const App: React.FC = () => {
           <li>通过 popup 入口能否在新标签页打开此页面</li>
           <li>热更新／ watch 模式是否及时输出</li>
         </ol>
+      </section>
+
+      <section
+        style={{
+          ...sectionStyle,
+          background: "rgba(13, 23, 36, 0.9)",
+          border: "1px solid rgba(102, 192, 244, 0.28)"
+        }}
+      >
+        <h2 style={{ margin: 0, fontSize: "1.15rem", color: "#d7e8ff" }}>
+          富文本编辑器 POC
+        </h2>
+        <p style={{ margin: "0.4rem 0 1.2rem", color: "#9eb4d4", lineHeight: 1.7 }}>
+          这是 Tiptap 的最小可行版本，已支持加粗、斜体、列表和代码块。后续会扩展成 BBCode
+          映射、章节同步等功能。
+        </p>
+
+        <TipTapEditor onUpdate={setHtmlPreview} />
+
+        <div
+          style={{
+            marginTop: "1.2rem",
+            background: "rgba(6, 14, 25, 0.85)",
+            border: "1px solid rgba(102, 192, 244, 0.2)",
+            borderRadius: "0.75rem",
+            padding: "0.9rem",
+            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
+            fontSize: "0.8rem",
+            color: "#80a4c7",
+            lineHeight: 1.6,
+            maxHeight: "160px",
+            overflowY: "auto"
+          }}
+        >
+          {htmlPreview || "<p>编辑器输出将实时展示在此。</p>"}
+        </div>
       </section>
     </div>
   );
