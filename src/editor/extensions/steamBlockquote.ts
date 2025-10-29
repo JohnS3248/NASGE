@@ -1,12 +1,13 @@
 import Blockquote from "@tiptap/extension-blockquote";
 
 const SteamBlockquote = Blockquote.extend({
+  name: "steamBlockquote",
   addAttributes() {
     return {
       author: {
         default: "",
-        parseHTML: (element) => element.getAttribute("data-author") || "",
-        renderHTML: (attributes) => {
+        parseHTML: (element: HTMLElement) => element.getAttribute("data-author") || "",
+        renderHTML: (attributes: { author?: string }) => {
           return {
             "data-author": attributes.author || null,
             class: "nasge-quote"

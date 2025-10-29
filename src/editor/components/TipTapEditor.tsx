@@ -181,7 +181,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       .chain()
       .focus()
       .insertContent({
-        type: "blockquote",
+        type: "steamBlockquote",
         attrs: { author },
         content: [
           ...(author
