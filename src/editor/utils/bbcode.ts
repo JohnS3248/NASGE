@@ -34,6 +34,20 @@ function serializeNode(node: HTMLElement | Text): string {
     return `${serializeChildren(node)}\n\n`;
   }
 
+  if (tagName === "blockquote") {
+    const author = node.getAttribute("data-author") ?? "";
+    const childNodes = Array.from(node.childNodes) as (HTMLElement | Text)[];
+    const filtered = childNodes.filter((child, index) => {
+      if (author && index === 0 && child instanceof HTMLElement && child.tagName.toLowerCase() === "p") {
+        const text = child.textContent?.trim() ?? "";
+        return !text.startsWith(`引用自 ${author}`);
+      }
+      return true;
+    });
+    const body = filtered.map((child) => serializeNode(child as any)).join("").trim();
+    return author ? `[quote=${author}]${body}[/quote]\n\n` : `[quote]${body}[/quote]\n\n`;
+  }
+
   if (tagName === "h1" || tagName === "h2" || tagName === "h3") {
     return wrap(`[${tagName}]`, serializeChildren(node));
   }
@@ -109,6 +123,16 @@ function wrap(tag: string, content: string): string {
 
 export function bbcodeToHtml(bbcode: string): string {
   let html = bbcode;
+  html = html.replace(/\[quote=([^\]]+)]([\s\S]*?)\[\/quote]/gi, (_, author, body) => {
+    const inner = bbcodeToHtml(body.trim());
+    return `<blockquote class="nasge-quote" data-author="${author}">${inner}</blockquote>`;
+  });
+
+  html = html.replace(/\[quote]([\s\S]*?)\[\/quote]/gi, (_, body) => {
+    const inner = bbcodeToHtml(body.trim());
+    return `<blockquote class="nasge-quote">${inner}</blockquote>`;
+  });
+
   html = html.replace(/\[b]/gi, "<strong>").replace(/\[\/b]/gi, "</strong>");
   html = html.replace(/\[i]/gi, "<em>").replace(/\[\/i]/gi, "</em>");
   html = html.replace(/\[u]/gi, "<u>").replace(/\[\/u]/gi, "</u>");
@@ -131,11 +155,6 @@ export function bbcodeToHtml(bbcode: string): string {
   // Links
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
-  html = html
-    .replace(/\[quote=([^\]]*)]/gi, '<blockquote class="nasge-quote"><div class="nasge-quote__meta">引用自 <span>$1</span>：</div><div class="nasge-quote__body">')
-    .replace(/\[quote]/gi, '<blockquote class="nasge-quote"><div class="nasge-quote__body">')
-    .replace(/\[\/quote]/gi, "</div></blockquote>");
-
   const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr)/i.test(html);
   if (hasBlock) {
     return html;

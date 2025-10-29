@@ -16,11 +16,8 @@ declare module "@tiptap/core" {
 
 export const Spoiler = Mark.create<SpoilerOptions>({
   name: "spoiler",
-
   priority: 1000,
-
   inclusive: true,
-
   addOptions() {
     return {
       HTMLAttributes: {
@@ -28,7 +25,6 @@ export const Spoiler = Mark.create<SpoilerOptions>({
       }
     };
   },
-
   parseHTML() {
     return [
       {
@@ -36,7 +32,6 @@ export const Spoiler = Mark.create<SpoilerOptions>({
       }
     ];
   },
-
   renderHTML({ HTMLAttributes }) {
     return [
       "span",
@@ -46,7 +41,6 @@ export const Spoiler = Mark.create<SpoilerOptions>({
       0
     ];
   },
-
   addCommands() {
     return {
       setSpoiler:
@@ -63,7 +57,6 @@ export const Spoiler = Mark.create<SpoilerOptions>({
           commands.unsetMark(this.name)
     };
   },
-
   addKeyboardShortcuts() {
     return {
       "Mod-Shift-S": () => this.editor.commands.toggleSpoiler()

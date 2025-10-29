@@ -7,7 +7,7 @@ import Strike from "@tiptap/extension-strike";
 import Heading from "@tiptap/extension-heading";
 import Link from "@tiptap/extension-link";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
-import Blockquote from "@tiptap/extension-blockquote";
+import SteamBlockquote from "../extensions/steamBlockquote";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -74,7 +74,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       }),
       Spoiler,
       HorizontalRule,
-      Blockquote,
       Image.configure({
         HTMLAttributes: {
           class: "nasge-image"
@@ -176,7 +175,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   }, [editor]);
 
   const insertQuote = useCallback(() => {
-    editor?.chain().focus().toggleBlockquote().run();
+    if (!editor) return;
+    const author = window.prompt("引用来源（可选）", "") ?? "";
+    editor.chain().focus().setBlockquote().run();
+    if (author) {
+      const meta = `引用自 ${author}：`;
+      editor.commands.insertContent(`<p class="nasge-quote__meta">${meta}</p>`);
+    }
   }, [editor]);
 
   const insertCodeBlock = useCallback(() => {
@@ -316,12 +321,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         <ToolbarIcon
           label="❝"
           active={editor.isActive("blockquote")}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          onClick={insertQuote}
         />
         <ToolbarIcon
           label="<>"
           active={editor.isActive("codeBlock")}
-          onClick={insertCodeBlock}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
         />
         <ToolbarIcon label="—" onClick={insertHorizontalRule} />
         {headingButtons.map(({ label, level }) => (
