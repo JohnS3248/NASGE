@@ -31,7 +31,8 @@ function serializeNode(node: HTMLElement | Text): string {
   const tagName = node.tagName.toLowerCase();
 
   if (tagName === "p") {
-    return `${serializeChildren(node)}\n\n`;
+    const body = serializeChildren(node);
+    return body.trim() ? `${body}\n\n` : "\n";
   }
 
   if (tagName === "blockquote") {
@@ -155,7 +156,7 @@ export function bbcodeToHtml(bbcode: string): string {
   // Links
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
-  const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr)/i.test(html);
+  const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr|blockquote)/i.test(html);
   if (hasBlock) {
     return html;
   }
