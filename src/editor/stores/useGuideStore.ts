@@ -2,11 +2,15 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { bbcodeToHtml } from "../utils/bbcode";
+import { JSONContent } from "@tiptap/core";
+import { createEditorExtensions, createEmptyDoc } from "../utils/editorExtensions";
+import { generateJSON } from "@tiptap/html";
 
 export type ChapterDraft = {
   id: string;
   title: string;
-  bbcode: string;
+  content: JSONContent;
   updatedAt: number;
 };
 
@@ -29,7 +33,7 @@ export const useGuideStore = create<GuideState>()(
         {
           id: crypto.randomUUID(),
           title: "章节 1",
-          bbcode: "",
+          content: createEmptyDoc(),
           updatedAt: Date.now()
         }
       ],
@@ -43,7 +47,7 @@ export const useGuideStore = create<GuideState>()(
         const chapter: ChapterDraft = {
           id: crypto.randomUUID(),
           title: `章节 ${get().chapters.length + 1}`,
-          bbcode: "",
+          content: createEmptyDoc(),
           updatedAt: Date.now()
         };
         set((state) => ({
@@ -92,7 +96,54 @@ export const useGuideStore = create<GuideState>()(
       }
     }),
     {
-      name: "nasge-guide-drafts"
+      name: "nasge-guide-drafts",
+      version: 3,
+      migrate: (persistedState: any, version) => {
+        if (!persistedState) {
+          return persistedState;
+        }
+
+        const extensions = createEditorExtensions();
+
+        if (version < 2 && persistedState.chapters) {
+          persistedState.chapters = persistedState.chapters.map((chapter: any) => {
+            const bbcode = typeof chapter.bbcode === "string" ? chapter.bbcode : "";
+            const html = bbcode ? bbcodeToHtml(bbcode) : "";
+            return {
+              ...chapter,
+              content: toJSONContent(html, extensions)
+            };
+          });
+        }
+
+        if (version < 3 && persistedState.chapters) {
+          persistedState.chapters = persistedState.chapters.map((chapter: any) => {
+            if (chapter && typeof chapter.content === "object" && chapter.content !== null && "type" in chapter.content) {
+              return chapter;
+            }
+
+            const html = typeof chapter.content === "string" ? chapter.content : "";
+            return {
+              ...chapter,
+              content: toJSONContent(html, extensions)
+            };
+          });
+        }
+
+        return persistedState;
+      }
     }
   )
 );
+
+function toJSONContent(html: string, extensions: ReturnType<typeof createEditorExtensions>): JSONContent {
+  if (!html) {
+    return createEmptyDoc();
+  }
+
+  try {
+    return generateJSON(html, extensions);
+  } catch {
+    return createEmptyDoc();
+  }
+}

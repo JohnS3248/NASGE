@@ -1,20 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import Underline from "@tiptap/extension-underline";
-import Strike from "@tiptap/extension-strike";
-import Heading from "@tiptap/extension-heading";
-import Link from "@tiptap/extension-link";
-import HorizontalRule from "@tiptap/extension-horizontal-rule";
-import SteamBlockquote from "../extensions/steamBlockquote";
-import { Table } from "@tiptap/extension-table";
-import { TableRow } from "@tiptap/extension-table-row";
-import { TableCell } from "@tiptap/extension-table-cell";
-import { TableHeader } from "@tiptap/extension-table-header";
-import Image from "@tiptap/extension-image";
-
-import Spoiler from "../extensions/spoiler";
+import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 
 const toolbarButton: React.CSSProperties = {
   border: "none",
@@ -29,7 +16,7 @@ const toolbarButton: React.CSSProperties = {
 
 type TipTapEditorProps = {
   initialContent?: string;
-  externalHTML?: string;
+  externalDoc?: JSONContent;
   onUpdate?: (payload: { html: string; json: JSONContent }) => void;
 };
 
@@ -42,9 +29,11 @@ type ContextMenuState = {
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   initialContent = "<p>欢迎使用 NASGE。这里是 Sprint 1 的 Tiptap 最小可行版本。</p>",
-  externalHTML,
+  externalDoc,
   onUpdate
 }) => {
+  const extensions = useMemo(() => createEditorExtensions(), []);
+  const ignoreNextUpdateRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
     x: 0,
@@ -53,43 +42,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   });
 
   const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: false,
-        strike: false,
-        horizontalRule: false,
-        underline: false,
-        link: false,
-        blockquote: false
-      }),
-      Underline,
-      Strike,
-      Heading.configure({
-        levels: [1, 2, 3]
-      }),
-      Link.configure({
-        openOnClick: false,
-        linkOnPaste: true,
-        autolink: true
-      }),
-      Spoiler,
-      HorizontalRule,
-      Image.configure({
-        HTMLAttributes: {
-          class: "nasge-image"
-        }
-      }),
-      Table.configure({
-        resizable: false,
-        HTMLAttributes: {
-          class: "nasge-table"
-        }
-      }),
-      TableRow,
-      TableHeader,
-      TableCell
-    ],
-    content: initialContent,
+    extensions,
+    content: externalDoc ?? EMPTY_DOC,
     editorProps: {
       attributes: {
         class:
@@ -97,6 +51,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       }
     },
     onUpdate: ({ editor }) => {
+      if (ignoreNextUpdateRef.current) {
+        ignoreNextUpdateRef.current = false;
+        return;
+      }
       onUpdate?.({
         html: editor.getHTML(),
         json: editor.getJSON()
@@ -221,9 +179,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   }, [editor]);
 
   useEffect(() => {
-    if (!editor || externalHTML === undefined) return;
-    editor.commands.setContent(externalHTML || "<p></p>");
-  }, [editor, externalHTML]);
+    if (!editor || externalDoc === undefined) return;
+    ignoreNextUpdateRef.current = true;
+    editor.commands.setContent(externalDoc ?? EMPTY_DOC, { emitUpdate: false });
+  }, [editor, externalDoc]);
 
   if (!editor) return null;
 

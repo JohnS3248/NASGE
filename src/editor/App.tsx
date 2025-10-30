@@ -1,30 +1,72 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import TipTapEditor from "./components/TipTapEditor";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
 import { useGuideStore } from "./stores/useGuideStore";
+import { JSONContent } from "@tiptap/core";
+import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
+import { generateHTML, generateJSON } from "@tiptap/html";
 
 const App: React.FC = () => {
-  const [htmlPreview, setHtmlPreview] = useState<string>("");
-  const [bbcodePreview, setBbcodePreview] = useState<string>("");
-  const [externalHtml, setExternalHtml] = useState<string>("");
-  const [bbcodeInput, setBbcodeInput] = useState<string>("");
+  const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
+  const [currentHtml, setCurrentHtml] = useState<string>("");
+  const lastAppliedSerializedRef = useRef<string | null>(null);
 
   const { chapters, activeId, addChapter, selectChapter, updateChapter, deleteChapter, restoreChapter } = useGuideStore();
 
   const activeChapter = useMemo(() => chapters.find((chapter) => chapter.id === activeId) ?? chapters[0], [chapters, activeId]);
+  const htmlExtensions = useMemo(() => createEditorExtensions(), []);
+
+  const docToHtml = useCallback(
+    (doc: JSONContent) => generateHTML(doc, htmlExtensions),
+    [htmlExtensions]
+  );
 
   useEffect(() => {
-    if (activeChapter && activeChapter.bbcode) {
-      const html = bbcodeToHtml(activeChapter.bbcode);
-      setExternalHtml(html);
-      setHtmlPreview(html);
-      setBbcodePreview(activeChapter.bbcode);
-    } else {
-      setExternalHtml('');
-      setHtmlPreview('');
-      setBbcodePreview('');
+    const nextDoc = activeChapter?.content ?? createEmptyDoc();
+    const nextSerialized = JSON.stringify(nextDoc);
+
+    if (lastAppliedSerializedRef.current === nextSerialized) {
+      return;
     }
-  }, [activeChapter?.id]);
+
+    lastAppliedSerializedRef.current = nextSerialized;
+    setExternalDoc(nextDoc);
+    setCurrentHtml(docToHtml(nextDoc));
+  }, [activeChapter?.content, activeChapter?.id, docToHtml]);
+
+  const handleExportBBCode = useCallback(() => {
+    if (!currentHtml) {
+      window.alert("当前章节为空，没有可导出的 BBCode。");
+      return;
+    }
+    const bbcode = htmlToBBCode(currentHtml);
+    try {
+      void navigator.clipboard?.writeText(bbcode);
+      window.alert("BBCode 已复制到剪贴板。");
+    } catch {
+      window.prompt("复制以下 BBCode", bbcode);
+    }
+  }, [currentHtml]);
+
+  const handleImportBBCode = useCallback(() => {
+    const input = window.prompt("粘贴要导入的 BBCode", "");
+    if (input === null) return;
+    const html = bbcodeToHtml(input);
+    let doc: JSONContent;
+    try {
+      doc = generateJSON(html, htmlExtensions);
+    } catch (error) {
+      console.error("导入 BBCode 失败", error);
+      window.alert("BBCode 内容无法识别，请检查格式后再试。");
+      return;
+    }
+    setExternalDoc(doc);
+    setCurrentHtml(docToHtml(doc));
+    lastAppliedSerializedRef.current = JSON.stringify(doc);
+    if (activeChapter) {
+      updateChapter(activeChapter.id, { content: doc });
+    }
+  }, [activeChapter, updateChapter, htmlExtensions, docToHtml]);
 
   const sectionStyle: React.CSSProperties = {
     borderRadius: "1.05rem",
@@ -195,106 +237,59 @@ const App: React.FC = () => {
         </aside>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <TipTapEditor
-          externalHTML={externalHtml}
-          onUpdate={({ html }) => {
-            setHtmlPreview(html);
-            setBbcodePreview(htmlToBBCode(html));
-            if (activeChapter) {
-              updateChapter(activeChapter.id, { bbcode: htmlToBBCode(html) });
-            }
-          }}
-        />
-
         <div
           style={{
-            marginTop: "1.2rem",
-            background: "rgba(6, 14, 25, 0.85)",
-            border: "1px solid rgba(102, 192, 244, 0.2)",
-            borderRadius: "0.75rem",
-            padding: "0.9rem",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
-            fontSize: "0.8rem",
-            color: "#80a4c7",
-            lineHeight: 1.6,
-            maxHeight: "160px",
-            overflowY: "auto"
-          }}
-        >
-          {htmlPreview || "<p>编辑器输出将实时展示在此。</p>"}
-        </div>
-        <div
-          style={{
-            marginTop: "1rem",
-            background: "rgba(6, 14, 25, 0.9)",
-            border: "1px solid rgba(102, 192, 244, 0.15)",
-            borderRadius: "0.75rem",
-            padding: "0.9rem",
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
-            fontSize: "0.78rem",
-            color: "#7ea0c6",
-            lineHeight: 1.6,
-            maxHeight: "160px",
-            overflowY: "auto"
-          }}
-        >
-          {bbcodePreview || "BBCode 将展示在此。"}
-        </div>
-
-        <div
-          style={{
-            marginTop: "1.4rem",
             display: "flex",
-            flexDirection: "column",
+            justifyContent: "flex-end",
             gap: "0.6rem"
           }}
         >
-          <label style={{ color: "#9eb4d4", fontSize: "0.9rem" }}>
-            从 BBCode 导入
-          </label>
-          <textarea
-            value={bbcodeInput}
-            onChange={(event) => setBbcodeInput(event.target.value)}
-            placeholder="[b]示例[/b]"
-            style={{
-              width: "100%",
-              minHeight: "120px",
-              background: "rgba(6, 14, 25, 0.85)",
-              border: "1px solid rgba(102, 192, 244, 0.18)",
-              borderRadius: "0.75rem",
-              padding: "0.75rem",
-              color: "#d7e8ff",
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas",
-              fontSize: "0.85rem",
-              lineHeight: 1.6,
-              resize: "vertical"
-            }}
-          />
           <button
             type="button"
-            onClick={() => {
-              const html = bbcodeToHtml(bbcodeInput);
-              setExternalHtml(html);
-              if (activeChapter) {
-                updateChapter(activeChapter.id, { bbcode: bbcodeInput });
-              }
-            }}
+            onClick={handleImportBBCode}
             style={{
-              alignSelf: "flex-start",
-              padding: "0.6rem 1.2rem",
+              padding: "0.45rem 1rem",
               borderRadius: "0.6rem",
-              border: "none",
+              border: "1px solid rgba(102, 192, 244, 0.35)",
+              background: "rgba(12, 21, 33, 0.85)",
+              color: "#cfe7ff",
+              fontWeight: 600,
+              cursor: "pointer"
+            }}
+          >
+            导入 BBCode
+          </button>
+          <button
+            type="button"
+            onClick={handleExportBBCode}
+            style={{
+              padding: "0.45rem 1rem",
+              borderRadius: "0.6rem",
+              border: "1px solid rgba(102, 192, 244, 0.35)",
               background:
                 "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
               color: "#06101e",
               fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: "0 10px 20px rgba(32, 64, 99, 0.3)"
+              cursor: "pointer"
             }}
           >
-            应用 BBCode
+            导出 BBCode
           </button>
         </div>
+        <TipTapEditor
+          externalDoc={externalDoc}
+          onUpdate={({ html, json }) => {
+            setCurrentHtml(html);
+            if (activeChapter) {
+              const nextSerialized = JSON.stringify(json);
+              lastAppliedSerializedRef.current = nextSerialized;
+              const currentSerialized = JSON.stringify(activeChapter.content);
+              if (nextSerialized !== currentSerialized) {
+                updateChapter(activeChapter.id, { content: json });
+              }
+            }
+          }}
+        />
         </div>
       </section>
     </div>

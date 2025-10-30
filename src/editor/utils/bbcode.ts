@@ -9,19 +9,26 @@ const INLINE_MARKS: Record<string, { open: string; close: string }> = {
   "span.nasge-spoiler": { open: "[spoiler]", close: "[/spoiler]" }
 };
 
+type SerializeContext = {
+  isLastSibling: boolean;
+};
+
 export function htmlToBBCode(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
   const root = doc.body.firstElementChild;
   if (!root) return "";
-  return Array.from(root.childNodes)
-    .map((node) => serializeNode(node as HTMLElement | Text))
-    .join("")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  const nodes = Array.from(root.childNodes) as (HTMLElement | Text)[];
+  return nodes
+    .map((node, index) =>
+      serializeNode(node, {
+        isLastSibling: index === nodes.length - 1
+      })
+    )
+    .join("");
 }
 
-function serializeNode(node: HTMLElement | Text): string {
+function serializeNode(node: HTMLElement | Text, context: SerializeContext): string {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent ?? "";
   }
@@ -32,7 +39,10 @@ function serializeNode(node: HTMLElement | Text): string {
 
   if (tagName === "p") {
     const body = serializeChildren(node);
-    return body.trim() ? `${body}\n\n` : "\n";
+    if (!body.trim()) {
+      return "\n";
+    }
+    return context.isLastSibling ? body : `${body}\n\n`;
   }
 
   if (tagName === "blockquote") {
@@ -45,8 +55,16 @@ function serializeNode(node: HTMLElement | Text): string {
       }
       return true;
     });
-    const body = filtered.map((child) => serializeNode(child as any)).join("").trim();
-    return author ? `[quote=${author}]${body}[/quote]\n\n` : `[quote]${body}[/quote]\n\n`;
+    const body = filtered
+      .map((child, index) =>
+        serializeNode(child as any, {
+          isLastSibling: index === filtered.length - 1
+        })
+      )
+      .join("")
+      .trim();
+    const suffix = context.isLastSibling ? "" : "\n\n";
+    return author ? `[quote=${author}]${body}[/quote]${suffix}` : `[quote]${body}[/quote]${suffix}`;
   }
 
   if (tagName === "h1" || tagName === "h2" || tagName === "h3") {
@@ -112,8 +130,13 @@ function serializeNode(node: HTMLElement | Text): string {
 }
 
 function serializeChildren(node: HTMLElement): string {
-  return Array.from(node.childNodes)
-    .map((child) => serializeNode(child as HTMLElement | Text))
+  const childNodes = Array.from(node.childNodes) as (HTMLElement | Text)[];
+  return childNodes
+    .map((child, index) =>
+      serializeNode(child as HTMLElement | Text, {
+        isLastSibling: index === childNodes.length - 1
+      })
+    )
     .join("");
 }
 
@@ -161,12 +184,52 @@ export function bbcodeToHtml(bbcode: string): string {
     return html;
   }
 
-  const normalized = html
-    .split(/\n{2,}/)
-    .map((block) => block.trim())
-    .filter(Boolean)
-    .map((block) => `<p>${block}</p>`)
-    .join("");
+  const paragraphs: string[] = [];
+  let buffer = "";
+  let index = 0;
 
-  return normalized || `<p>${html}</p>`;
+  while (index < html.length) {
+    const char = html[index];
+
+    if (char === "\n") {
+      let count = 1;
+      while (index + count < html.length && html[index + count] === "\n") {
+        count++;
+      }
+
+      if (buffer.length > 0) {
+        paragraphs.push(buffer);
+        buffer = "";
+        const extraBlankCount = Math.max(0, count - 2);
+        if (extraBlankCount > 0) {
+          for (let blankIndex = 0; blankIndex < extraBlankCount; blankIndex++) {
+            paragraphs.push("");
+          }
+        }
+      } else {
+        for (let blankIndex = 0; blankIndex < count; blankIndex++) {
+          paragraphs.push("");
+        }
+      }
+
+      index += count;
+      continue;
+    }
+
+    buffer += char;
+    index += 1;
+  }
+
+  if (buffer.length > 0 || !paragraphs.length) {
+    paragraphs.push(buffer);
+  }
+
+  return paragraphs
+    .map((paragraph) => {
+      if (!paragraph.trim()) {
+        return "<p><br /></p>";
+      }
+      return `<p>${paragraph.replace(/\n/g, "<br />")}</p>`;
+    })
+    .join("");
 }
