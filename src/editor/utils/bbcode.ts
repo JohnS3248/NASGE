@@ -13,6 +13,15 @@ type SerializeContext = {
   isLastSibling: boolean;
 };
 
+type BlockOptions = {
+  trailing?: string;
+};
+
+function block(content: string, context: SerializeContext, options: BlockOptions = {}): string {
+  const suffix = options.trailing ?? "\n";
+  return `${content}${suffix}`;
+}
+
 export function htmlToBBCode(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
@@ -25,7 +34,9 @@ export function htmlToBBCode(html: string): string {
         isLastSibling: index === nodes.length - 1
       })
     )
-    .join("");
+    .join("")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/\s+$/, "");
 }
 
 function serializeNode(node: HTMLElement | Text, context: SerializeContext): string {
@@ -40,9 +51,9 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   if (tagName === "p") {
     const body = serializeChildren(node);
     if (!body.trim()) {
-      return "\n";
+      return block("", context, { trailing: "\n" });
     }
-    return context.isLastSibling ? body : `${body}\n\n`;
+    return block(body, context);
   }
 
   if (tagName === "blockquote") {
@@ -63,12 +74,12 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
       )
       .join("")
       .trim();
-    const suffix = context.isLastSibling ? "" : "\n\n";
-    return author ? `[quote=${author}]${body}[/quote]${suffix}` : `[quote]${body}[/quote]${suffix}`;
+    const quote = author ? `[quote=${author}]${body}[/quote]` : `[quote]${body}[/quote]`;
+    return block(quote, context);
   }
 
   if (tagName === "h1" || tagName === "h2" || tagName === "h3") {
-    return wrap(`[${tagName}]`, serializeChildren(node));
+    return block(wrap(`[${tagName}]`, serializeChildren(node)), context);
   }
 
   if (tagName === "a") {
@@ -79,24 +90,27 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   if (tagName === "ul" || tagName === "ol") {
     const open = tagName === "ul" ? "[list]" : "[olist]";
     const close = tagName === "ul" ? "[/list]" : "[/olist]";
-    return `${open}${serializeChildren(node)}${close}`;
+    const body = serializeChildren(node).replace(/\n+$/, "\n");
+    return block(`${open}\n${body}${close}`, context);
   }
 
   if (tagName === "li") {
-    return `[*]${serializeChildren(node)}`;
+    const body = serializeChildren(node).replace(/\n+$/, "");
+    return `[*]${body}\n`;
   }
 
   if (tagName === "pre") {
     const code = node.textContent ?? "";
-    return `[code]${code.replace(/\n$/, "")}[/code]`;
+    return block(`[code]${code.replace(/\n$/, "")}[/code]`, context);
   }
 
   if (tagName === "hr") {
-    return "[hr]";
+    return block("[hr]", context);
   }
 
   if (tagName === "table") {
-    return `[table]${serializeChildren(node)}[/table]`;
+    const body = serializeChildren(node).replace(/\n+$/, "\n");
+    return block(`[table]\n${body}[/table]`, context);
   }
 
   if (tagName === "img") {
@@ -105,7 +119,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "tr") {
-    return `[tr]${serializeChildren(node)}[/tr]`;
+    const body = serializeChildren(node).replace(/\n+$/, "");
+    return `[tr]${body}[/tr]\n`;
   }
 
   if (tagName === "td") {

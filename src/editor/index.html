@@ -37,6 +37,33 @@
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
       }
 
+      .ProseMirror h1,
+      .ProseMirror h2,
+      .ProseMirror h3 {
+        color: #66c0f4;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .ProseMirror h1 {
+        font-size: 1.85rem;
+        margin: 1.8rem 0 1rem;
+        border-bottom: 1px solid rgba(102, 192, 244, 0.25);
+        padding-bottom: 0.4rem;
+      }
+
+      .ProseMirror h2 {
+        font-size: 1.45rem;
+        margin: 1.4rem 0 0.9rem;
+        color: #74c6ff;
+      }
+
+      .ProseMirror h3 {
+        font-size: 1.2rem;
+        margin: 1.2rem 0 0.75rem;
+        color: #8dd4ff;
+      }
+
       .ProseMirror pre {
         background: rgba(6, 14, 25, 0.92);
         padding: 0.95rem 1.1rem;
@@ -65,24 +92,35 @@
       }
 
       .nasge-table {
-        width: 100%;
+        width: auto;
+        max-width: 100%;
         border-collapse: collapse;
-        table-layout: fixed;
+        table-layout: auto;
         margin: 0.6rem 0;
+        background: rgba(8, 15, 26, 0.82);
       }
 
       .nasge-table td,
       .nasge-table th {
         border: 1px solid rgba(102, 192, 244, 0.18);
-        padding: 0.65rem 0.75rem;
+        padding: 0.6rem 0.75rem;
         background: rgba(8, 15, 26, 0.88);
         color: #d7e8ff;
-        min-width: 90px;
+        white-space: nowrap;
       }
 
       .nasge-table th {
-        background: rgba(12, 27, 44, 0.95);
+        background: rgba(14, 29, 46, 0.95);
         font-weight: 600;
+        text-align: left;
+      }
+
+      .nasge-table td {
+        font-weight: 500;
+      }
+
+      .nasge-table tr:nth-child(odd) td {
+        background: rgba(10, 20, 33, 0.88);
       }
 
       .nasge-image {

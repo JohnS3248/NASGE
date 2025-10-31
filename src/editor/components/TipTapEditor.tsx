@@ -222,53 +222,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           border: "1px solid rgba(102, 192, 244, 0.18)"
         }}
       >
-        <select
-          value={
-            editor.isActive("heading", { level: 1 })
-              ? "h1"
-              : editor.isActive("heading", { level: 2 })
-              ? "h2"
-              : editor.isActive("heading", { level: 3 })
-              ? "h3"
-              : "paragraph"
-          }
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === "paragraph") {
-              editor.chain().focus().setParagraph().run();
-            } else {
-              const level = Number(value.slice(1)) as 1 | 2 | 3;
-              editor.chain().focus().setHeading({ level }).run();
-            }
-          }}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "#d7e8ff",
-            fontSize: "0.85rem",
-            fontWeight: 600,
-            padding: "0.35rem 0.6rem",
-            borderRadius: "0.6rem"
-          }}
-        >
-          <option value="paragraph">Normal</option>
-          <option value="h1">H1</option>
-          <option value="h2">H2</option>
-          <option value="h3">H3</option>
-        </select>
-
-        <ToolbarIcon
-          label="•"
-          active={editor.isActive("bulletList")}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        />
         <ToolbarIcon
           label="B"
           active={editor.isActive("bold")}
           onClick={() => editor.chain().focus().toggleBold().run()}
         />
         <ToolbarIcon
-          label="I"
+          label="𝑰"
           active={editor.isActive("italic")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         />
@@ -278,7 +238,28 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           onClick={() => editor.chain().focus().toggleUnderline().run()}
         />
         <ToolbarIcon
-          label="S"
+          label={
+            <span
+              style={{
+                position: "relative",
+                paddingInline: "0.05rem",
+                fontWeight: 600
+              }}
+            >
+              S
+              <span
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  right: 0,
+                  top: "45%",
+                  borderBottom: "2px solid currentColor",
+                  transform: "rotate(-12deg)"
+                }}
+              />
+            </span>
+          }
+          title="删除线"
           active={editor.isActive("strike")}
           onClick={() => editor.chain().focus().toggleStrike().run()}
         />
@@ -309,12 +290,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           />
         ))}
         <ToolbarIcon
-          label="•⋮"
+          label="•"
+          title="项目符号列表"
           active={editor.isActive("bulletList")}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         />
         <ToolbarIcon
           label="1."
+          title="有序列表"
           active={editor.isActive("orderedList")}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         />
@@ -390,6 +373,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 onComplete={closeContextMenu}
               />
               <MenuItem
+                label="斜体"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                onComplete={closeContextMenu}
+              />
+              <MenuItem
                 label="删除线"
                 onClick={() => editor.chain().focus().toggleStrike().run()}
                 onComplete={closeContextMenu}
@@ -455,7 +443,7 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete }) => (
 );
 
 type ToolbarIconProps = {
-  label: string;
+  label: React.ReactNode;
   onClick: () => void;
   active?: boolean;
   title?: string;
@@ -468,7 +456,7 @@ const ToolbarIcon: React.FC<ToolbarIconProps> = ({ label, onClick, active, title
     style={{
       ...toolbarButton,
       fontWeight: 600,
-      fontSize: label.length > 2 ? "0.8rem" : "0.9rem",
+      fontSize: "0.9rem",
       background: active ? "rgba(102, 192, 244, 0.2)" : "transparent"
     }}
     onClick={onClick}

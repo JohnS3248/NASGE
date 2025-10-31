@@ -1,6 +1,6 @@
 {
   "name": "nasge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "创建者友好的 Steam 指南编辑浏览器扩展",
   "type": "module",
   "scripts": {
@@ -27,6 +27,7 @@
     "@tiptap/html": "^3.9.1",
     "@tiptap/react": "^3.9.0",
     "@tiptap/starter-kit": "^3.9.0",
+    "jsdom": "^27.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.8"
