@@ -3,7 +3,7 @@ export type UploadScope = "chapter-preview" | "guide-cover";
 export type SerializedFilePayload = {
   name: string;
   type: string;
-  data: ArrayBuffer;
+  data: ArrayBuffer | number[];
   originalName?: string;
 };
 
@@ -46,15 +46,17 @@ export type SteamBridgeResponse<TData = unknown> =
   | SteamSuccessResponse<TData>
   | SteamErrorResponse;
 
-export type UploadContext = {
-  action: string;
-  fields: Record<string, string>;
-};
-
 export type UploadResult = {
   redirectUrl: string;
   previewIds: string[];
   status: number;
+};
+
+export type UploadContext = {
+  action: string;
+  fields: Record<string, string>;
+  fileFieldName: string;
+  fileInputMultiple: boolean;
 };
 
 export type SteamPageBridgeRequest = SteamBridgeRequest & {

@@ -5,6 +5,7 @@ import { useGuideStore } from "./stores/useGuideStore";
 import { JSONContent } from "@tiptap/core";
 import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
+import UploadStatusHUD from "./components/UploadStatusHUD";
 
 const App: React.FC = () => {
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
@@ -292,6 +293,7 @@ const App: React.FC = () => {
         />
         </div>
       </section>
+      <UploadStatusHUD />
     </div>
   );
 };

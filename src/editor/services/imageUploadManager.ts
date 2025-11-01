@@ -1,34 +1,79 @@
 import type { UploadScope } from "../../shared/messages";
 import { uploadSteamImage } from "./steamBridge";
-import { useImageUploadStore } from "../stores/useImageUploadStore";
+import { useImageUploadStore, type ImageUploadMetadata } from "../stores/useImageUploadStore";
 
 export async function uploadImageViaSteam(
   file: File,
-  scope: UploadScope = "chapter-preview"
+  scope: UploadScope = "chapter-preview",
+  metadata?: ImageUploadMetadata
 ) {
-  const { prepare, markUploading, markUploaded, markFailed } = useImageUploadStore.getState();
-  const record = prepare(file, scope);
+  const store = useImageUploadStore.getState();
+  const { prepare, markUploading, markUploaded, markFailed, setMetadata } = store;
+  const record = prepare(file, scope, metadata);
 
-  const uploadFile =
-    file.name === record.generatedName
-      ? file
-      : new File([await file.arrayBuffer()], record.generatedName, { type: file.type });
+  console.info("[NASGE] uploadImageViaSteam -> 准备上传文件", {
+    name: file.name,
+    size: file.size,
+    type: file.type
+  });
+
+  let slowWarningTimer: number | undefined;
 
   try {
     markUploading(record.id);
-    const result = await uploadSteamImage(scope, uploadFile);
+    slowWarningTimer = window.setTimeout(() => {
+      useImageUploadStore.getState().setMetadata(record.id, {
+        note: "等待 Steam 响应…请检查 Steam 页面是否弹出提示。"
+      });
+    }, 7000);
+
+    const result = await uploadSteamImage(scope, file, record.originalName);
     markUploaded(record.id, result);
+    setMetadata(record.id, { note: undefined });
     const finalRecord =
       useImageUploadStore.getState().items[record.id] ?? record;
     return { record: finalRecord, result };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "上传失败，未知错误。";
+    const message = formatUploadErrorMessage(error);
     markFailed(record.id, message);
-    throw error;
+    setMetadata(record.id, { note: undefined });
+    throw error instanceof Error ? error : new Error(message);
+  } finally {
+    if (slowWarningTimer !== undefined) {
+      window.clearTimeout(slowWarningTimer);
+    }
   }
 }
 
 export function clearUploadState(scope?: UploadScope) {
   useImageUploadStore.getState().reset(scope);
+}
+
+function formatUploadErrorMessage(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : "";
+  if (rawMessage.includes("Could not establish connection") || rawMessage.includes("Receiving end does not exist")) {
+    return "未能连接到 Steam 页面，请确认已打开 Steam 指南编辑页并刷新后重试。";
+  }
+
+  if (rawMessage.includes("The message port closed before a response was received")) {
+    return "未收到 Steam 页面响应，请刷新相关页面后重试。";
+  }
+
+  if (rawMessage.includes("扩展尚未获得访问 Steam 网页的权限")) {
+    return rawMessage;
+  }
+
+  if (/错误码\s*8/.test(rawMessage)) {
+    return "Steam 返回错误 8：无法解析图片文件，请确认图片未损坏并重新尝试。";
+  }
+
+  if (/错误码\s*29/.test(rawMessage)) {
+    return "Steam 返回错误 29：Steam 会话可能已失效或账号当前不可上传，请刷新 Steam 页面后重试。";
+  }
+
+  if (rawMessage) {
+    return rawMessage;
+  }
+
+  return "上传失败，未知错误。";
 }

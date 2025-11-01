@@ -39,9 +39,18 @@ function sendSteamRequest<T extends SteamBridgeRequest>(
 
 export async function uploadSteamImage(
   scope: UploadScope,
-  file: File
+  file: File,
+  originalName?: string
 ): Promise<UploadResult> {
   const fileData = await file.arrayBuffer();
+  const fileArray = Array.from(new Uint8Array(fileData));
+
+  console.info("[NASGE] uploadSteamImage -> 序列化文件", {
+    name: file.name,
+    size: file.size,
+    byteLength: fileData.byteLength,
+    type: file.type
+  });
 
   const request: SteamUploadRequest = {
     channel: "nasge:steam",
@@ -50,7 +59,8 @@ export async function uploadSteamImage(
     file: {
       name: file.name,
       type: file.type || "application/octet-stream",
-      data: fileData
+      data: fileArray,
+      originalName
     }
   };
 

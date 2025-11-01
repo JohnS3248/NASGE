@@ -3,6 +3,15 @@ import type { UploadResult, UploadScope } from "../../shared/messages";
 
 export type ImageUploadStatus = "idle" | "uploading" | "uploaded" | "failed";
 
+export type ImageUploadSource = "paste" | "drop" | "file-input" | "clipboard-url";
+
+export type ImageUploadMetadata = {
+  source?: ImageUploadSource;
+  cursorPosition?: number;
+  note?: string;
+  retryMessage?: string;
+};
+
 export type ImageUploadRecord = {
   id: string;
   scope: UploadScope;
@@ -14,18 +23,20 @@ export type ImageUploadRecord = {
   error?: string;
   createdAt: number;
   updatedAt: number;
+  metadata?: ImageUploadMetadata;
 };
 
 type ImageUploadState = {
   items: Record<string, ImageUploadRecord>;
   order: string[];
   counters: Record<UploadScope, number>;
-  prepare: (file: File, scope: UploadScope) => ImageUploadRecord;
+  prepare: (file: File, scope: UploadScope, metadata?: ImageUploadMetadata) => ImageUploadRecord;
   markUploading: (id: string) => void;
   markUploaded: (id: string, result: UploadResult) => void;
   markFailed: (id: string, error: string) => void;
   remove: (id: string) => void;
   reset: (scope?: UploadScope) => void;
+  setMetadata: (id: string, patch: Partial<ImageUploadMetadata>) => void;
 };
 
 export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
@@ -35,7 +46,7 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
     "chapter-preview": 0,
     "guide-cover": 0
   },
-  prepare: (file, scope) => {
+  prepare: (file, scope, metadata) => {
     const state = get();
     const nextNumber = (state.counters[scope] ?? 0) + 1;
     const generatedName = `${nextNumber}.${extractExtension(file.name)}`;
@@ -51,7 +62,8 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
       status: "idle",
       previewIds: [],
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      metadata
     };
 
     set((state) => ({
@@ -88,6 +100,20 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
         updatedAt: Date.now()
       })
     );
+  },
+  setMetadata: (id, patch) => {
+    set((state) => {
+      const existing = state.items[id];
+      if (!existing) {
+        return state;
+      }
+      return updateRecord(state, id, {
+        metadata: {
+          ...(existing.metadata ?? {}),
+          ...patch
+        }
+      });
+    });
   },
   remove: (id) => {
     set((state) => {

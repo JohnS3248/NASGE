@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
+import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
+import { processIncomingImages } from "../services/imageIntake";
 
 const toolbarButton: React.CSSProperties = {
   border: "none",
@@ -177,6 +179,74 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   useEffect(() => {
     return () => editor?.destroy();
   }, [editor]);
+
+  const handleIncomingFiles = useCallback(
+    async (files: File[], source: "paste" | "drop") => {
+      if (!editor || !files.length) return;
+      const cursorPosition = editor.state.selection.anchor;
+
+      try {
+        await processIncomingImages(files, {
+          source,
+          cursorPosition
+        });
+      } catch (error) {
+        console.error("[NASGE] 处理图片失败:", error);
+      }
+    },
+    [editor]
+  );
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const dom = editor.view.dom;
+
+    const onPaste = (event: ClipboardEvent) => {
+      const files = extractFilesFromPaste(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      editor.commands.focus();
+      void handleIncomingFiles(files, "paste");
+    };
+
+    const onDrop = (event: DragEvent) => {
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const coords = editor.view.posAtCoords({
+        left: event.clientX,
+        top: event.clientY
+      });
+
+      if (coords?.pos != null) {
+        editor.chain().focus().setTextSelection(coords.pos).run();
+      } else {
+        editor.commands.focus();
+      }
+
+      void handleIncomingFiles(files, "drop");
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+    };
+
+    dom.addEventListener("paste", onPaste as EventListener);
+    dom.addEventListener("drop", onDrop as EventListener);
+    dom.addEventListener("dragover", onDragOver as EventListener);
+
+    return () => {
+      dom.removeEventListener("paste", onPaste as EventListener);
+      dom.removeEventListener("drop", onDrop as EventListener);
+      dom.removeEventListener("dragover", onDragOver as EventListener);
+    };
+  }, [editor, handleIncomingFiles]);
 
   useEffect(() => {
     if (!editor || externalDoc === undefined) return;

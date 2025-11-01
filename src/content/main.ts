@@ -1,13 +1,25 @@
+declare global {
+  interface Window {
+    __NASGE_STEAM_CONTENT_INITIALIZED__?: boolean;
+  }
+}
+
 import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
+  SteamUploadRequest,
   UploadResult
 } from "../shared/messages";
 import { handleUploadRequest } from "./steamBridge";
 
 (() => {
+  if (window.__NASGE_STEAM_CONTENT_INITIALIZED__) {
+    return;
+  }
+  window.__NASGE_STEAM_CONTENT_INITIALIZED__ = true;
+
   console.info("[NASGE] Content script injected:", window.location.href);
 
   chrome.runtime.onMessage.addListener(
@@ -42,6 +54,22 @@ async function dispatchSteamBridgeMessage(
   message: SteamBridgeRequest,
   sendResponse: (response: SteamBridgeResponse<DispatchPayload>) => void
 ) {
+  if (message.action === "upload-image") {
+    const payload = message as SteamUploadRequest;
+    const raw = payload.file?.data;
+    const byteLength = Array.isArray(raw)
+      ? raw.length
+      : raw instanceof ArrayBuffer
+        ? raw.byteLength
+        : typeof (raw as { byteLength?: number })?.byteLength === "number"
+          ? (raw as { byteLength: number }).byteLength
+          : null;
+    console.info("[NASGE][Content] 接收到上传消息", {
+      byteLength,
+      name: payload.file?.name
+    });
+  }
+
   try {
     switch (message.action) {
       case "ping": {
