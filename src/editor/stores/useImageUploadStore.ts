@@ -48,8 +48,7 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
   },
   prepare: (file, scope, metadata) => {
     const state = get();
-    const nextNumber = (state.counters[scope] ?? 0) + 1;
-    const generatedName = `${nextNumber}.${extractExtension(file.name)}`;
+    const generatedName = buildGeneratedName(file.name, state);
     const id = createId();
     const now = Date.now();
 
@@ -67,10 +66,7 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
     };
 
     set((state) => ({
-      counters: {
-        ...state.counters,
-        [scope]: nextNumber
-      },
+      counters: state.counters,
       items: {
         ...state.items,
         [id]: record
@@ -161,8 +157,39 @@ export const useImageUploadStore = create<ImageUploadState>((set, get) => ({
   }
 }));
 
+function buildGeneratedName(originalName: string, state: ImageUploadState): string {
+  const sanitized = sanitizeFileName(originalName);
+  if (!state.order.some((id) => state.items[id]?.generatedName === sanitized)) {
+    return sanitized;
+  }
+
+  const ext = extractExtension(originalName);
+  const base = sanitized.replace(new RegExp(`\\.${ext}$`, "i"), "");
+
+  let index = 1;
+  let candidate = `${base}_${index}.${ext}`;
+  while (state.order.some((id) => state.items[id]?.generatedName === candidate)) {
+    index += 1;
+    candidate = `${base}_${index}.${ext}`;
+  }
+
+  return candidate;
+}
+
+function sanitizeFileName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) {
+    return `image_${Date.now()}.png`;
+  }
+
+  const ext = extractExtension(trimmed);
+  const base = trimmed.replace(new RegExp(`\\.${ext}$`, "i"), "");
+  const safeBase = base.replace(/[\s\\/:*?"<>|]/g, "_");
+  return `${safeBase}.${ext}`;
+}
+
 function extractExtension(name: string): string {
-  const match = /\.([a-zA-Z0-9]+)$/.exec(name);
+  const match = /\.([a-zA-Z0-9]+)$/.exec(name ?? "");
   if (!match) {
     return "png";
   }

@@ -4,6 +4,11 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { processIncomingImages } from "../services/imageIntake";
+import {
+  useEditorImageNodeStore,
+  type ImageAlignment,
+  type ImageDisplayPreset
+} from "../stores/useEditorImageNodeStore";
 
 const toolbarButton: React.CSSProperties = {
   border: "none",
@@ -22,12 +27,38 @@ type TipTapEditorProps = {
   onUpdate?: (payload: { html: string; json: JSONContent }) => void;
 };
 
+type ImageContextPayload = {
+  imageNodeId: string;
+};
+
+type ContextMenuMode = "selection" | "empty" | "image";
+
 type ContextMenuState = {
   visible: boolean;
   x: number;
   y: number;
-  mode: "selection" | "empty";
+  mode: ContextMenuMode;
+  payload?: ImageContextPayload;
 };
+
+const INITIAL_CONTEXT_MENU: ContextMenuState = {
+  visible: false,
+  x: 0,
+  y: 0,
+  mode: "empty"
+};
+
+const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
+  { label: "原尺寸", value: "original" },
+  { label: "半宽", value: "half" },
+  { label: "全宽", value: "full" }
+];
+
+const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> = [
+  { label: "左对齐", value: "floatLeft" },
+  { label: "右对齐", value: "floatRight" },
+  { label: "内嵌", value: "inline" }
+];
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   initialContent = "<p>欢迎使用 NASGE。这里是 Sprint 1 的 Tiptap 最小可行版本。</p>",
@@ -36,12 +67,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 }) => {
   const extensions = useMemo(() => createEditorExtensions(), []);
   const ignoreNextUpdateRef = useRef(false);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-    visible: false,
-    x: 0,
-    y: 0,
-    mode: "empty"
-  });
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
 
   const editor = useEditor({
     extensions,
@@ -63,6 +89,18 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       });
     }
   });
+
+  const contextMenuImageNode = useEditorImageNodeStore(
+    useCallback(
+      (state) =>
+        contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
+          ? state.nodes[contextMenu.payload.imageNodeId]
+          : undefined,
+      [contextMenu]
+    )
+  );
+  const updateImageDisplay = useEditorImageNodeStore((state) => state.updateDisplay);
+  const removeImageNode = useEditorImageNodeStore((state) => state.removeNode);
 
   const toggleLink = useCallback(() => {
     if (!editor) return;
@@ -123,8 +161,46 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   }, [editor]);
 
   const closeContextMenu = useCallback(() => {
-    setContextMenu((prev) => ({ ...prev, visible: false }));
+    setContextMenu(INITIAL_CONTEXT_MENU);
   }, []);
+
+  const applyImagePreset = useCallback(
+    (preset: ImageDisplayPreset) => {
+      if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+        return;
+      }
+      editor?.commands.focus();
+      updateImageDisplay(contextMenu.payload.imageNodeId, {
+        preset,
+        customWidthPx: undefined
+      });
+    },
+    [contextMenu, editor, updateImageDisplay]
+  );
+
+  const applyImageAlignment = useCallback(
+    (alignment: ImageAlignment) => {
+      if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+        return;
+      }
+      editor?.commands.focus();
+      updateImageDisplay(contextMenu.payload.imageNodeId, {
+        alignment
+      });
+    },
+    [contextMenu, editor, updateImageDisplay]
+  );
+
+  const handleDeleteImage = useCallback(() => {
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+      return;
+    }
+
+    const nodeId = contextMenu.payload.imageNodeId;
+    editor.commands.focus();
+    editor.chain().focus().deleteSelection().run();
+    removeImageNode(nodeId);
+  }, [contextMenu, editor, removeImageNode]);
 
   const insertImage = useCallback(() => {
     if (!editor) return;
@@ -186,7 +262,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const cursorPosition = editor.state.selection.anchor;
 
       try {
-        await processIncomingImages(files, {
+        await processIncomingImages(editor, files, {
           source,
           cursorPosition
         });
@@ -385,7 +461,42 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }}
         onContextMenu={(event) => {
           event.preventDefault();
-          const mode = editor.state.selection.empty ? "empty" : "selection";
+          if (!editor) {
+            return;
+          }
+
+          const target = event.target as HTMLElement;
+          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
+          if (imageElement) {
+            const imageNodeId = imageElement.dataset.imageNodeId;
+            if (imageNodeId) {
+              const coords = editor.view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY
+              });
+              if (coords?.pos != null) {
+                editor
+                  .chain()
+                  .focus()
+                  .setNodeSelection(coords.pos)
+                  .run();
+              } else {
+                editor.commands.focus();
+              }
+
+              setContextMenu({
+                visible: true,
+                x: event.clientX,
+                y: event.clientY,
+                mode: "image",
+                payload: { imageNodeId }
+              });
+              return;
+            }
+          }
+
+          const mode: ContextMenuMode = editor.state.selection.empty ? "empty" : "selection";
+
           setContextMenu({
             visible: true,
             x: event.clientX,
@@ -415,7 +526,50 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             boxShadow: "0 16px 38px rgba(6, 12, 20, 0.55)"
           }}
         >
-          {contextMenu.mode === "selection" ? (
+          {contextMenu.mode === "image" ? (
+            contextMenuImageNode ? (
+              <>
+                <MenuSectionLabel label="尺寸" />
+                {IMAGE_SIZE_OPTIONS.map((option) => (
+                  <MenuItem
+                    key={option.value}
+                    label={option.label}
+                    active={contextMenuImageNode.display.preset === option.value}
+                    onClick={() => applyImagePreset(option.value)}
+                    onComplete={closeContextMenu}
+                  />
+                ))}
+                <MenuDivider />
+                <MenuSectionLabel label="对齐" />
+                {IMAGE_ALIGNMENT_OPTIONS.map((option) => (
+                  <MenuItem
+                    key={option.value}
+                    label={option.label}
+                    active={contextMenuImageNode.display.alignment === option.value}
+                    onClick={() => applyImageAlignment(option.value)}
+                    onComplete={closeContextMenu}
+                  />
+                ))}
+                <MenuDivider />
+                <MenuItem
+                  label="删除图片"
+                  danger
+                  onClick={handleDeleteImage}
+                  onComplete={closeContextMenu}
+                />
+              </>
+            ) : (
+              <div
+                style={{
+                  padding: "0.6rem 0.75rem",
+                  color: "rgba(205, 226, 255, 0.75)",
+                  fontSize: "0.8rem"
+                }}
+              >
+                图片数据暂不可用。
+              </div>
+            )
+          ) : contextMenu.mode === "selection" ? (
             <>
               <MenuItem
                 label="一级标题"
@@ -485,24 +639,30 @@ type MenuItemProps = {
   label: string;
   onClick: () => void;
   onComplete: () => void;
+  active?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
 };
 
-const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete }) => (
+const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active, danger, disabled }) => (
   <button
     type="button"
+    disabled={disabled}
     onClick={() => {
+      if (disabled) return;
       onClick();
       onComplete();
     }}
     style={{
       border: "none",
-      background: "transparent",
+      background: active ? "rgba(102, 192, 244, 0.16)" : "transparent",
       textAlign: "left",
       padding: "0.55rem 0.75rem",
-      color: "#cde2ff",
+      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "#e5f3ff" : "#cde2ff",
       borderRadius: "0.6rem",
       fontSize: "0.85rem",
-      cursor: "pointer"
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontWeight: active ? 600 : 500
     }}
     onMouseDown={(event) => {
       event.preventDefault();
@@ -510,6 +670,30 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete }) => (
   >
     {label}
   </button>
+);
+
+const MenuSectionLabel: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    style={{
+      padding: "0.3rem 0.75rem 0.15rem",
+      fontSize: "0.72rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: "rgba(173, 205, 244, 0.7)"
+    }}
+  >
+    {label}
+  </div>
+);
+
+const MenuDivider: React.FC = () => (
+  <div
+    style={{
+      height: "1px",
+      margin: "0.25rem 0.5rem",
+      background: "rgba(102, 192, 244, 0.18)"
+    }}
+  />
 );
 
 type ToolbarIconProps = {

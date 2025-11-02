@@ -27,10 +27,22 @@ export type SteamPingRequest = BridgeBase & {
   action: "ping";
 };
 
+export type SteamGuideImage = {
+  previewId: string;
+  fileName: string;
+  thumbnailUrl?: string;
+};
+
+export type SteamFetchGuideImagesRequest = BridgeBase & {
+  action: "fetch-guide-images";
+  scope: UploadScope;
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamCollectContextRequest
-  | SteamPingRequest;
+  | SteamPingRequest
+  | SteamFetchGuideImagesRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

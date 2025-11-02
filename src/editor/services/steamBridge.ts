@@ -2,6 +2,8 @@ import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
   SteamUploadRequest,
+  SteamFetchGuideImagesRequest,
+  SteamGuideImage,
   UploadResult,
   UploadScope
 } from "../../shared/messages";
@@ -82,4 +84,19 @@ export async function pingSteamBridge(): Promise<void> {
   if (!response.ok) {
     throw new Error(response.error);
   }
+}
+
+export async function fetchSteamGuideImages(scope: UploadScope = "chapter-preview"): Promise<SteamGuideImage[]> {
+  const request: SteamFetchGuideImagesRequest = {
+    channel: "nasge:steam",
+    action: "fetch-guide-images",
+    scope
+  };
+
+  const response = await sendSteamRequest(request);
+  if (!response.ok) {
+    throw new Error(response.error);
+  }
+
+  return (response.data as SteamGuideImage[]) ?? [];
 }

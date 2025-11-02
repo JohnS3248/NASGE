@@ -1,0 +1,232 @@
+import { create } from "zustand";
+import type { UploadResult } from "../../shared/messages";
+import type {
+  ImageUploadMetadata,
+  ImageUploadRecord
+} from "./useImageUploadStore";
+
+export type ImageNodeStatus =
+  | "intake"
+  | "uploading"
+  | "ready"
+  | "error"
+  | "detached";
+
+export type ImageDisplayPreset = "original" | "full" | "half" | "thumb";
+export type ImageAlignment = "floatLeft" | "floatRight" | "inline";
+
+export const DEFAULT_IMAGE_PRESET: ImageDisplayPreset = "original";
+export const DEFAULT_IMAGE_ALIGNMENT: ImageAlignment = "inline";
+
+export type EditorImageNode = {
+  nodeId: string;
+  uploadId?: string;
+  previewId?: string;
+  redirectUrl?: string;
+  cdnUrl?: string;
+  status: ImageNodeStatus;
+  originalName: string;
+  fileName?: string;
+  fileSize: number;
+  originalSize?: {
+    width: number;
+    height: number;
+  };
+  display: {
+    preset: ImageDisplayPreset;
+    alignment: ImageAlignment;
+    customWidthPx?: number;
+  };
+  metadata: {
+    source?: ImageUploadMetadata["source"];
+    cursorPosition?: number;
+    insertedAt: number;
+    previewDataUrl?: string;
+  };
+  error?: string;
+};
+
+type RegisterNodeOptions = {
+  file: File;
+  metadata: {
+    source?: ImageUploadMetadata["source"];
+    cursorPosition?: number;
+  };
+  previewDataUrl?: string;
+  intrinsicSize?: {
+    width: number;
+    height: number;
+  };
+};
+
+type MarkUploadedPayload = {
+  record: ImageUploadRecord;
+  result: UploadResult;
+};
+
+type EditorImageNodePatch = Partial<
+  Omit<EditorImageNode, "metadata" | "display">
+> & {
+  metadata?: Partial<EditorImageNode["metadata"]>;
+  display?: Partial<EditorImageNode["display"]>;
+};
+
+type EditorImageNodeState = {
+  nodes: Record<string, EditorImageNode>;
+  registerFromLocalFile: (options: RegisterNodeOptions) => EditorImageNode;
+  attachUploadRecord: (nodeId: string, record: ImageUploadRecord) => void;
+  markUploading: (nodeId: string) => void;
+  markUploaded: (nodeId: string, payload: MarkUploadedPayload) => void;
+  markFailed: (nodeId: string, error: string) => void;
+  removeNode: (nodeId: string) => void;
+  updateDisplay: (
+    nodeId: string,
+    patch: Partial<EditorImageNode["display"]>
+  ) => void;
+};
+
+export const useEditorImageNodeStore = create<EditorImageNodeState>(
+  (set, get) => ({
+    nodes: {},
+    registerFromLocalFile: ({ file, metadata, previewDataUrl, intrinsicSize }) => {
+      const nodeId = createNodeId();
+      const now = Date.now();
+      const node: EditorImageNode = {
+        nodeId,
+        status: "intake",
+        originalName: file.name,
+        fileSize: file.size,
+        originalSize: intrinsicSize,
+        display: {
+          preset: DEFAULT_IMAGE_PRESET,
+          alignment: DEFAULT_IMAGE_ALIGNMENT
+        },
+        metadata: {
+          source: metadata.source,
+          cursorPosition: metadata.cursorPosition,
+          insertedAt: now,
+          previewDataUrl
+        }
+      };
+
+      set((state) => ({
+        nodes: {
+          ...state.nodes,
+          [nodeId]: node
+        }
+      }));
+
+      return node;
+    },
+    attachUploadRecord: (nodeId, record) => {
+      set((state) =>
+        updateNode(state, nodeId, {
+          uploadId: record.id,
+          fileName: record.generatedName ?? record.originalName
+        })
+      );
+    },
+    markUploading: (nodeId) => {
+      set((state) => updateNode(state, nodeId, { status: "uploading" }));
+    },
+    markUploaded: (nodeId, payload) => {
+      const { record, result } = payload;
+      const previewId = result.previewIds[0];
+      const cdnUrl = previewId ? buildPreviewImageUrl(previewId) : undefined;
+
+      const previous = get().nodes[nodeId];
+      set((state) =>
+        updateNode(state, nodeId, {
+          status: "ready",
+          previewId,
+          redirectUrl: result.redirectUrl,
+          cdnUrl,
+          uploadId: record.id,
+          fileName: record.generatedName ?? record.originalName,
+          metadata: {
+            previewDataUrl: undefined
+          }
+        })
+      );
+    },
+    markFailed: (nodeId, error) => {
+      set((state) =>
+        updateNode(state, nodeId, {
+          status: "error",
+          error
+        })
+      );
+    },
+    removeNode: (nodeId) => {
+      const existing = get().nodes[nodeId];
+      set((state) => {
+        if (!state.nodes[nodeId]) {
+          return state;
+        }
+        const { [nodeId]: _removed, ...rest } = state.nodes;
+        return {
+          ...state,
+          nodes: rest
+        };
+      });
+    },
+    updateDisplay: (nodeId, patch) => {
+      set((state) =>
+        updateNode(state, nodeId, {
+          display: patch
+        })
+      );
+    }
+  })
+);
+
+function updateNode(
+  state: EditorImageNodeState,
+  nodeId: string,
+  patch: EditorImageNodePatch
+) {
+  const node = state.nodes[nodeId];
+  if (!node) {
+    return state;
+  }
+
+  const { metadata: metadataPatch, display: displayPatch, ...rest } = patch;
+  const nextMetadata =
+    metadataPatch === undefined
+      ? node.metadata
+      : {
+          ...node.metadata,
+          ...metadataPatch
+        };
+  const nextDisplay =
+    displayPatch === undefined
+      ? node.display
+      : {
+          ...node.display,
+          ...displayPatch
+        };
+
+  return {
+    ...state,
+    nodes: {
+      ...state.nodes,
+      [nodeId]: {
+        ...node,
+        ...rest,
+        metadata: nextMetadata,
+        display: nextDisplay
+      }
+    }
+  };
+}
+
+function createNodeId(): string {
+  if (typeof crypto?.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `img_node_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
+export function buildPreviewImageUrl(previewId: string): string {
+  return `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}`;
+}

@@ -8,6 +8,7 @@
     "dev:extension": "vite build --watch --mode development",
     "build": "npm run type-check && vite build",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "keywords": [],
@@ -42,6 +43,7 @@
     "tslib": "^2.8.1",
     "type-fest": "^5.1.0",
     "typescript": "^5.9.3",
-    "vite": "^7.1.12"
+    "vite": "^7.1.12",
+    "vitest": "^2.1.4"
   }
 }

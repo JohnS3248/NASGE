@@ -13,6 +13,7 @@ import Image from "@tiptap/extension-image";
 
 import Spoiler from "../extensions/spoiler";
 import SteamBlockquote from "../extensions/steamBlockquote";
+import SteamImage from "../extensions/steamImage";
 
 export const createEditorExtensions = (): Extensions => [
   StarterKit.configure({
@@ -40,6 +41,7 @@ export const createEditorExtensions = (): Extensions => [
       class: "nasge-image"
     }
   }),
+  SteamImage,
   Table.configure({
     resizable: false,
     HTMLAttributes: {

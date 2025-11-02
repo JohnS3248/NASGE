@@ -6,6 +6,7 @@ import { JSONContent } from "@tiptap/core";
 import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
 import UploadStatusHUD from "./components/UploadStatusHUD";
+import SteamImagePool from "./components/SteamImagePool";
 
 const App: React.FC = () => {
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
@@ -69,6 +70,11 @@ const App: React.FC = () => {
     }
   }, [activeChapter, updateChapter, htmlExtensions, docToHtml]);
 
+  const handleDeleteUploadedRecord = useCallback((recordId: string) => {
+    console.info("[NASGE] 请求删除 Steam 预览记录", recordId);
+    window.alert("图片删除功能正在实现中，请手动在 Steam 页面移除对应图片。");
+  }, []);
+
   const sectionStyle: React.CSSProperties = {
     borderRadius: "1.05rem",
     background: "rgba(13, 23, 36, 0.9)",
@@ -128,7 +134,7 @@ const App: React.FC = () => {
         style={{
           ...sectionStyle,
           display: "grid",
-          gridTemplateColumns: "280px 1fr",
+          gridTemplateColumns: "280px 1fr 260px",
           gap: "1.5rem",
           alignItems: "start"
         }}
@@ -236,62 +242,71 @@ const App: React.FC = () => {
             </button>
           </div>
         </aside>
-
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-        <div
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: "0.6rem"
+            }}
+          >
+            <button
+              type="button"
+              onClick={handleImportBBCode}
+              style={{
+                padding: "0.45rem 1rem",
+                borderRadius: "0.6rem",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              导入 BBCode
+            </button>
+            <button
+              type="button"
+              onClick={handleExportBBCode}
+              style={{
+                padding: "0.45rem 1rem",
+                borderRadius: "0.6rem",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background:
+                  "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                color: "#06101e",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              导出 BBCode
+            </button>
+          </div>
+          <TipTapEditor
+            externalDoc={externalDoc}
+            onUpdate={({ html, json }) => {
+              setCurrentHtml(html);
+              if (activeChapter) {
+                const nextSerialized = JSON.stringify(json);
+                lastAppliedSerializedRef.current = nextSerialized;
+                const currentSerialized = JSON.stringify(activeChapter.content);
+                if (nextSerialized !== currentSerialized) {
+                  updateChapter(activeChapter.id, { content: json });
+                }
+              }
+            }}
+          />
+        </div>
+
+        <aside
           style={{
             display: "flex",
-            justifyContent: "flex-end",
-            gap: "0.6rem"
+            flexDirection: "column",
+            gap: "0.75rem"
           }}
         >
-          <button
-            type="button"
-            onClick={handleImportBBCode}
-            style={{
-              padding: "0.45rem 1rem",
-              borderRadius: "0.6rem",
-              border: "1px solid rgba(102, 192, 244, 0.35)",
-              background: "rgba(12, 21, 33, 0.85)",
-              color: "#cfe7ff",
-              fontWeight: 600,
-              cursor: "pointer"
-            }}
-          >
-            导入 BBCode
-          </button>
-          <button
-            type="button"
-            onClick={handleExportBBCode}
-            style={{
-              padding: "0.45rem 1rem",
-              borderRadius: "0.6rem",
-              border: "1px solid rgba(102, 192, 244, 0.35)",
-              background:
-                "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-              color: "#06101e",
-              fontWeight: 600,
-              cursor: "pointer"
-            }}
-          >
-            导出 BBCode
-          </button>
-        </div>
-        <TipTapEditor
-          externalDoc={externalDoc}
-          onUpdate={({ html, json }) => {
-            setCurrentHtml(html);
-            if (activeChapter) {
-              const nextSerialized = JSON.stringify(json);
-              lastAppliedSerializedRef.current = nextSerialized;
-              const currentSerialized = JSON.stringify(activeChapter.content);
-              if (nextSerialized !== currentSerialized) {
-                updateChapter(activeChapter.id, { content: json });
-              }
-            }
-          }}
-        />
-        </div>
+          <SteamImagePool onDelete={handleDeleteUploadedRecord} />
+        </aside>
       </section>
       <UploadStatusHUD />
     </div>

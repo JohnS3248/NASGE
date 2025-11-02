@@ -1,15 +1,31 @@
-import type { UploadScope } from "../../shared/messages";
+import type { UploadResult, UploadScope } from "../../shared/messages";
 import { uploadSteamImage } from "./steamBridge";
-import { useImageUploadStore, type ImageUploadMetadata } from "../stores/useImageUploadStore";
+import {
+  useImageUploadStore,
+  type ImageUploadMetadata,
+  type ImageUploadRecord
+} from "../stores/useImageUploadStore";
+
+export type UploadLifecycleHooks = {
+  onPrepared?: (record: ImageUploadRecord) => void;
+  onUploading?: (record: ImageUploadRecord) => void;
+  onUploaded?: (
+    record: ImageUploadRecord,
+    result: UploadResult
+  ) => void;
+  onFailed?: (record: ImageUploadRecord, error: string) => void;
+};
 
 export async function uploadImageViaSteam(
   file: File,
   scope: UploadScope = "chapter-preview",
-  metadata?: ImageUploadMetadata
+  metadata?: ImageUploadMetadata,
+  hooks?: UploadLifecycleHooks
 ) {
   const store = useImageUploadStore.getState();
   const { prepare, markUploading, markUploaded, markFailed, setMetadata } = store;
   const record = prepare(file, scope, metadata);
+  hooks?.onPrepared?.(record);
 
   console.info("[NASGE] uploadImageViaSteam -> 准备上传文件", {
     name: file.name,
@@ -21,6 +37,9 @@ export async function uploadImageViaSteam(
 
   try {
     markUploading(record.id);
+    hooks?.onUploading?.(
+      useImageUploadStore.getState().items[record.id] ?? record
+    );
     slowWarningTimer = window.setTimeout(() => {
       useImageUploadStore.getState().setMetadata(record.id, {
         note: "等待 Steam 响应…请检查 Steam 页面是否弹出提示。"
@@ -32,11 +51,15 @@ export async function uploadImageViaSteam(
     setMetadata(record.id, { note: undefined });
     const finalRecord =
       useImageUploadStore.getState().items[record.id] ?? record;
+    hooks?.onUploaded?.(finalRecord, result);
     return { record: finalRecord, result };
   } catch (error) {
     const message = formatUploadErrorMessage(error);
     markFailed(record.id, message);
     setMetadata(record.id, { note: undefined });
+    const failedRecord =
+      useImageUploadStore.getState().items[record.id] ?? record;
+    hooks?.onFailed?.(failedRecord, message);
     throw error instanceof Error ? error : new Error(message);
   } finally {
     if (slowWarningTimer !== undefined) {

@@ -1,0 +1,296 @@
+import React, { useEffect, useMemo } from "react";
+import { useImageUploadStore } from "../stores/useImageUploadStore";
+import { buildPreviewImageUrl } from "../stores/useEditorImageNodeStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+
+type SteamImagePoolProps = {
+  onDelete?: (recordId: string) => void;
+};
+
+const statusLabelMap: Record<string, string> = {
+  uploading: "上传中",
+  uploaded: "已上传",
+  failed: "上传失败",
+  idle: "待上传"
+};
+
+const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
+  const items = useImageUploadStore((state) => state.items);
+  const order = useImageUploadStore((state) => state.order);
+
+  const records = useMemo(
+    () =>
+      order
+        .map((id) => items[id])
+        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    [order, items]
+  );
+
+  const remoteItems = useSteamGuideImageStore((state) => state.items);
+  const remoteStatus = useSteamGuideImageStore((state) => state.status);
+  const remoteError = useSteamGuideImageStore((state) => state.error);
+  const refreshRemote = useSteamGuideImageStore((state) => state.refresh);
+
+  useEffect(() => {
+    if (remoteStatus === "idle") {
+      void refreshRemote();
+    }
+  }, [remoteStatus, refreshRemote]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.75rem",
+        padding: "1rem",
+        borderRadius: "0.9rem",
+        background: "rgba(8, 14, 23, 0.82)",
+        border: "1px solid rgba(102, 192, 244, 0.2)",
+        maxHeight: "74vh",
+        overflowY: "auto"
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontWeight: 600,
+          color: "#d7e8ff",
+          fontSize: "0.95rem"
+        }}
+      >
+        <span>Steam 图片池</span>
+        <button
+          type="button"
+          onClick={() => refreshRemote()}
+          style={{
+            border: "1px solid rgba(102, 192, 244, 0.3)",
+            background: "rgba(11, 20, 33, 0.82)",
+            color: "#bcd9ff",
+            borderRadius: "0.5rem",
+            padding: "0.25rem 0.6rem",
+            fontSize: "0.75rem",
+            cursor: remoteStatus === "loading" ? "progress" : "pointer"
+          }}
+          disabled={remoteStatus === "loading"}
+        >
+          {remoteStatus === "loading" ? "刷新中…" : "刷新"}
+        </button>
+      </div>
+      {remoteError ? (
+        <div
+          style={{
+            padding: "0.5rem 0.6rem",
+            borderRadius: "0.6rem",
+            background: "rgba(255, 118, 118, 0.12)",
+            color: "#ffb3b3",
+            fontSize: "0.78rem"
+          }}
+        >
+          {remoteError}
+        </div>
+      ) : null}
+
+      {records.length ? (
+        <section
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.65rem"
+          }}
+        >
+          <SectionTitle>上传队列</SectionTitle>
+          {records.map((record) => {
+            const previewId = record.previewIds[0];
+            const src = previewId ? buildPreviewImageUrl(previewId) : undefined;
+            const statusLabel = statusLabelMap[record.status] ?? record.status;
+            return (
+              <div
+                key={record.id}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.55rem",
+                  padding: "0.65rem",
+                  borderRadius: "0.7rem",
+                  background: "rgba(12, 20, 32, 0.9)",
+                  border: "1px solid rgba(102, 192, 244, 0.18)"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "0.4rem"
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: "0.8rem",
+                      fontWeight: 600,
+                      color: "#cfe2ff",
+                      lineHeight: 1.4
+                    }}
+                  >
+                    {record.generatedName}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color:
+                        record.status === "failed"
+                          ? "#ff8f8f"
+                          : record.status === "uploaded"
+                            ? "#85ffba"
+                            : "#9ac7ff"
+                    }}
+                  >
+                    {statusLabel}
+                  </span>
+                </div>
+                {src ? (
+                  <img
+                    src={src}
+                    alt={record.generatedName}
+                    style={{
+                      width: "100%",
+                      borderRadius: "0.6rem",
+                      objectFit: "cover",
+                      background: "rgba(14, 26, 40, 0.7)"
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      height: "120px",
+                      borderRadius: "0.6rem",
+                      background: "rgba(14, 26, 40, 0.7)",
+                      border: "1px dashed rgba(102, 192, 244, 0.25)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "rgba(205, 226, 255, 0.6)",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    等待 Steam 返回预览 ID…
+                  </div>
+                )}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    fontSize: "0.75rem",
+                    color: "rgba(205, 226, 255, 0.65)"
+                  }}
+                >
+                  <span>预览 ID: {previewId ?? "尚未生成"}</span>
+                  <button
+                    type="button"
+                    disabled={record.status !== "uploaded"}
+                    onClick={() => onDelete?.(record.id)}
+                    style={{
+                      border: "none",
+                      borderRadius: "0.5rem",
+                      padding: "0.3rem 0.6rem",
+                      background:
+                        record.status === "uploaded"
+                          ? "rgba(255, 118, 118, 0.2)"
+                          : "rgba(120, 140, 160, 0.18)",
+                      color: record.status === "uploaded" ? "#ff9a9a" : "rgba(200, 215, 236, 0.6)",
+                      cursor: record.status === "uploaded" ? "pointer" : "not-allowed",
+                      fontWeight: 600
+                    }}
+                  >
+                    删除
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+
+      <section
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.65rem"
+        }}
+      >
+        <SectionTitle>Steam 已有图片</SectionTitle>
+        {remoteStatus === "loading" && !remoteItems.length ? (
+          <div style={{ fontSize: "0.8rem", color: "rgba(205, 226, 255, 0.7)" }}>正在加载图片池…</div>
+        ) : null}
+        {!remoteItems.length && remoteStatus === "ready" ? (
+          <div style={{ fontSize: "0.8rem", color: "rgba(205, 226, 255, 0.65)" }}>
+            当前指南尚未有历史图片。
+          </div>
+        ) : null}
+        {remoteItems.map((asset) => (
+          <div
+            key={asset.previewId}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.5rem",
+              padding: "0.6rem",
+              borderRadius: "0.7rem",
+              background: "rgba(12, 20, 32, 0.9)",
+              border: "1px solid rgba(102, 192, 244, 0.18)"
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.8rem",
+                color: "#cfe2ff",
+                fontWeight: 600
+              }}
+            >
+              {asset.fileName}
+            </div>
+            {asset.thumbnailUrl ? (
+              <img
+                src={asset.thumbnailUrl}
+                alt={asset.fileName}
+                style={{
+                  width: "100%",
+                  borderRadius: "0.6rem",
+                  objectFit: "cover",
+                  background: "rgba(14, 26, 40, 0.7)"
+                }}
+              />
+            ) : null}
+            <div
+              style={{
+                fontSize: "0.75rem",
+                color: "rgba(205, 226, 255, 0.65)"
+              }}
+            >
+              预览 ID: {asset.previewId}
+            </div>
+          </div>
+        ))}
+      </section>
+    </div>
+  );
+};
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div
+    style={{
+      fontSize: "0.78rem",
+      color: "rgba(173, 202, 236, 0.78)",
+      letterSpacing: "0.08em",
+      textTransform: "uppercase"
+    }}
+  >
+    {children}
+  </div>
+);
+
+export default SteamImagePool;

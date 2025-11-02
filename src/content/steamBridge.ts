@@ -1,5 +1,6 @@
 import type {
   SteamUploadRequest,
+  SteamGuideImage,
   UploadContext,
   UploadResult,
   UploadScope
@@ -65,17 +66,17 @@ export async function handleUploadRequest(
   }
   fireUpdateEvents(initialFileInput);
 
-  let preparation: PreparationResult;
-  try {
-    preparation = await waitForSteamPreparation(
+  let preparation =
+    await waitForSteamPreparation(
       request.scope,
       initialForm,
       initialFileInput,
       file,
       managedInputs
     );
-  } catch (error) {
-    console.warn("[NASGE] Steam 自动准备阶段失败，尝试手动补齐字段。", error);
+
+  if (!preparation) {
+    console.info("[NASGE] Steam 自动准备未在时限内完成，改用手动补齐流程。");
     preparation = manualPrepareUpload(request.scope, file, managedInputs);
   }
 
@@ -264,16 +265,13 @@ function parseSize(value?: string): number | null {
 
 function interpretUploadRedirect(url: string): { previewIds: string[] } {
   const parsed = new URL(url);
-  const success = parsed.searchParams.get("fileuploadsuccess") === "1";
+  const successCode = parsed.searchParams.get("fileuploadsuccess") ?? "0";
   const previewIds = parsed.searchParams.getAll("previewid[]").filter(Boolean);
   const errorCode = parsed.searchParams.get("error") ?? parsed.searchParams.get("warning");
 
-  if (!success) {
-    throw new Error(
-      errorCode
-        ? `Steam 上传失败（错误码 ${errorCode}）。`
-        : "Steam 上传失败，未收到成功标记。"
-    );
+  if (successCode !== "1") {
+    const mappedMessage = mapSteamUploadError(successCode, errorCode);
+    throw new Error(mappedMessage);
   }
 
   if (!previewIds.length) {
@@ -281,6 +279,147 @@ function interpretUploadRedirect(url: string): { previewIds: string[] } {
   }
 
   return { previewIds };
+}
+
+export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuideImage[]> {
+  const { form } = resolveUploadElements(scope);
+
+  const sessionId = readFormField(form, "sessionid");
+  const appId = readFormField(form, "appid") ?? readFormField(form, "consumer_app_id");
+  const guideId =
+    readFormField(form, "id") ?? new URL(window.location.href).searchParams.get("id") ?? undefined;
+
+  if (!sessionId || !appId || !guideId) {
+    throw new Error("无法收集 Steam 图片池所需的上下文信息（appid/sessionid/id）。");
+  }
+
+  const params = new URLSearchParams();
+  params.set("appid", appId);
+  params.set("sessionid", sessionId);
+  params.set("id", guideId);
+  params.set("filetype", "4");
+  params.set("p", "1");
+
+  const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest"
+    },
+    body: params.toString(),
+    credentials: "include"
+  });
+
+  if (!response.ok) {
+    throw new Error(`拉取 Steam 图片池失败：${response.status}`);
+  }
+
+  const html = await response.text();
+  return parseGuideImagePool(html);
+}
+
+function mapSteamUploadError(successCode: string, errorCode: string | null): string {
+  if (successCode === "29") {
+    return "Steam 上传失败（重复的图片或使用中的文件）。请确认该图片未在当前指南中占用，或尝试修改文件名后重新上传。";
+  }
+
+  if (errorCode) {
+    return `Steam 上传失败（错误码 ${errorCode}）。`;
+  }
+
+  return `Steam 上传失败，返回代码 ${successCode}。`;
+}
+
+function readFormField(form: HTMLFormElement, name: string): string | undefined {
+  const input = form.querySelector<HTMLInputElement>(`input[name='${name}']`);
+  const value = input?.value?.trim();
+  return value ? value : undefined;
+}
+
+function parseGuideImagePool(html: string): SteamGuideImage[] {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const images = new Map<string, SteamGuideImage>();
+
+  const nodes = Array.from(doc.querySelectorAll<HTMLElement>("[data-previewid], img"));
+  for (const node of nodes) {
+    let previewId: string | undefined;
+    let thumbnailUrl: string | undefined;
+    let fileName: string | undefined;
+
+    if (node instanceof HTMLImageElement) {
+      const src = node.getAttribute("src") ?? "";
+      const match = /UGC\/(\d+)/i.exec(src);
+      if (match) {
+        previewId = match[1];
+        thumbnailUrl = absoluteUrl(src);
+      }
+      fileName =
+        node.getAttribute("data-filename") ??
+        node.getAttribute("data-title") ??
+        node.getAttribute("title") ??
+        node.getAttribute("alt") ??
+        fileName;
+    }
+
+    if (!previewId) {
+      const attr = node.getAttribute("data-previewid");
+      if (attr) {
+        previewId = attr;
+      }
+      const thumbAttr = node.getAttribute("data-thumbnail-url");
+      if (thumbAttr) {
+        thumbnailUrl = absoluteUrl(thumbAttr);
+      }
+      const nameAttr = node.getAttribute("data-filename") ?? node.getAttribute("data-title");
+      if (nameAttr) {
+        fileName = nameAttr;
+      }
+    }
+
+    if (!previewId && node instanceof HTMLElement) {
+      const onclick = node.getAttribute("onclick") ?? "";
+      const match = /SelectItem[^]*?(['"])(\d+)\1/.exec(onclick) ?? /previewid=(\d+)/.exec(onclick);
+      if (match) {
+        previewId = match[2] ?? match[1];
+      }
+    }
+
+    if (!previewId) {
+      continue;
+    }
+
+    if (!thumbnailUrl && node instanceof HTMLImageElement) {
+      const src = node.getAttribute("src") ?? "";
+      thumbnailUrl = absoluteUrl(src);
+    }
+
+    if (!fileName) {
+      const label = node.getAttribute("data-filename") ?? node.textContent ?? "";
+      fileName = label.trim() || `preview_${previewId}`;
+    }
+
+    const record: SteamGuideImage = {
+      previewId,
+      fileName,
+      thumbnailUrl
+    };
+
+    if (!images.has(previewId)) {
+      images.set(previewId, record);
+    }
+  }
+
+  return Array.from(images.values());
+}
+
+function absoluteUrl(src: string): string | undefined {
+  if (!src) return undefined;
+  try {
+    return new URL(src, window.location.href).toString();
+  } catch {
+    return src;
+  }
 }
 
 function resolveUploadElements(scope: UploadScope): {
@@ -359,7 +498,7 @@ async function waitForSteamPreparation(
   initialInput: HTMLInputElement,
   file: File,
   registry: Map<HTMLInputElement, string>
-): Promise<PreparationResult> {
+): Promise<PreparationResult | null> {
   const deadline = Date.now() + 7_000;
   let lastContext: UploadContext | null = null;
   let currentForm = initialForm;
@@ -415,8 +554,10 @@ async function waitForSteamPreparation(
     await delay(120);
   }
 
-  console.warn("[NASGE] 等待 Steam 准备超时，最后上下文:", lastContext);
-  throw new Error("等待 Steam 准备上传超时，请确认页面状态后重试。");
+  console.info("[NASGE] Steam 自动准备在时限内未完成，启用后备方案。", {
+    lastContext
+  });
+  return null;
 }
 
 function manualPrepareUpload(

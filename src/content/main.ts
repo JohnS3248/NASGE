@@ -7,12 +7,13 @@ declare global {
 import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
+  SteamGuideImage,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
   SteamUploadRequest,
   UploadResult
 } from "../shared/messages";
-import { handleUploadRequest } from "./steamBridge";
+import { handleUploadRequest, fetchGuideImagePool } from "./steamBridge";
 
 (() => {
   if (window.__NASGE_STEAM_CONTENT_INITIALIZED__) {
@@ -48,7 +49,7 @@ import { handleUploadRequest } from "./steamBridge";
   window.addEventListener("message", handlePageBridgeMessage);
 })();
 
-type DispatchPayload = UploadResult | { ready: boolean };
+type DispatchPayload = UploadResult | { ready: boolean } | SteamGuideImage[];
 
 async function dispatchSteamBridgeMessage(
   message: SteamBridgeRequest,
@@ -79,6 +80,11 @@ async function dispatchSteamBridgeMessage(
       case "upload-image": {
         const result = await handleUploadRequest(message);
         sendResponse({ ok: true, data: result });
+        break;
+      }
+      case "fetch-guide-images": {
+        const data = await fetchGuideImagePool(message.scope);
+        sendResponse({ ok: true, data });
         break;
       }
       case "collect-upload-context": {
