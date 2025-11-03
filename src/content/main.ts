@@ -7,13 +7,14 @@ declare global {
 import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
+  SteamDeleteImageRequest,
   SteamGuideImage,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
   SteamUploadRequest,
   UploadResult
 } from "../shared/messages";
-import { handleUploadRequest, fetchGuideImagePool } from "./steamBridge";
+import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./steamBridge";
 
 (() => {
   if (window.__NASGE_STEAM_CONTENT_INITIALIZED__) {
@@ -49,7 +50,7 @@ import { handleUploadRequest, fetchGuideImagePool } from "./steamBridge";
   window.addEventListener("message", handlePageBridgeMessage);
 })();
 
-type DispatchPayload = UploadResult | { ready: boolean } | SteamGuideImage[];
+type DispatchPayload = UploadResult | { ready: boolean } | { success: boolean } | SteamGuideImage[];
 
 async function dispatchSteamBridgeMessage(
   message: SteamBridgeRequest,
@@ -85,6 +86,12 @@ async function dispatchSteamBridgeMessage(
       case "fetch-guide-images": {
         const data = await fetchGuideImagePool(message.scope);
         sendResponse({ ok: true, data });
+        break;
+      }
+      case "delete-image": {
+        const deleteRequest = message as SteamDeleteImageRequest;
+        await deleteGuideImage(deleteRequest.scope, deleteRequest.previewId);
+        sendResponse({ ok: true, data: { success: true } });
         break;
       }
       case "collect-upload-context": {

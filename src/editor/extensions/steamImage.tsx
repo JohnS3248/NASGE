@@ -238,13 +238,18 @@ function baseContainerStyle(
           : "0.75rem 1rem 0.75rem 0",
     padding: 0,
     overflow: "hidden",
-    position: "relative"
+    position: "relative",
+    verticalAlign: "top",
+    // 添加最大宽度限制，防止图片过大撑破布局
+    maxWidth: "100%"
   };
 
   if (widthMode === "full") {
     base.width = "100%";
   } else if (typeof widthPx === "number" && widthPx > 0) {
     base.width = `${widthPx}px`;
+    // 确保容器不会超过父容器宽度
+    base.maxWidth = "100%";
   }
 
   if (alignment === "floatLeft") {
@@ -269,44 +274,48 @@ function baseContainerStyle(
 }
 
 function resolveImageStyle(dimensions: RenderDimensions): React.CSSProperties {
+  const commonStyles: React.CSSProperties = {
+    display: "block",
+    height: "auto",
+    maxWidth: "100%",
+    userSelect: "none",
+    pointerEvents: "none",
+    // 确保图片保持原始宽高比
+    objectFit: "contain",
+    // 覆盖prose等全局样式
+    margin: "0 !important" as any,
+    // 确保图片宽度不会溢出容器
+    width: "100%"
+  };
+
   if (dimensions.mode === "full") {
     return {
-      display: "block",
-      width: "100%",
-      height: "auto",
-      maxWidth: "100%",
-      userSelect: "none",
-      pointerEvents: "none"
+      ...commonStyles,
+      width: "100%"
     };
   }
 
   if (dimensions.mode === "fixed" && typeof dimensions.imageWidthPx === "number") {
     return {
-      display: "block",
-      width: `${dimensions.imageWidthPx}px`,
-      height: "auto",
-      maxWidth: "100%",
-      userSelect: "none",
-      pointerEvents: "none"
+      ...commonStyles,
+      width: "100%"
     };
   }
 
   return {
-    display: "block",
-    width: "auto",
-    height: "auto",
-    maxWidth: "100%",
-    userSelect: "none",
-    pointerEvents: "none"
+    ...commonStyles,
+    width: "100%"
   };
 }
 
 function placeholderImageStyle(widthPx?: number, heightPx?: number): React.CSSProperties {
   return {
-    width: widthPx ? `${widthPx}px` : "320px",
+    width: "100%",
     height: heightPx ? `${heightPx}px` : "200px",
+    maxWidth: widthPx ? `${widthPx}px` : "320px",
     background: "rgba(14, 26, 40, 0.6)",
-    border: "1px dashed rgba(102, 192, 244, 0.32)"
+    border: "1px dashed rgba(102, 192, 244, 0.32)",
+    display: "block"
   };
 }
 
@@ -369,13 +378,17 @@ function resolveRenderDimensions(imageNode: EditorImageNode): RenderDimensions {
       };
     }
     case "original":
-    default:
+    default: {
+      // 对于原尺寸，我们设置容器宽度为原始宽度
+      // 但由于容器有 maxWidth: 100%，实际不会超出父容器
+      // 图片本身设置 width: 100%，会自动适配容器大小并保持宽高比
       return {
         mode: "fixed",
         imageWidthPx: intrinsicWidth,
         containerWidthPx: intrinsicWidth,
         estimatedHeightPx: intrinsicHeight
       };
+    }
   }
 }
 

@@ -9,6 +9,7 @@ type SteamGuideImageState = {
   status: FetchStatus;
   error?: string;
   refresh: () => Promise<void>;
+  removeItem: (previewId: string) => void;
 };
 
 export const useSteamGuideImageStore = create<SteamGuideImageState>((set) => ({
@@ -26,5 +27,10 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>((set) => ({
         error: error instanceof Error ? error.message : String(error)
       });
     }
+  },
+  removeItem: (previewId: string) => {
+    set((state) => ({
+      items: state.items.filter((item) => item.previewId !== previewId)
+    }));
   }
 }));

@@ -5,6 +5,7 @@ import type {
 } from "../stores/useImageUploadStore";
 import { uploadImageViaSteam } from "./imageUploadManager";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 
 export type IncomingImageOptions = {
   source: ImageUploadSource;
@@ -102,6 +103,8 @@ export async function processIncomingImages(
         },
         onUploaded: (record, result) => {
           imageNodeStore.markUploaded(node.nodeId, { record, result });
+          const steamImageStore = useSteamGuideImageStore.getState();
+          void steamImageStore.refresh();
         },
         onFailed: (_record, message) => {
           imageNodeStore.markFailed(node.nodeId, message);

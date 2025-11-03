@@ -7,11 +7,14 @@ import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/edito
 import { generateHTML, generateJSON } from "@tiptap/html";
 import UploadStatusHUD from "./components/UploadStatusHUD";
 import SteamImagePool from "./components/SteamImagePool";
+import { deleteSteamImage } from "./services/steamBridge";
+import { useSteamGuideImageStore } from "./stores/useSteamGuideImageStore";
 
 const App: React.FC = () => {
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
   const lastAppliedSerializedRef = useRef<string | null>(null);
+  const [chapterPanelOpen, setChapterPanelOpen] = useState(false);
 
   const { chapters, activeId, addChapter, selectChapter, updateChapter, deleteChapter, restoreChapter } = useGuideStore();
 
@@ -70,9 +73,25 @@ const App: React.FC = () => {
     }
   }, [activeChapter, updateChapter, htmlExtensions, docToHtml]);
 
-  const handleDeleteUploadedRecord = useCallback((recordId: string) => {
-    console.info("[NASGE] 请求删除 Steam 预览记录", recordId);
-    window.alert("图片删除功能正在实现中，请手动在 Steam 页面移除对应图片。");
+  const handleDeleteUploadedRecord = useCallback(async (previewId: string) => {
+    console.info("[NASGE] 请求删除 Steam 预览记录", previewId);
+
+    if (!window.confirm("确定要删除这张图片吗？删除后无法恢复。")) {
+      return;
+    }
+
+    try {
+      await deleteSteamImage(previewId, "chapter-preview");
+
+      const steamImageStore = useSteamGuideImageStore.getState();
+      steamImageStore.removeItem(previewId);
+
+      window.alert("图片已成功删除。");
+    } catch (error) {
+      console.error("[NASGE] 删除图片失败", error);
+      const message = error instanceof Error ? error.message : "删除失败，未知错误";
+      window.alert(`删除图片失败：${message}`);
+    }
   }, []);
 
   const sectionStyle: React.CSSProperties = {
@@ -133,115 +152,153 @@ const App: React.FC = () => {
       <section
         style={{
           ...sectionStyle,
-          display: "grid",
-          gridTemplateColumns: "280px 1fr 260px",
-          gap: "1.5rem",
-          alignItems: "start"
+          padding: "1rem 1.4rem",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.75rem"
         }}
       >
-        <aside
+        <div
           style={{
             display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem"
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0.5rem",
+            borderRadius: "0.6rem",
+            background: "rgba(8, 14, 23, 0.6)",
+            cursor: "pointer"
           }}
+          onClick={() => setChapterPanelOpen(!chapterPanelOpen)}
         >
+          <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+            <span style={{ fontSize: "0.9rem", color: "#d7e8ff", fontWeight: 600 }}>
+              {chapterPanelOpen ? "▼" : "▶"} 章节管理
+            </span>
+            <span style={{ fontSize: "0.85rem", color: "#8aa4c7" }}>
+              当前: {activeChapter?.title || "未选择"}
+            </span>
+          </div>
           <button
             type="button"
-            onClick={addChapter}
+            onClick={(e) => {
+              e.stopPropagation();
+              addChapter();
+            }}
             style={{
-              height: "2.4rem",
-              borderRadius: "0.75rem",
+              padding: "0.4rem 0.9rem",
+              borderRadius: "0.5rem",
               border: "none",
-              background:
-                "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+              background: "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
               color: "#06101e",
               fontWeight: 600,
               cursor: "pointer",
-              boxShadow: "0 12px 22px rgba(32, 64, 99, 0.35)"
+              fontSize: "0.8rem"
             }}
           >
             新增章节
           </button>
+        </div>
 
+        {chapterPanelOpen && (
           <div
             style={{
+              padding: "0.8rem",
+              borderRadius: "0.7rem",
               background: "rgba(8, 14, 23, 0.85)",
               border: "1px solid rgba(102, 192, 244, 0.18)",
-              borderRadius: "0.75rem",
-              overflow: "hidden"
+              display: "flex",
+              flexDirection: "column",
+              gap: "0.6rem"
             }}
           >
-            {chapters.map((chapter) => (
-              <button
-                key={chapter.id}
-                onClick={() => selectChapter(chapter.id)}
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background:
-                    activeChapter?.id === chapter.id
-                      ? "rgba(102, 192, 244, 0.22)"
-                      : "transparent",
-                  color: "#d7e8ff",
-                  textAlign: "left",
-                  padding: "0.7rem 0.9rem",
-                  fontSize: "0.9rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  cursor: "pointer"
-                }}
-              >
-                <span style={{ flex: 1, marginRight: "0.5rem" }}>{chapter.title}</span>
-                <span
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gap: "0.6rem",
+                maxHeight: "200px",
+                overflowY: "auto"
+              }}
+            >
+              {chapters.map((chapter) => (
+                <button
+                  key={chapter.id}
+                  onClick={() => selectChapter(chapter.id)}
                   style={{
-                    fontSize: "0.75rem",
-                    opacity: 0.6
+                    border: "1px solid rgba(102, 192, 244, 0.2)",
+                    borderRadius: "0.5rem",
+                    background:
+                      activeChapter?.id === chapter.id
+                        ? "rgba(102, 192, 244, 0.22)"
+                        : "rgba(12, 20, 32, 0.7)",
+                    color: "#d7e8ff",
+                    textAlign: "left",
+                    padding: "0.6rem 0.8rem",
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "0.3rem"
                   }}
                 >
-                  {new Date(chapter.updatedAt).toLocaleTimeString()}
-                </span>
-              </button>
-            ))}
-          </div>
+                  <span style={{ fontWeight: 600 }}>{chapter.title}</span>
+                  <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>
+                    {new Date(chapter.updatedAt).toLocaleTimeString()}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "0.5rem"
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => {
-                if (activeChapter) {
-                  const newTitle = window.prompt("章节标题", activeChapter.title);
-                  if (newTitle) {
-                    updateChapter(activeChapter.id, { title: newTitle });
-                  }
-                }
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                paddingTop: "0.5rem",
+                borderTop: "1px solid rgba(102, 192, 244, 0.15)"
               }}
-              style={subActionButtonStyle}
             >
-              重命名
-            </button>
-            <button
-              type="button"
-              onClick={() => activeChapter && deleteChapter(activeChapter.id)}
-              style={subActionButtonStyle}
-            >
-              删除
-            </button>
-            <button
-              type="button"
-              onClick={() => restoreChapter()}
-              style={subActionButtonStyle}
-            >
-              撤销删除
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (activeChapter) {
+                    const newTitle = window.prompt("章节标题", activeChapter.title);
+                    if (newTitle) {
+                      updateChapter(activeChapter.id, { title: newTitle });
+                    }
+                  }
+                }}
+                style={subActionButtonStyle}
+              >
+                重命名
+              </button>
+              <button
+                type="button"
+                onClick={() => activeChapter && deleteChapter(activeChapter.id)}
+                style={subActionButtonStyle}
+              >
+                删除
+              </button>
+              <button
+                type="button"
+                onClick={() => restoreChapter()}
+                style={subActionButtonStyle}
+              >
+                撤销删除
+              </button>
+            </div>
           </div>
-        </aside>
+        )}
+      </section>
+
+      <section
+        style={{
+          ...sectionStyle,
+          display: "grid",
+          gridTemplateColumns: "1fr 280px",
+          gap: "1.5rem",
+          alignItems: "start"
+        }}
+      >
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
           <div
             style={{

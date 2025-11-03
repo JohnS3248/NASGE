@@ -38,11 +38,18 @@ export type SteamFetchGuideImagesRequest = BridgeBase & {
   scope: UploadScope;
 };
 
+export type SteamDeleteImageRequest = BridgeBase & {
+  action: "delete-image";
+  scope: UploadScope;
+  previewId: string;
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamCollectContextRequest
   | SteamPingRequest
-  | SteamFetchGuideImagesRequest;
+  | SteamFetchGuideImagesRequest
+  | SteamDeleteImageRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

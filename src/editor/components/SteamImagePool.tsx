@@ -22,7 +22,8 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
     () =>
       order
         .map((id) => items[id])
-        .filter((item): item is NonNullable<typeof item> => Boolean(item)),
+        .filter((item): item is NonNullable<typeof item> => Boolean(item))
+        .filter((item) => item.status !== "uploaded"),
     [order, items]
   );
 
@@ -93,7 +94,7 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
         </div>
       ) : null}
 
-      {records.length ? (
+      {records.length > 0 && (
         <section
           style={{
             display: "flex",
@@ -176,44 +177,27 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
                       fontSize: "0.8rem"
                     }}
                   >
-                    等待 Steam 返回预览 ID…
+                    {record.status === "uploading" ? "正在上传…" : "等待上传"}
                   </div>
                 )}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    fontSize: "0.75rem",
-                    color: "rgba(205, 226, 255, 0.65)"
-                  }}
-                >
-                  <span>预览 ID: {previewId ?? "尚未生成"}</span>
-                  <button
-                    type="button"
-                    disabled={record.status !== "uploaded"}
-                    onClick={() => onDelete?.(record.id)}
+                {record.status === "failed" && record.error && (
+                  <div
                     style={{
-                      border: "none",
-                      borderRadius: "0.5rem",
-                      padding: "0.3rem 0.6rem",
-                      background:
-                        record.status === "uploaded"
-                          ? "rgba(255, 118, 118, 0.2)"
-                          : "rgba(120, 140, 160, 0.18)",
-                      color: record.status === "uploaded" ? "#ff9a9a" : "rgba(200, 215, 236, 0.6)",
-                      cursor: record.status === "uploaded" ? "pointer" : "not-allowed",
-                      fontWeight: 600
+                      fontSize: "0.75rem",
+                      color: "#ff8f8f",
+                      padding: "0.4rem",
+                      background: "rgba(255, 118, 118, 0.1)",
+                      borderRadius: "0.5rem"
                     }}
                   >
-                    删除
-                  </button>
-                </div>
+                    {record.error}
+                  </div>
+                )}
               </div>
             );
           })}
         </section>
-      ) : null}
+      )}
 
       <section
         style={{
@@ -267,11 +251,30 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
             ) : null}
             <div
               style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
                 fontSize: "0.75rem",
                 color: "rgba(205, 226, 255, 0.65)"
               }}
             >
-              预览 ID: {asset.previewId}
+              <span>预览 ID: {asset.previewId}</span>
+              <button
+                type="button"
+                onClick={() => onDelete?.(asset.previewId)}
+                style={{
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  padding: "0.3rem 0.6rem",
+                  background: "rgba(255, 118, 118, 0.2)",
+                  color: "#ff9a9a",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  fontSize: "0.75rem"
+                }}
+              >
+                删除
+              </button>
             </div>
           </div>
         ))}

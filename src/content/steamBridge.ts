@@ -282,23 +282,109 @@ function interpretUploadRedirect(url: string): { previewIds: string[] } {
 }
 
 export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuideImage[]> {
-  const { form } = resolveUploadElements(scope);
+  const isManageGuidePage = window.location.href.includes("/manageguide/");
+  const isEditSubsectionPage = window.location.href.includes("/editguidesubsection/");
 
-  const sessionId = readFormField(form, "sessionid");
-  const appId = readFormField(form, "appid") ?? readFormField(form, "consumer_app_id");
-  const guideId =
-    readFormField(form, "id") ?? new URL(window.location.href).searchParams.get("id") ?? undefined;
+  if (isManageGuidePage) {
+    console.info("[NASGE] 在 manageguide 页面，直接从 DOM 解析图片池");
+    return parseGuideImagePoolFromDOM();
+  }
 
-  if (!sessionId || !appId || !guideId) {
-    throw new Error("无法收集 Steam 图片池所需的上下文信息（appid/sessionid/id）。");
+  if (isEditSubsectionPage) {
+    console.info("[NASGE] 在 editguidesubsection 页面，从页面 DOM 直接读取图片池");
+    return parseGuideImagePoolFromEditSubsectionDOM();
+  }
+
+  console.info("[NASGE] 在章节编辑页面，准备通过 AJAX 拉取图片池");
+
+  let sessionId: string | undefined;
+  let consumerAppId: string | undefined;
+  let guideId: string | undefined;
+
+  try {
+    const { form } = resolveUploadElements(scope);
+    sessionId = readFormField(form, "sessionid");
+    consumerAppId = readFormField(form, "consumer_app_id");
+    guideId = readFormField(form, "publishedfileid") ?? readFormField(form, "id");
+  } catch (error) {
+    console.warn("[NASGE] 无法从上传表单读取字段，尝试其他方式", error);
+  }
+
+  if (!sessionId) {
+    sessionId = (window as any).g_sessionID;
+  }
+
+  if (!guideId) {
+    guideId = new URL(window.location.href).searchParams.get("id") ?? undefined;
+  }
+
+  if (!consumerAppId) {
+    const allForms = document.querySelectorAll('form');
+    for (const form of allForms) {
+      const appIdInput = form.querySelector<HTMLInputElement>('input[name="consumer_app_id"]');
+      if (appIdInput?.value) {
+        consumerAppId = appIdInput.value;
+        break;
+      }
+    }
+  }
+
+  if (!consumerAppId) {
+    const urlMatch = window.location.href.match(/appid[=\/](\d+)/);
+    if (urlMatch) {
+      consumerAppId = urlMatch[1];
+    }
+  }
+
+  if (!consumerAppId) {
+    const metaTag = document.querySelector<HTMLMetaElement>('meta[name="twitter:app:id:iphone"], meta[property="al:ios:app_store_id"]');
+    if (metaTag?.content) {
+      consumerAppId = metaTag.content;
+    }
+  }
+
+  if (!consumerAppId) {
+    try {
+      const response = await fetch(`https://steamcommunity.com/sharedfiles/filedetails/?id=${guideId}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const html = await response.text();
+      const appIdMatch = html.match(/consumer_appid["\s:=]+(\d+)/i);
+      if (appIdMatch) {
+        consumerAppId = appIdMatch[1];
+        console.info("[NASGE] 从指南详情页提取 appid", consumerAppId);
+      }
+    } catch (error) {
+      console.warn("[NASGE] 无法从指南详情页提取 appid", error);
+    }
+  }
+
+  console.info("[NASGE] 收集到的上下文信息", {
+    sessionId: sessionId ? "存在" : "缺失",
+    consumerAppId,
+    guideId
+  });
+
+  if (!sessionId || !guideId) {
+    throw new Error(`无法收集 Steam 图片池所需的上下文信息。sessionId: ${!!sessionId}, guideId: ${!!guideId}`);
+  }
+
+  if (!consumerAppId) {
+    console.warn("[NASGE] 无法自动获取 consumer_app_id，这可能导致图片池为空");
+    consumerAppId = "";
   }
 
   const params = new URLSearchParams();
-  params.set("appid", appId);
+  if (consumerAppId) {
+    params.set("appid", consumerAppId);
+  }
   params.set("sessionid", sessionId);
   params.set("id", guideId);
   params.set("filetype", "4");
   params.set("p", "1");
+
+  console.info("[NASGE] 发起 AJAX 请求", params.toString());
 
   const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
     method: "POST",
@@ -311,10 +397,12 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
   });
 
   if (!response.ok) {
-    throw new Error(`拉取 Steam 图片池失败：${response.status}`);
+    throw new Error(`拉取 Steam 图片池失败：HTTP ${response.status}`);
   }
 
   const html = await response.text();
+  console.info("[NASGE] AJAX 响应长度", html.length);
+
   return parseGuideImagePool(html);
 }
 
@@ -420,6 +508,201 @@ function absoluteUrl(src: string): string | undefined {
   } catch {
     return src;
   }
+}
+
+function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
+  const images = new Map<string, SteamGuideImage>();
+
+  const globalVar = (window as any).gPreviewImages;
+  if (Array.isArray(globalVar) && globalVar.length > 0) {
+    console.info('[NASGE] 从全局变量 gPreviewImages 解析图片池');
+    for (const item of globalVar) {
+      if (item.previewid) {
+        images.set(item.previewid, {
+          previewId: item.previewid,
+          fileName: item.filename || `preview_${item.previewid}`,
+          thumbnailUrl: item.url
+        });
+      }
+    }
+  } else {
+    console.info('[NASGE] gPreviewImages 不可用，尝试从 DOM 解析');
+
+    const imageContainers = document.querySelectorAll('.manageSortablePreview, .guide_preview_image_small, .preview_image, [data-previewid]');
+
+    for (const container of Array.from(imageContainers)) {
+      let previewId: string | undefined;
+      let thumbnailUrl: string | undefined;
+      let fileName: string | undefined;
+
+      const idMatch = /preview_(\d+)/.exec(container.id || '');
+      if (idMatch) {
+        previewId = idMatch[1];
+      }
+
+      const dataPreviewId = container.getAttribute('data-previewid');
+      if (dataPreviewId && !previewId) {
+        previewId = dataPreviewId;
+      }
+
+      const img = container.querySelector('img') || (container instanceof HTMLImageElement ? container : null);
+      if (img) {
+        const src = img.getAttribute('src') || '';
+        const match = /UGC\/(\d+)|ugc\/(\d+)/i.exec(src);
+        if (match && !previewId) {
+          previewId = match[1] || match[2];
+        }
+        if (src) {
+          thumbnailUrl = absoluteUrl(src);
+        }
+        fileName = img.getAttribute('alt') || img.getAttribute('title') || fileName;
+      }
+
+      const onclick = container.getAttribute('onclick') || '';
+      if (!previewId) {
+        const match = /previewid[=\s]+['"]?(\d+)['"]?/i.exec(onclick) || /preview_(\d+)/i.exec(onclick);
+        if (match) {
+          previewId = match[1];
+        }
+      }
+
+      if (!fileName) {
+        const titleElem = container.querySelector('.preview_title, .file_name');
+        if (titleElem) {
+          fileName = titleElem.textContent?.trim() || fileName;
+        }
+      }
+
+      if (previewId) {
+        if (!fileName) {
+          fileName = `preview_${previewId}`;
+        }
+        if (!images.has(previewId)) {
+          images.set(previewId, {
+            previewId,
+            fileName,
+            thumbnailUrl
+          });
+        }
+      }
+    }
+  }
+
+  console.info(`[NASGE] 从 DOM 解析到 ${images.size} 张图片`, Array.from(images.values()));
+  return Array.from(images.values());
+}
+
+function parseGuideImagePoolFromEditSubsectionDOM(): SteamGuideImage[] {
+  const images = new Map<string, SteamGuideImage>();
+
+  const previewImagesContainer = document.querySelector('#PreviewImages');
+  if (!previewImagesContainer) {
+    console.warn('[NASGE] 未找到 #PreviewImages 容器');
+    return [];
+  }
+
+  const imageElements = previewImagesContainer.querySelectorAll('img[id][src*="steamusercontent"]');
+  console.info(`[NASGE] 在 #PreviewImages 中找到 ${imageElements.length} 张图片`);
+
+  for (const img of Array.from(imageElements)) {
+    const previewId = img.id;
+    const thumbnailUrl = img.getAttribute('src');
+    const fileName = img.getAttribute('title') || `preview_${previewId}`;
+
+    if (previewId && thumbnailUrl) {
+      images.set(previewId, {
+        previewId,
+        fileName,
+        thumbnailUrl: absoluteUrl(thumbnailUrl)
+      });
+    }
+  }
+
+  console.info(`[NASGE] 从 editguidesubsection DOM 解析到 ${images.size} 张图片`, Array.from(images.values()));
+  return Array.from(images.values());
+}
+
+export async function deleteGuideImage(scope: UploadScope, previewId: string): Promise<void> {
+  console.info("[NASGE] 准备删除图片", { scope, previewId });
+
+  let sessionId: string | undefined;
+  let guideId: string | undefined;
+
+  try {
+    const { form } = resolveUploadElements(scope);
+    sessionId = readFormField(form, "sessionid");
+    guideId = readFormField(form, "id") ?? readFormField(form, "publishedfileid");
+  } catch (error) {
+    console.warn("[NASGE] 无法从表单读取删除参数，尝试其他方式", error);
+  }
+
+  if (!sessionId) {
+    sessionId = (window as any).g_sessionID;
+  }
+
+  if (!guideId) {
+    guideId = new URL(window.location.href).searchParams.get("id") ?? undefined;
+  }
+
+  if (!sessionId || !guideId) {
+    console.error("[NASGE] 删除图片失败：缺少必要参数", { sessionId: !!sessionId, guideId });
+    throw new Error("无法收集删除图片所需的上下文信息（sessionid/id）。");
+  }
+
+  const params = new URLSearchParams();
+  params.set("id", guideId);
+  params.set("sessionid", sessionId);
+  params.set("previewid", previewId);
+  params.set("ajax", "true");
+
+  console.info("[NASGE] 发送删除请求", {
+    url: "https://steamcommunity.com/sharedfiles/removepreview",
+    params: params.toString()
+  });
+
+  const response = await fetch("https://steamcommunity.com/sharedfiles/removepreview", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+      "X-Requested-With": "XMLHttpRequest",
+      "X-Prototype-Version": "1.7"
+    },
+    body: params.toString(),
+    credentials: "include"
+  });
+
+  if (!response.ok) {
+    console.error("[NASGE] 删除请求失败", { status: response.status, statusText: response.statusText });
+    throw new Error(`删除图片失败：HTTP ${response.status}`);
+  }
+
+  const result = await response.json();
+  console.info("[NASGE] 删除请求响应", result);
+
+  if (result.success !== 1) {
+    throw new Error("Steam 删除图片失败，请刷新页面后重试。");
+  }
+
+  console.info("[NASGE] 成功删除图片，开始清理 DOM", previewId);
+
+  const isEditSubsectionPage = window.location.href.includes("/editguidesubsection/");
+  if (isEditSubsectionPage) {
+    const imgElement = document.querySelector(`#PreviewImages img[id="${previewId}"]`);
+    if (imgElement) {
+      const container = imgElement.closest('.previewImage, div[class*="preview"]');
+      if (container) {
+        container.remove();
+        console.info("[NASGE] 已从 DOM 中移除图片容器", previewId);
+      } else {
+        imgElement.remove();
+        console.info("[NASGE] 已从 DOM 中移除图片元素", previewId);
+      }
+    } else {
+      console.warn("[NASGE] 未在 DOM 中找到要移除的图片", previewId);
+    }
+  }
+
+  console.info("[NASGE] 图片删除完成", previewId);
 }
 
 function resolveUploadElements(scope: UploadScope): {

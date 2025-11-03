@@ -100,3 +100,17 @@ export async function fetchSteamGuideImages(scope: UploadScope = "chapter-previe
 
   return (response.data as SteamGuideImage[]) ?? [];
 }
+
+export async function deleteSteamImage(previewId: string, scope: UploadScope = "chapter-preview"): Promise<void> {
+  const request: SteamBridgeRequest = {
+    channel: "nasge:steam",
+    action: "delete-image",
+    scope,
+    previewId
+  } as any;
+
+  const response = await sendSteamRequest(request);
+  if (!response.ok) {
+    throw new Error(response.error);
+  }
+}

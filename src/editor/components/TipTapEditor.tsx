@@ -343,19 +343,35 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   );
 
   return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.85rem",
-        background: "rgba(9, 15, 25, 0.55)",
-        border: "1px solid rgba(102, 192, 244, 0.25)",
-        borderRadius: "1rem",
-        padding: "1.25rem",
-        boxShadow: "0 18px 30px rgba(7, 11, 19, 0.45)"
-      }}
-    >
+    <>
+      <style>
+        {`
+          /* 覆盖 prose 类对图片的影响，确保图片容器和图片本身能正确显示 */
+          .nasge-editor-container .nasge-image-node {
+            max-width: 100% !important;
+          }
+
+          .nasge-editor-container .nasge-image-node img {
+            margin: 0 !important;
+            max-width: 100% !important;
+            height: auto !important;
+            display: block !important;
+          }
+        `}
+      </style>
+      <div
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          gap: "0.85rem",
+          background: "rgba(9, 15, 25, 0.55)",
+          border: "1px solid rgba(102, 192, 244, 0.25)",
+          borderRadius: "1rem",
+          padding: "1.25rem",
+          boxShadow: "0 18px 30px rgba(7, 11, 19, 0.45)"
+        }}
+      >
       <div
         style={{
           display: "flex",
@@ -459,6 +475,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           border: "1px solid rgba(102, 192, 244, 0.18)",
           overflowY: "auto"
         }}
+        className="nasge-editor-container"
         onContextMenu={(event) => {
           event.preventDefault();
           if (!editor) {
@@ -631,7 +648,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           )}
         </div>
       ) : null}
-    </div>
+      </div>
+    </>
   );
 };
 
