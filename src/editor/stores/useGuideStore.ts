@@ -12,6 +12,9 @@ export type ChapterDraft = {
   title: string;
   content: JSONContent;
   updatedAt: number;
+  steamSectionId?: string;
+  steamGuideId?: string;
+  lastSyncedAt?: number;
 };
 
 type GuideState = {

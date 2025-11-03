@@ -44,12 +44,35 @@ export type SteamDeleteImageRequest = BridgeBase & {
   previewId: string;
 };
 
+export type SteamFetchChapterRequest = BridgeBase & {
+  action: "fetch-chapter";
+  guideId: string;
+  sectionId: string;
+};
+
+export type SteamSaveChapterRequest = BridgeBase & {
+  action: "save-chapter";
+  guideId: string;
+  sectionId?: string;
+  title: string;
+  description: string;
+  sessionId?: string;  // 可选：从 MAIN world 传递的 sessionid
+};
+
+export type SteamFetchChapterListRequest = BridgeBase & {
+  action: "fetch-chapter-list";
+  guideId: string;
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamCollectContextRequest
   | SteamPingRequest
   | SteamFetchGuideImagesRequest
-  | SteamDeleteImageRequest;
+  | SteamDeleteImageRequest
+  | SteamFetchChapterRequest
+  | SteamSaveChapterRequest
+  | SteamFetchChapterListRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

@@ -8,6 +8,9 @@ import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
   SteamDeleteImageRequest,
+  SteamFetchChapterRequest,
+  SteamSaveChapterRequest,
+  SteamFetchChapterListRequest,
   SteamGuideImage,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
@@ -92,6 +95,33 @@ async function dispatchSteamBridgeMessage(
         const deleteRequest = message as SteamDeleteImageRequest;
         await deleteGuideImage(deleteRequest.scope, deleteRequest.previewId);
         sendResponse({ ok: true, data: { success: true } });
+        break;
+      }
+      case "fetch-chapter": {
+        const { fetchChapterFromSteam } = await import("./chapterSync");
+        const fetchRequest = message as SteamFetchChapterRequest;
+        const chapter = await fetchChapterFromSteam(fetchRequest.guideId, fetchRequest.sectionId);
+        sendResponse({ ok: true, data: chapter as any });
+        break;
+      }
+      case "save-chapter": {
+        const { saveChapterToSteam } = await import("./chapterSync");
+        const saveRequest = message as SteamSaveChapterRequest;
+        const sectionId = await saveChapterToSteam(
+          saveRequest.guideId,
+          saveRequest.sectionId,
+          saveRequest.title,
+          saveRequest.description,
+          saveRequest.sessionId  // 传递从 MAIN world 获取的 sessionId
+        );
+        sendResponse({ ok: true, data: { sectionId } as any });
+        break;
+      }
+      case "fetch-chapter-list": {
+        const { fetchChapterList } = await import("./chapterSync");
+        const listRequest = message as SteamFetchChapterListRequest;
+        const chapters = await fetchChapterList(listRequest.guideId);
+        sendResponse({ ok: true, data: { chapters } as any });
         break;
       }
       case "collect-upload-context": {
