@@ -64,6 +64,11 @@ export type SteamFetchChapterListRequest = BridgeBase & {
   guideId: string;
 };
 
+export type SteamFetchGuideInfoRequest = BridgeBase & {
+  action: "fetch-guide-info";
+  guideId: string;
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamCollectContextRequest
@@ -72,7 +77,8 @@ export type SteamBridgeRequest =
   | SteamDeleteImageRequest
   | SteamFetchChapterRequest
   | SteamSaveChapterRequest
-  | SteamFetchChapterListRequest;
+  | SteamFetchChapterListRequest
+  | SteamFetchGuideInfoRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

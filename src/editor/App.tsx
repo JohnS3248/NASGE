@@ -9,16 +9,25 @@ import UploadStatusHUD from "./components/UploadStatusHUD";
 import SteamImagePool from "./components/SteamImagePool";
 import { deleteSteamImage } from "./services/steamBridge";
 import { useSteamGuideImageStore } from "./stores/useSteamGuideImageStore";
+import { useEditorMode } from "./hooks/useEditorMode";
+import { useChapterSync } from "./hooks/useChapterSync";
+import EditorHeader from "./components/EditorHeader";
+import ChapterNav from "./components/ChapterNav";
+import DraftPanel from "./components/DraftPanel";
+import TitleEditor from "./components/TitleEditor";
 
 const App: React.FC = () => {
+  // 初始化编辑器模式和指南信息
+  const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
+  const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
   const lastAppliedSerializedRef = useRef<string | null>(null);
-  const [chapterPanelOpen, setChapterPanelOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const { chapters, activeId, addChapter, selectChapter, updateChapter, deleteChapter, restoreChapter } = useGuideStore();
+  const { drafts, activeDraftId, updateDraft } = useGuideStore();
 
-  const activeChapter = useMemo(() => chapters.find((chapter) => chapter.id === activeId) ?? chapters[0], [chapters, activeId]);
+  const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId) ?? drafts[0], [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions(), []);
 
   const docToHtml = useCallback(
@@ -27,7 +36,7 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
-    const nextDoc = activeChapter?.content ?? createEmptyDoc();
+    const nextDoc = activeDraft?.content ?? createEmptyDoc();
     const nextSerialized = JSON.stringify(nextDoc);
 
     if (lastAppliedSerializedRef.current === nextSerialized) {
@@ -37,7 +46,7 @@ const App: React.FC = () => {
     lastAppliedSerializedRef.current = nextSerialized;
     setExternalDoc(nextDoc);
     setCurrentHtml(docToHtml(nextDoc));
-  }, [activeChapter?.content, activeChapter?.id, docToHtml]);
+  }, [activeDraft?.content, activeDraft?.id, docToHtml]);
 
   const handleExportBBCode = useCallback(() => {
     if (!currentHtml) {
@@ -68,10 +77,38 @@ const App: React.FC = () => {
     setExternalDoc(doc);
     setCurrentHtml(docToHtml(doc));
     lastAppliedSerializedRef.current = JSON.stringify(doc);
-    if (activeChapter) {
-      updateChapter(activeChapter.id, { content: doc });
+    if (activeDraft) {
+      updateDraft(activeDraft.id, { content: doc });
     }
-  }, [activeChapter, updateChapter, htmlExtensions, docToHtml]);
+  }, [activeDraft, updateDraft, htmlExtensions, docToHtml]);
+
+  const handleUploadToSteam = useCallback(async () => {
+    if (!activeDraft) {
+      window.alert("没有可上传的草稿");
+      return;
+    }
+
+    if (!activeDraft.linkedChapterId) {
+      window.alert("该草稿未关联章节，无法上传。请先拉取章节内容。");
+      return;
+    }
+
+    if (!window.confirm(`确定要将草稿"${activeDraft.draftName}"上传到 Steam 吗？`)) {
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await pushDraft(activeDraft.id);
+      window.alert("上传成功！");
+    } catch (error) {
+      console.error("[NASGE] 上传失败", error);
+      const message = error instanceof Error ? error.message : "上传失败，未知错误";
+      window.alert(`上传失败：${message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [activeDraft, pushDraft]);
 
   const handleDeleteUploadedRecord = useCallback(async (previewId: string) => {
     console.info("[NASGE] 请求删除 Steam 预览记录", previewId);
@@ -94,291 +131,219 @@ const App: React.FC = () => {
     }
   }, []);
 
-  const sectionStyle: React.CSSProperties = {
-    borderRadius: "1.05rem",
-    background: "rgba(13, 23, 36, 0.9)",
-    border: "1px solid rgba(102, 192, 244, 0.25)",
-    padding: "1.6rem",
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.85rem",
-    boxShadow: "0 24px 40px rgba(10, 18, 30, 0.45)"
-  };
-
   return (
     <div
       style={{
         minHeight: "100vh",
         background: "radial-gradient(circle at 20% 0%, rgba(102, 192, 244, 0.2), transparent 55%), linear-gradient(180deg, #101a2b 0%, #0b1522 100%)",
-        padding: "2rem 2.5rem 3rem",
+        padding: "1.5rem",
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
-        gap: "2rem"
+        gap: "1.5rem"
       }}
     >
-      <header
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "0.6rem"
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "2.4rem",
-            fontWeight: 700,
-            letterSpacing: "0.05em",
-            color: "#f6fbff",
-            textShadow: "0 10px 25px rgba(7, 14, 23, 0.5)"
-          }}
-        >
-          NASGE 编辑器
-        </h1>
-        <p
-          style={{
-            margin: "1rem 0 0",
-            maxWidth: "620px",
-            lineHeight: 1.8,
-            color: "#a4bedc"
-          }}
-        >
-          New Awesome Steam Guide Editor — 在浏览器中构建完全所见即所得的 Steam 指南。
-          支持自定义 BBCode、图片、表格与章节同步。
-        </p>
-      </header>
+      {/* 顶部信息区 */}
+      <EditorHeader />
 
-      <section
+      {/* 草稿管理（可折叠） */}
+      <DraftPanel />
+
+      {/* 主内容区：中间编辑器 + 右侧章节 */}
+      <div
         style={{
-          ...sectionStyle,
-          padding: "1rem 1.4rem",
           display: "flex",
-          flexDirection: "column",
-          gap: "0.75rem"
+          gap: "1.5rem",
+          alignItems: "start",
+          flex: 1
         }}
       >
-        <div
+        {/* 中间编辑器区域 */}
+        <main
           style={{
+            flex: 1,
+            borderRadius: "1.05rem",
+            background: "rgba(13, 23, 36, 0.9)",
+            border: "1px solid rgba(102, 192, 244, 0.25)",
+            padding: "1.6rem",
+            boxShadow: "0 24px 40px rgba(10, 18, 30, 0.45)",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "0.5rem",
-            borderRadius: "0.6rem",
-            background: "rgba(8, 14, 23, 0.6)",
-            cursor: "pointer"
+            flexDirection: "column",
+            gap: "1rem"
           }}
-          onClick={() => setChapterPanelOpen(!chapterPanelOpen)}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
-            <span style={{ fontSize: "0.9rem", color: "#d7e8ff", fontWeight: 600 }}>
-              {chapterPanelOpen ? "▼" : "▶"} 章节管理
-            </span>
-            <span style={{ fontSize: "0.85rem", color: "#8aa4c7" }}>
-              当前: {activeChapter?.title || "未选择"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              addChapter();
-            }}
-            style={{
-              padding: "0.4rem 0.9rem",
-              borderRadius: "0.5rem",
-              border: "none",
-              background: "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-              color: "#06101e",
-              fontWeight: 600,
-              cursor: "pointer",
-              fontSize: "0.8rem"
-            }}
-          >
-            新增章节
-          </button>
-        </div>
-
-        {chapterPanelOpen && (
+          {/* 工具栏 */}
           <div
             style={{
-              padding: "0.8rem",
-              borderRadius: "0.7rem",
-              background: "rgba(8, 14, 23, 0.85)",
-              border: "1px solid rgba(102, 192, 244, 0.18)",
               display: "flex",
-              flexDirection: "column",
-              gap: "0.6rem"
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "1rem"
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                gap: "0.6rem",
-                maxHeight: "200px",
-                overflowY: "auto"
+            <TitleEditor
+              value={activeDraft?.title || ""}
+              style={activeDraft?.titleStyle || 'short'}
+              onChange={(newTitle) => {
+                if (activeDraft) {
+                  updateDraft(activeDraft.id, { title: newTitle });
+                }
               }}
-            >
-              {chapters.map((chapter) => (
+              onStyleChange={(newStyle) => {
+                if (activeDraft) {
+                  updateDraft(activeDraft.id, { titleStyle: newStyle });
+                }
+              }}
+            />
+            <div style={{ display: "flex", gap: "0.6rem" }}>
+              <button
+                type="button"
+                onClick={handleImportBBCode}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "0.6rem",
+                  border: "1px solid rgba(102, 192, 244, 0.35)",
+                  background: "rgba(12, 21, 33, 0.85)",
+                  color: "#cfe7ff",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: "0.85rem"
+                }}
+              >
+                导入 BBCode
+              </button>
+              <button
+                type="button"
+                onClick={handleExportBBCode}
+                style={{
+                  padding: "0.45rem 1rem",
+                  borderRadius: "0.6rem",
+                  border: "1px solid rgba(102, 192, 244, 0.35)",
+                  background: "rgba(12, 21, 33, 0.85)",
+                  color: "#cfe7ff",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: "0.85rem"
+                }}
+              >
+                导出 BBCode
+              </button>
+              {activeDraft?.linkedChapterId && (
                 <button
-                  key={chapter.id}
-                  onClick={() => selectChapter(chapter.id)}
+                  type="button"
+                  onClick={handleUploadToSteam}
+                  disabled={isUploading}
                   style={{
-                    border: "1px solid rgba(102, 192, 244, 0.2)",
-                    borderRadius: "0.5rem",
-                    background:
-                      activeChapter?.id === chapter.id
-                        ? "rgba(102, 192, 244, 0.22)"
-                        : "rgba(12, 20, 32, 0.7)",
-                    color: "#d7e8ff",
-                    textAlign: "left",
-                    padding: "0.6rem 0.8rem",
+                    padding: "0.45rem 1rem",
+                    borderRadius: "0.6rem",
+                    border: "none",
+                    background: isUploading
+                      ? "rgba(102, 192, 244, 0.5)"
+                      : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                    color: "#06101e",
+                    fontWeight: 600,
+                    cursor: isUploading ? "wait" : "pointer",
                     fontSize: "0.85rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "0.3rem"
+                    opacity: isUploading ? 0.7 : 1
                   }}
                 >
-                  <span style={{ fontWeight: 600 }}>{chapter.title}</span>
-                  <span style={{ fontSize: "0.7rem", opacity: 0.6 }}>
-                    {new Date(chapter.updatedAt).toLocaleTimeString()}
-                  </span>
+                  {isUploading ? "上传中..." : "上传到 Steam"}
                 </button>
-              ))}
+              )}
             </div>
+          </div>
 
+          {/* 编辑器 */}
+          {!activeDraft ? (
             <div
               style={{
+                flex: 1,
                 display: "flex",
-                gap: "0.5rem",
-                paddingTop: "0.5rem",
-                borderTop: "1px solid rgba(102, 192, 244, 0.15)"
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "1.5rem",
+                padding: "4rem 2rem",
+                background: "rgba(8, 14, 23, 0.6)",
+                borderRadius: "1.2rem",
+                border: "2px dashed rgba(102, 192, 244, 0.3)"
               }}
             >
+              <div
+                style={{
+                  fontSize: "3rem",
+                  opacity: 0.4
+                }}
+              >
+                📝
+              </div>
+              <div
+                style={{
+                  color: "#8aa4c7",
+                  fontSize: "1.1rem",
+                  textAlign: "center",
+                  lineHeight: 1.6
+                }}
+              >
+                <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem", color: "#d7e8ff" }}>
+                  暂无草稿
+                </div>
+                <div style={{ fontSize: "0.95rem" }}>
+                  请先创建一个新草稿，或从章节导航中拉取现有章节
+                </div>
+              </div>
               <button
                 type="button"
                 onClick={() => {
-                  if (activeChapter) {
-                    const newTitle = window.prompt("章节标题", activeChapter.title);
-                    if (newTitle) {
-                      updateChapter(activeChapter.id, { title: newTitle });
-                    }
-                  }
+                  const store = useGuideStore.getState();
+                  store.addDraft();
                 }}
-                style={subActionButtonStyle}
+                style={{
+                  padding: "0.8rem 2rem",
+                  borderRadius: "0.8rem",
+                  border: "none",
+                  background: "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                  color: "#06101e",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: "1rem",
+                  boxShadow: "0 4px 12px rgba(102, 192, 244, 0.3)"
+                }}
               >
-                重命名
-              </button>
-              <button
-                type="button"
-                onClick={() => activeChapter && deleteChapter(activeChapter.id)}
-                style={subActionButtonStyle}
-              >
-                删除
-              </button>
-              <button
-                type="button"
-                onClick={() => restoreChapter()}
-                style={subActionButtonStyle}
-              >
-                撤销删除
+                + 创建新草稿
               </button>
             </div>
-          </div>
-        )}
-      </section>
-
-      <section
-        style={{
-          ...sectionStyle,
-          display: "grid",
-          gridTemplateColumns: "1fr 280px",
-          gap: "1.5rem",
-          alignItems: "start"
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.6rem"
-            }}
-          >
-            <button
-              type="button"
-              onClick={handleImportBBCode}
-              style={{
-                padding: "0.45rem 1rem",
-                borderRadius: "0.6rem",
-                border: "1px solid rgba(102, 192, 244, 0.35)",
-                background: "rgba(12, 21, 33, 0.85)",
-                color: "#cfe7ff",
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              导入 BBCode
-            </button>
-            <button
-              type="button"
-              onClick={handleExportBBCode}
-              style={{
-                padding: "0.45rem 1rem",
-                borderRadius: "0.6rem",
-                border: "1px solid rgba(102, 192, 244, 0.35)",
-                background:
-                  "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-                color: "#06101e",
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              导出 BBCode
-            </button>
-          </div>
-          <TipTapEditor
-            externalDoc={externalDoc}
-            onUpdate={({ html, json }) => {
-              setCurrentHtml(html);
-              if (activeChapter) {
-                const nextSerialized = JSON.stringify(json);
-                lastAppliedSerializedRef.current = nextSerialized;
-                const currentSerialized = JSON.stringify(activeChapter.content);
-                if (nextSerialized !== currentSerialized) {
-                  updateChapter(activeChapter.id, { content: json });
+          ) : (
+            <TipTapEditor
+              externalDoc={externalDoc}
+              onUpdate={({ html, json }) => {
+                setCurrentHtml(html);
+                if (activeDraft) {
+                  const nextSerialized = JSON.stringify(json);
+                  lastAppliedSerializedRef.current = nextSerialized;
+                  const currentSerialized = JSON.stringify(activeDraft.content);
+                  if (nextSerialized !== currentSerialized) {
+                    updateDraft(activeDraft.id, { content: json });
+                  }
                 }
-              }
-            }}
-          />
-        </div>
+              }}
+            />
+          )}
 
-        <aside
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem"
-          }}
-        >
+          {/* 图片池 */}
           <SteamImagePool onDelete={handleDeleteUploadedRecord} />
-        </aside>
-      </section>
+        </main>
+
+        {/* 右侧章节导航 */}
+        <ChapterNav
+          onRefresh={refreshGuideInfo}
+          isRefreshing={isRefreshingGuide}
+        />
+      </div>
+
       <UploadStatusHUD />
     </div>
   );
 };
 
 export default App;
-
-const subActionButtonStyle: React.CSSProperties = {
-  flex: 1,
-  border: "none",
-  borderRadius: "0.65rem",
-  padding: "0.55rem 0.75rem",
-  background: "rgba(20, 33, 52, 0.85)",
-  color: "#d7e8ff",
-  cursor: "pointer",
-  fontSize: "0.85rem"
-};

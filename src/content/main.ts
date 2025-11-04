@@ -11,6 +11,7 @@ import type {
   SteamFetchChapterRequest,
   SteamSaveChapterRequest,
   SteamFetchChapterListRequest,
+  SteamFetchGuideInfoRequest,
   SteamGuideImage,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
@@ -122,6 +123,13 @@ async function dispatchSteamBridgeMessage(
         const listRequest = message as SteamFetchChapterListRequest;
         const chapters = await fetchChapterList(listRequest.guideId);
         sendResponse({ ok: true, data: { chapters } as any });
+        break;
+      }
+      case "fetch-guide-info": {
+        const { fetchGuideInfo } = await import("./guideInfo");
+        const infoRequest = message as SteamFetchGuideInfoRequest;
+        const guideInfo = await fetchGuideInfo(infoRequest.guideId);
+        sendResponse({ ok: true, data: guideInfo as any });
         break;
       }
       case "collect-upload-context": {

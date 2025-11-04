@@ -1,0 +1,610 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Steam 社区 :: 测试指南1</title>
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+<link href="https://community.fastly.steamstatic.com/public/shared/css/motiva_sans.css?v=-yZgCk0Nu7kH&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/shared/css/buttons.css?v=0Ihq-pAoptBq&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/shared/css/shared_global.css?v=riRED4VAuQ63&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/globalv2.css?v=9RV1KkrS040q&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/skin_1/global.css?v=K0ryu12K41ve&amp;l=schinese&amp;_cdn=fastly&amp;client=0" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/skin_1/workshop.css?v=Gozo_9YydoE6&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/skin_1/workshop_managepreviews.css?v=-e58oJGb7Hde&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/skin_1/sharedfiles_guide.css?v=X8GAR_qYydhX&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<link href="https://community.fastly.steamstatic.com/public/css/skin_1/header.css?v=EM4kCu67DNda&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<script type="text/javascript">
+	var __PrototypePreserve=[];
+	__PrototypePreserve[0] = Array.from;
+	__PrototypePreserve[1] = Array.prototype.filter;
+	__PrototypePreserve[2] = Array.prototype.flatMap;
+	__PrototypePreserve[3] = Array.prototype.find;
+	__PrototypePreserve[4] = Array.prototype.some;
+	__PrototypePreserve[5] = Function.prototype.bind;
+	__PrototypePreserve[6] = HTMLElement.prototype.scrollTo;
+</script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/prototype-1.7.js?v=npJElBnrEO6W&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript">
+	Array.from = __PrototypePreserve[0] || Array.from;
+	Array.prototype.filter = __PrototypePreserve[1] || Array.prototype.filter;
+	Array.prototype.flatMap = __PrototypePreserve[2] || Array.prototype.flatMap;
+	Array.prototype.find = __PrototypePreserve[3] || Array.prototype.find;
+	Array.prototype.some = __PrototypePreserve[4] || Array.prototype.some;
+	Function.prototype.bind = __PrototypePreserve[5] || Function.prototype.bind;
+	HTMLElement.prototype.scrollTo = __PrototypePreserve[6] || HTMLElement.prototype.scrollTo;
+</script>
+<script type="text/javascript">
+	var __ScriptaculousPreserve=[];
+	__ScriptaculousPreserve[0] = Array.from;
+	__ScriptaculousPreserve[1] = Function.prototype.bind;
+	__ScriptaculousPreserve[2] = HTMLElement.prototype.scrollTo;
+</script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/scriptaculous/_combined.js?v=pbdAKOcDIgbC&amp;l=schinese&amp;_cdn=fastly&amp;load=effects,controls,slider,dragdrop"></script>
+<script type="text/javascript">
+	Array.from = __ScriptaculousPreserve[0] || Array.from;
+	Function.prototype.bind = __ScriptaculousPreserve[1] || Function.prototype.bind;
+	HTMLElement.prototype.scrollTo = __ScriptaculousPreserve[2] || HTMLElement.prototype.scrollTo;
+delete String['__parseStyleElement'];  Prototype.Browser.WebKit = true;</script>
+<script type="text/javascript">VALVE_PUBLIC_PATH = "https:\/\/community.fastly.steamstatic.com\/public\/";</script><script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/global.js?v=SXZhb5R714HO&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/jquery-1.11.1.min.js?v=gQHVlrK4-jX-&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/shared/javascript/tooltip.js?v=LZHsOVauqTrm&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/shared/javascript/shared_global.js?v=VXf0wxW84aT4&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/shared/javascript/auth_refresh.js?v=w6QbwI-5-j2S&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript">Object.seal && [ Object, Array, String, Number ].map( function( builtin ) { Object.seal( builtin.prototype ); } );</script><script type="text/javascript">$J = jQuery.noConflict();
+if ( typeof JSON != 'object' || !JSON.stringify || !JSON.parse ) { document.write( "<scr" + "ipt type=\"text\/javascript\" src=\"https:\/\/community.fastly.steamstatic.com\/public\/javascript\/json2.js?v=54NKNglvGTO8&amp;l=schinese&amp;_cdn=fastly\"><\/script>\n" ); };
+</script>
+		<script type="text/javascript">
+			document.addEventListener('DOMContentLoaded', function(event) {
+				SetupTooltips( { tooltipCSSClass: 'community_tooltip'} );
+		});
+		</script><script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/modalv2.js?v=zBXEuexVQ0FZ&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/workshop_functions.js?v=x5DrsJOoA3iH&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/sharedfiles_previews_functions.js?v=aD_gHcv7Ox0C&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript">
+
+	publishedfileid = '3595374622';
+
+	function AddNewSubSection()
+	{
+		var options = {
+			method: 'post',
+			postBody: 'id=' + 3595374622 + '&sessionid=' + g_sessionID,
+			onSuccess: function(transport)
+				{
+					var json = transport.responseText.evalJSON();
+					switch ( json['success'] )
+					{
+						case 1:
+							window.location.reload();
+							break;
+						default:
+							alert( "Failure code: " + json['success'] );
+							window.location.reload();
+							break;
+					}
+				}
+		};
+		new Ajax.Request(
+			'https://steamcommunity.com/sharedfiles/setguidesubsection',
+			options
+		);
+	}
+
+	function RemoveSubSection( elemID, sectionID )
+	{
+		var confirmed = confirm( '您确定要移除该部分吗？此操作无法撤消。' );
+		if ( !confirmed )
+		{
+			return;
+		}
+		var options = {
+			method: 'post',
+			postBody: 'id=' + 3595374622 + '&sessionid=' + g_sessionID + '&sectionid=' + sectionID,
+			onSuccess: function(transport)
+			{
+				var json = transport.responseText.evalJSON();
+				switch ( json['success'] )
+				{
+					case 1:
+						$( elemID ).remove();
+						break;
+					default:
+						alert( "Failure code: " + json['success'] );
+						window.location.reload();
+						break;
+				}
+			}
+		};
+		new Ajax.Request(
+			'https://steamcommunity.com/sharedfiles/removeguidesubsection',
+			options
+		);
+	}
+
+	function OnSubSectionReorder( elContainer )
+	{
+		var rgChildElements = elContainer.childElements().grep( new Selector( "div.editGuideTOCSection" ) );
+		for ( var i = 0; i < rgChildElements.length; i++ )
+		{
+			var elChild = rgChildElements[i];
+			var elInput = elChild.down( '.sub_section_input' );
+			elInput.value = i;
+		}
+		$('SubSectionsForm').request(
+			{
+				onSuccess: function( transport )
+				{
+					var json = transport.responseText.evalJSON();
+					switch ( json['success'] )
+					{
+						case 1:
+							break;
+						default:
+							alert( "Failure code: " + json['success'] );
+							window.location.reload();
+							break;
+					}
+				}
+			}
+		);
+	}
+
+	gPreviewImages = [{"previewid":"43096048","sortorder":1,"url":"https:\/\/images.steamusercontent.com\/ugc\/12278831822012809238\/637AD7C70FCE75ED93AA444B6A0FCDB8D1221896\/","size":46543,"filename":"2.jpg","preview_type":0},{"previewid":"43096931","sortorder":2,"url":"https:\/\/images.steamusercontent.com\/ugc\/12707002963633688113\/0196C30460D54453A391415E518B3E1714E05235\/","size":177779,"filename":"Legacy.jpg","preview_type":0},{"previewid":"43097047","sortorder":3,"url":"https:\/\/images.steamusercontent.com\/ugc\/18166447854815134431\/84432BAFA3301DC25383F7D453970237AEBFF9F8\/","size":169318,"filename":"head_2.jpg","preview_type":0}];
+
+</script>
+</head>
+<body class=" ">
+<center>
+	<!-- header bar, contains info browsing user if logged in -->
+	<div role="banner" id="global_header" data-panel="{&quot;flow-children&quot;:&quot;row&quot;}">
+	<div class="content">
+		<div class="logo">
+			<span id="logo_holder">
+									<a href="https://store.steampowered.com/" aria-label="Steam 主页链接">
+						<img src="https://community.fastly.steamstatic.com/public/shared/images/header/logo_steam.svg?t=962016" width="176" height="44" alt="Steam 主页链接">
+					</a>
+							</span>
+		</div>
+
+			<div role="navigation" class="supernav_container" aria-label="全局菜单">
+								<a class="menuitem supernav" href="https://store.steampowered.com/" data-tooltip-type="selector" data-tooltip-content=".submenu_Store">
+				商店			</a>
+			<div class="submenu_Store" style="display: none;" data-submenuid="Store">
+														<a class="submenuitem" href="https://store.steampowered.com/">
+						主页											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/explore/">
+						探索队列											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/wishlist/">
+						愿望单											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/points/shop/">
+						点数商店											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/news/">
+						新闻											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/stats/">
+						统计数据											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/about/">
+						关于											</a>
+							</div>
+										<a class="menuitem supernav supernav_active" href="https://steamcommunity.com/" data-tooltip-type="selector" data-tooltip-content=".submenu_Community">
+				社区			</a>
+			<div class="submenu_Community" style="display: none;" data-submenuid="Community">
+														<a class="submenuitem" href="https://steamcommunity.com/">
+						主页											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/discussions/">
+						讨论											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/workshop/">
+						创意工坊											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/market/">
+						市场											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/?subsection=broadcasts">
+						实况直播											</a>
+							</div>
+										<a class="menuitem supernav username" href="https://steamcommunity.com/my/" data-tooltip-type="selector" data-tooltip-content=".submenu_Profile">
+				Ψ			</a>
+			<div class="submenu_Profile" style="display: none;" data-submenuid="Profile">
+														<a class="submenuitem" href="https://steamcommunity.com/my/home/">
+						动态											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/">
+						个人资料											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/friends/">
+						好友											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/games/">
+						游戏											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/groups/">
+						组											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/screenshots/">
+						内容											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/badges/">
+						徽章											</a>
+														<a class="submenuitem" href="https://steamcommunity.com/my/inventory/">
+						库存											</a>
+														<a class="submenuitem" href="https://store.steampowered.com/yearinreview/">
+						Steam 回顾											</a>
+							</div>
+										<a class="menuitem " href="https://steamcommunity.com/chat/">
+				聊天			</a>
+										<a class="menuitem " href="https://help.steampowered.com/zh-cn/">
+				客服			</a>
+				</div>
+	<script type="text/javascript">
+		jQuery(function($) {
+			$('#global_header .supernav').v_tooltip({'location':'bottom', 'destroyWhenDone': false, 'tooltipClass': 'supernav_content', 'offsetY':-6, 'offsetX': 1, 'horizontalSnap': 4, 'tooltipParent': '#global_header .supernav_container', 'correctForScreenSize': false});
+		});
+	</script>
+
+		<div id="global_actions">
+			<div role="navigation" id="global_action_menu" aria-label="帐户菜单">
+									<a class="header_installsteam_btn header_installsteam_btn_gray" href="https://store.steampowered.com/about/">
+						<div class="header_installsteam_btn_content">
+							安装 Steam						</div>
+					</a>
+				
+				
+										<!-- notification inbox area -->
+																								<div id="header_notification_area" style="position:relative">
+							<div  data-featuretarget="green-envelope"></div><script type="text/javascript">$J( EnableNotificationCountPolling );</script>			<div id="header_notification_link" class="header_notification_btn global_header_toggle_button header_notification_bell"></div>
+									</div>
+					<button class="pulldown global_action_link persona_name_text_content" id="account_pulldown" onclick="ShowMenu( this, 'account_dropdown', 'right', 'bottom', true );">
+						Ψ					</button>
+					<div class="popup_block_new" id="account_dropdown" style="display: none;">
+						<div class="popup_body popup_menu">
+															<a class="popup_menu_item" href="https://steamcommunity.com/id/JohnS3248/">查看我的个人资料</a>
+								<a class="popup_menu_item" href="https://store.steampowered.com/account/">帐户明细: <span class="account_name">johns3248</span></a>
+																						<a class="popup_menu_item" href="https://store.steampowered.com/account/preferences/">商店偏好</a>
+															
+															<span class="popup_menu_item" id="account_language_pulldown">更改语言</span>
+								<div class="popup_block_new" id="language_dropdown" style="display: none;">
+									<div class="popup_body popup_menu">
+																																																									<a class="popup_menu_item tight" href="?l=schinese&id=3595374622" onclick="ChangeLanguage( 'schinese' ); return false;">简体中文</a>
+																																															<a class="popup_menu_item tight" href="?l=tchinese&id=3595374622" onclick="ChangeLanguage( 'tchinese' ); return false;">繁體中文（繁体中文）</a>
+																																															<a class="popup_menu_item tight" href="?l=japanese&id=3595374622" onclick="ChangeLanguage( 'japanese' ); return false;">日本語（日语）</a>
+																																															<a class="popup_menu_item tight" href="?l=koreana&id=3595374622" onclick="ChangeLanguage( 'koreana' ); return false;">한국어（韩语）</a>
+																																															<a class="popup_menu_item tight" href="?l=thai&id=3595374622" onclick="ChangeLanguage( 'thai' ); return false;">ไทย（泰语）</a>
+																																															<a class="popup_menu_item tight" href="?l=bulgarian&id=3595374622" onclick="ChangeLanguage( 'bulgarian' ); return false;">български（保加利亚语）</a>
+																																															<a class="popup_menu_item tight" href="?l=czech&id=3595374622" onclick="ChangeLanguage( 'czech' ); return false;">Čeština（捷克语）</a>
+																																															<a class="popup_menu_item tight" href="?l=danish&id=3595374622" onclick="ChangeLanguage( 'danish' ); return false;">Dansk（丹麦语）</a>
+																																															<a class="popup_menu_item tight" href="?l=german&id=3595374622" onclick="ChangeLanguage( 'german' ); return false;">Deutsch（德语）</a>
+																																															<a class="popup_menu_item tight" href="?l=english&id=3595374622" onclick="ChangeLanguage( 'english' ); return false;">English（英语）</a>
+																																															<a class="popup_menu_item tight" href="?l=spanish&id=3595374622" onclick="ChangeLanguage( 'spanish' ); return false;">Español-España（西班牙语 - 西班牙）</a>
+																																															<a class="popup_menu_item tight" href="?l=latam&id=3595374622" onclick="ChangeLanguage( 'latam' ); return false;">Español - Latinoamérica（西班牙语 - 拉丁美洲）</a>
+																																															<a class="popup_menu_item tight" href="?l=greek&id=3595374622" onclick="ChangeLanguage( 'greek' ); return false;">Ελληνικά（希腊语）</a>
+																																															<a class="popup_menu_item tight" href="?l=french&id=3595374622" onclick="ChangeLanguage( 'french' ); return false;">Français（法语）</a>
+																																															<a class="popup_menu_item tight" href="?l=italian&id=3595374622" onclick="ChangeLanguage( 'italian' ); return false;">Italiano（意大利语）</a>
+																																															<a class="popup_menu_item tight" href="?l=indonesian&id=3595374622" onclick="ChangeLanguage( 'indonesian' ); return false;">Bahasa Indonesia（印度尼西亚语）</a>
+																																															<a class="popup_menu_item tight" href="?l=hungarian&id=3595374622" onclick="ChangeLanguage( 'hungarian' ); return false;">Magyar（匈牙利语）</a>
+																																															<a class="popup_menu_item tight" href="?l=dutch&id=3595374622" onclick="ChangeLanguage( 'dutch' ); return false;">Nederlands（荷兰语）</a>
+																																															<a class="popup_menu_item tight" href="?l=norwegian&id=3595374622" onclick="ChangeLanguage( 'norwegian' ); return false;">Norsk（挪威语）</a>
+																																															<a class="popup_menu_item tight" href="?l=polish&id=3595374622" onclick="ChangeLanguage( 'polish' ); return false;">Polski（波兰语）</a>
+																																															<a class="popup_menu_item tight" href="?l=portuguese&id=3595374622" onclick="ChangeLanguage( 'portuguese' ); return false;">Português（葡萄牙语 - 葡萄牙）</a>
+																																															<a class="popup_menu_item tight" href="?l=brazilian&id=3595374622" onclick="ChangeLanguage( 'brazilian' ); return false;">Português-Brasil（葡萄牙语 - 巴西）</a>
+																																															<a class="popup_menu_item tight" href="?l=romanian&id=3595374622" onclick="ChangeLanguage( 'romanian' ); return false;">Română（罗马尼亚语）</a>
+																																															<a class="popup_menu_item tight" href="?l=russian&id=3595374622" onclick="ChangeLanguage( 'russian' ); return false;">Русский（俄语）</a>
+																																															<a class="popup_menu_item tight" href="?l=finnish&id=3595374622" onclick="ChangeLanguage( 'finnish' ); return false;">Suomi（芬兰语）</a>
+																																															<a class="popup_menu_item tight" href="?l=swedish&id=3595374622" onclick="ChangeLanguage( 'swedish' ); return false;">Svenska（瑞典语）</a>
+																																															<a class="popup_menu_item tight" href="?l=turkish&id=3595374622" onclick="ChangeLanguage( 'turkish' ); return false;">Türkçe（土耳其语）</a>
+																																															<a class="popup_menu_item tight" href="?l=vietnamese&id=3595374622" onclick="ChangeLanguage( 'vietnamese' ); return false;">Tiếng Việt（越南语）</a>
+																																															<a class="popup_menu_item tight" href="?l=ukrainian&id=3595374622" onclick="ChangeLanguage( 'ukrainian' ); return false;">Українська（乌克兰语）</a>
+																															<a class="popup_menu_item tight" href="https://www.valvesoftware.com/en/contact?contact-person=Translation%20Team%20Feedback" target="_blank">
+											报告翻译问题										</a>
+									</div>
+								</div>
+							
+															<a class="popup_menu_item" href="javascript:Logout();">退出帐户…</a>
+													</div>
+					</div>
+					<script type="text/javascript">
+						RegisterFlyout( 'account_language_pulldown', 'language_dropdown', 'leftsubmenu', 'bottomsubmenu', true );
+					</script>
+												</div>
+							<a href="https://steamcommunity.com/id/JohnS3248/" class="user_avatar playerAvatar online" aria-label="查看您的个人资料">
+					<img src="https://avatars.fastly.steamstatic.com/cf832b924f418d83c18c7ae8c35ccea357cda66b.jpg" alt="Ψ">
+				</a>
+					</div>
+			</div>
+</div>
+<div id="modalBG" style="display: none"></div><script type="text/javascript">
+	g_sessionID = "4f3d653f8ff053d573019b94";
+	g_steamID = "76561198397240810";
+	g_strLanguage = "schinese";
+	g_SNR = '2_100100_manageguide_';
+	g_bAllowAppImpressions = true;
+		g_ContentDescriptorPreferences = [3,4];
+
+	
+
+	// We always want to have the timezone cookie set for PHP to use
+	setTimezoneCookies();
+
+	$J( function() {
+
+		InitMiniprofileHovers(( 'https%3A%2F%2Fsteamcommunity.com' ));
+		InitEmoticonHovers();
+		ApplyAdultContentPreferences();
+	});
+
+	$J( function() { InitEconomyHovers( "https:\/\/community.fastly.steamstatic.com\/public\/css\/skin_1\/economy.css?v=rHY9Ei5pf10z&l=schinese&_cdn=fastly", "https:\/\/community.fastly.steamstatic.com\/public\/javascript\/economy_common.js?v=GYFVZLtXyAJC&l=schinese&_cdn=fastly", "https:\/\/community.fastly.steamstatic.com\/public\/javascript\/economy.js?v=KslSsjXxgwwg&l=schinese&_cdn=fastly" );});</script>
+<script>window.g_wapit="eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNzJBRTU3MF9BNUU4RiIsICJzdWIiOiAiNzY1NjExOTgzOTcyNDA4MTAiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NjIxNDk4NzEsICJuYmYiOiAxNzUzNDIxNzM2LCAiaWF0IjogMTc2MjA2MTczNiwgImp0aSI6ICIwMDA4XzI3MkMzQzZCXzM2NTFEIiwgIm9hdCI6IDE3NjE3MjM0NzIsICJydF9leHAiOiAxNzc5OTIxNjU4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTE5LjE4LjIuOTIiLCAiaXBfY29uZmlybWVyIjogIjExOS4xOC4yLjkyIiB9.fQa0wB0hG5sclk5qfQ5-YvI4L_UphSvJLhGhDrdcuT2Cg5FrF2Y2CPFxRC2PGjYrEGOt0m-08g0dazdY6L0ZAQ";</script><div id="application_config" style="display: none;"  data-config="{&quot;EUNIVERSE&quot;:1,&quot;WEB_UNIVERSE&quot;:&quot;public&quot;,&quot;LANGUAGE&quot;:&quot;schinese&quot;,&quot;COUNTRY&quot;:&quot;CN&quot;,&quot;MEDIA_CDN_COMMUNITY_URL&quot;:&quot;https:\/\/cdn.fastly.steamstatic.com\/steamcommunity\/public\/&quot;,&quot;MEDIA_CDN_URL&quot;:&quot;https:\/\/cdn.fastly.steamstatic.com\/&quot;,&quot;VIDEO_CDN_URL&quot;:&quot;https:\/\/video.fastly.steamstatic.com\/&quot;,&quot;COMMUNITY_CDN_URL&quot;:&quot;https:\/\/community.fastly.steamstatic.com\/&quot;,&quot;COMMUNITY_CDN_ASSET_URL&quot;:&quot;https:\/\/cdn.fastly.steamstatic.com\/steamcommunity\/public\/assets\/&quot;,&quot;STORE_CDN_URL&quot;:&quot;https:\/\/store.fastly.steamstatic.com\/&quot;,&quot;PUBLIC_SHARED_URL&quot;:&quot;https:\/\/community.fastly.steamstatic.com\/public\/shared\/&quot;,&quot;COMMUNITY_BASE_URL&quot;:&quot;https:\/\/steamcommunity.com\/&quot;,&quot;CHAT_BASE_URL&quot;:&quot;https:\/\/steamcommunity.com\/&quot;,&quot;STORE_BASE_URL&quot;:&quot;https:\/\/store.steampowered.com\/&quot;,&quot;STORE_CHECKOUT_BASE_URL&quot;:&quot;https:\/\/checkout.steampowered.com\/&quot;,&quot;IMG_URL&quot;:&quot;https:\/\/community.fastly.steamstatic.com\/public\/images\/&quot;,&quot;STEAMTV_BASE_URL&quot;:&quot;https:\/\/steam.tv\/&quot;,&quot;HELP_BASE_URL&quot;:&quot;https:\/\/help.steampowered.com\/&quot;,&quot;PARTNER_BASE_URL&quot;:&quot;https:\/\/partner.steamgames.com\/&quot;,&quot;STATS_BASE_URL&quot;:&quot;https:\/\/partner.steampowered.com\/&quot;,&quot;INTERNAL_STATS_BASE_URL&quot;:&quot;https:\/\/steamstats.valve.org\/&quot;,&quot;IN_CLIENT&quot;:false,&quot;USE_POPUPS&quot;:false,&quot;STORE_ICON_BASE_URL&quot;:&quot;https:\/\/shared.fastly.steamstatic.com\/store_item_assets\/steam\/apps\/&quot;,&quot;STORE_ITEM_BASE_URL&quot;:&quot;https:\/\/shared.fastly.steamstatic.com\/store_item_assets\/&quot;,&quot;WEBAPI_BASE_URL&quot;:&quot;https:\/\/api.steampowered.com\/&quot;,&quot;TOKEN_URL&quot;:&quot;https:\/\/steamcommunity.com\/chat\/clientjstoken&quot;,&quot;BUILD_TIMESTAMP&quot;:1761692269,&quot;PAGE_TIMESTAMP&quot;:1762137858,&quot;IN_TENFOOT&quot;:false,&quot;IN_GAMEPADUI&quot;:false,&quot;IN_CHROMEOS&quot;:false,&quot;IN_MOBILE_WEBVIEW&quot;:false,&quot;PLATFORM&quot;:&quot;macos&quot;,&quot;BASE_URL_STORE_CDN_ASSETS&quot;:&quot;https:\/\/cdn.fastly.steamstatic.com\/store\/&quot;,&quot;EREALM&quot;:1,&quot;LOGIN_BASE_URL&quot;:&quot;https:\/\/login.steampowered.com\/&quot;,&quot;AVATAR_BASE_URL&quot;:&quot;https:\/\/avatars.fastly.steamstatic.com\/&quot;,&quot;FROM_WEB&quot;:true,&quot;WEBSITE_ID&quot;:&quot;Community&quot;,&quot;BASE_URL_SHARED_CDN&quot;:&quot;https:\/\/shared.fastly.steamstatic.com\/&quot;,&quot;CLAN_CDN_ASSET_URL&quot;:&quot;https:\/\/clan.fastly.steamstatic.com\/&quot;,&quot;COMMUNITY_ASSETS_BASE_URL&quot;:&quot;https:\/\/shared.fastly.steamstatic.com\/community_assets\/&quot;,&quot;SNR&quot;:&quot;2_100100_manageguide_&quot;}" data-userinfo="{&quot;logged_in&quot;:true,&quot;steamid&quot;:&quot;76561198397240810&quot;,&quot;accountid&quot;:436975082,&quot;account_name&quot;:&quot;johns3248&quot;,&quot;is_support&quot;:false,&quot;is_limited&quot;:false,&quot;is_partner_member&quot;:false,&quot;is_valve_email&quot;:false,&quot;country_code&quot;:&quot;CN&quot;,&quot;excluded_content_descriptors&quot;:[3,4]}" data-community="[]" data-loyaltystore="{&quot;webapi_token&quot;:&quot;eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNzJBRTU3MF9BNUU4RiIsICJzdWIiOiAiNzY1NjExOTgzOTcyNDA4MTAiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NjIxNDk4NzEsICJuYmYiOiAxNzUzNDIxNzM2LCAiaWF0IjogMTc2MjA2MTczNiwgImp0aSI6ICIwMDA4XzI3MkMzQzZCXzM2NTFEIiwgIm9hdCI6IDE3NjE3MjM0NzIsICJydF9leHAiOiAxNzc5OTIxNjU4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTE5LjE4LjIuOTIiLCAiaXBfY29uZmlybWVyIjogIjExOS4xOC4yLjkyIiB9.fQa0wB0hG5sclk5qfQ5-YvI4L_UphSvJLhGhDrdcuT2Cg5FrF2Y2CPFxRC2PGjYrEGOt0m-08g0dazdY6L0ZAQ&quot;}" data-loyalty_webapi_token="&quot;eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNzJBRTU3MF9BNUU4RiIsICJzdWIiOiAiNzY1NjExOTgzOTcyNDA4MTAiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NjIxNDk4NzEsICJuYmYiOiAxNzUzNDIxNzM2LCAiaWF0IjogMTc2MjA2MTczNiwgImp0aSI6ICIwMDA4XzI3MkMzQzZCXzM2NTFEIiwgIm9hdCI6IDE3NjE3MjM0NzIsICJydF9leHAiOiAxNzc5OTIxNjU4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTE5LjE4LjIuOTIiLCAiaXBfY29uZmlybWVyIjogIjExOS4xOC4yLjkyIiB9.fQa0wB0hG5sclk5qfQ5-YvI4L_UphSvJLhGhDrdcuT2Cg5FrF2Y2CPFxRC2PGjYrEGOt0m-08g0dazdY6L0ZAQ&quot;" data-steam_notifications="{&quot;notifications&quot;:[{&quot;notification_id&quot;:&quot;122389507184&quot;,&quot;notification_targets&quot;:3,&quot;notification_type&quot;:8,&quot;body_data&quot;:&quot;{\&quot;appid\&quot;:3035570,\&quot;count\&quot;:1,\&quot;appids\&quot;:[3035570]}&quot;,&quot;read&quot;:0,&quot;timestamp&quot;:1762113155,&quot;hidden&quot;:0,&quot;expiry&quot;:1762285955,&quot;viewed&quot;:1762119885}],&quot;pending_gift_count&quot;:0,&quot;pending_friend_count&quot;:0,&quot;unread_count&quot;:1,&quot;pending_family_invite_count&quot;:0,&quot;success&quot;:1,&quot;rwgrsn&quot;:-2}"></div><link href="https://community.fastly.steamstatic.com/public/css/applications/community/main.css?v=G6PKu0qOLUOU&amp;l=schinese&amp;_cdn=fastly" rel="stylesheet" type="text/css">
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/applications/community/manifest.js?v=liDPo5PWCRkq&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/applications/community/libraries~b28b7af69.js?v=ZVt373dPtfky&amp;l=schinese&amp;_cdn=fastly"></script>
+<script type="text/javascript" src="https://community.fastly.steamstatic.com/public/javascript/applications/community/main.js?v=ZhrmzoGSihWI&amp;l=schinese&amp;_cdn=fastly"></script>
+	<div id="application_root"></div>
+	<!-- /header bar -->
+</center>
+
+<!-- top content -->
+	<script type="text/javascript">
+		function PublishGuide()
+		{
+			$('GuidePublish').submit();
+		}
+	</script>
+	<form class="smallForm" method="POST" name="GuidePublish" id="GuidePublish" action="https://steamcommunity.com/sharedfiles/finishguide" >
+		<input type="hidden" name="id" value="3595374622" />
+		<input type="hidden" name="sessionid" value="4f3d653f8ff053d573019b94" />
+	</form>
+	<div class="editGuideHeader">
+	<div class="editGuideHeaderTabs">
+		<div class="editGuideHeaderTab first ">
+			<a href="https://steamcommunity.com/sharedfiles/editguide/?id=3595374622">基本指南信息</a>
+					</div>
+
+		<div class="editGuideHeaderBullet"></div>
+		<div class="editGuideHeaderTab selected">
+						<a href="https://steamcommunity.com/sharedfiles/manageguide/?id=3595374622">指南内容</a>
+									<div class="editGuideHeaderSelectionArrow"></div>
+					</div>
+						<div class="editGuideHeaderBullet"></div>
+		<div class="editGuideHeaderTab ">
+						<a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3595374622&preview=true">预览指南</a>
+								</div>
+			</div>
+	<div style="clear: both"></div>
+</div>
+
+<!-- /top content -->
+<!-- main body -->
+<div id="BG_bottom">
+	
+	<div class="editGuidePageTitle">
+		<div class="guidePreviewImageSmall">
+			<img src="https://images.steamusercontent.com/ugc/15321395411222024698/FB68ECAD84949F198ADD6DFBA20A11235337E0E0/?imw=128&imh=128&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true"/>
+		</div>
+		测试指南1	</div>
+
+	<div class="detailBox collection">
+		<div class="editGuidePageSectionTitle">指南内容</div>
+		<div class="editGuidePageSectionDesc">定义您的指南框架及指南中的章节名称。您可以拖动章节以重新排序。</div>
+
+		<div class="editGuideTableOfContents">
+			<form class="smallForm" method="POST" name="SubSectionsForm" id="SubSectionsForm" action="https://steamcommunity.com/sharedfiles/setguidesubsectionorder" >
+			<input type="hidden" name="id" value="3595374622" />
+			<input type="hidden" name="sessionid" value="4f3d653f8ff053d573019b94" />
+			<div id="sortable_sub_sections">
+								<div class="editGuideTOCSection " id="subSection_8379603">
+						<div class="editGuideTOCSectionGrabber">
+							<div class="editGuideTOCSectionGrabberTop"></div>
+							<div class="editGuideTOCSectionGrabberBottom"></div>
+							<div class="editGuideTOCSectionGrabberTop"></div>
+						</div>
+						<div class="editGuideTOCSectionTitle"><a href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8379603">测试章节标题1</a></div>
+						<div class="editGuideTOCSectionControls">
+							<a class="btnv6_blue_hoverfade btn_medium" href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8379603">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_edit.png">
+								编辑此章节</span>
+							</a>
+							<a class="btnv6_blue_hoverfade btn_medium" href="javascript:RemoveSubSection( subSection_8379603, '8379603' )">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+								删除此章节</span>
+							</a>
+						</div>
+						<input type="hidden" class="sub_section_input" name="sub_sections[8379603][sort_order]" value="0">
+						<div style="clear: both"></div>
+					</div>
+										<div class="editGuideTOCSection " id="subSection_8384255">
+						<div class="editGuideTOCSectionGrabber">
+							<div class="editGuideTOCSectionGrabberTop"></div>
+							<div class="editGuideTOCSectionGrabberBottom"></div>
+							<div class="editGuideTOCSectionGrabberTop"></div>
+						</div>
+						<div class="editGuideTOCSectionTitle"><a href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8384255">测试章节标题2</a></div>
+						<div class="editGuideTOCSectionControls">
+							<a class="btnv6_blue_hoverfade btn_medium" href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8384255">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_edit.png">
+								编辑此章节</span>
+							</a>
+							<a class="btnv6_blue_hoverfade btn_medium" href="javascript:RemoveSubSection( subSection_8384255, '8384255' )">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+								删除此章节</span>
+							</a>
+						</div>
+						<input type="hidden" class="sub_section_input" name="sub_sections[8384255][sort_order]" value="1">
+						<div style="clear: both"></div>
+					</div>
+										<div class="editGuideTOCSection " id="subSection_8391293">
+						<div class="editGuideTOCSectionGrabber">
+							<div class="editGuideTOCSectionGrabberTop"></div>
+							<div class="editGuideTOCSectionGrabberBottom"></div>
+							<div class="editGuideTOCSectionGrabberTop"></div>
+						</div>
+						<div class="editGuideTOCSectionTitle"><a href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8391293">测试章节标题3</a></div>
+						<div class="editGuideTOCSectionControls">
+							<a class="btnv6_blue_hoverfade btn_medium" href="https://steamcommunity.com/sharedfiles/editguidesubsection/?id=3595374622&sectionid=8391293">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_edit.png">
+								编辑此章节</span>
+							</a>
+							<a class="btnv6_blue_hoverfade btn_medium" href="javascript:RemoveSubSection( subSection_8391293, '8391293' )">
+								<span><img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+								删除此章节</span>
+							</a>
+						</div>
+						<input type="hidden" class="sub_section_input" name="sub_sections[8391293][sort_order]" value="2">
+						<div style="clear: both"></div>
+					</div>
+									<script type="text/javascript">
+					Event.observe( document, 'dom:loaded', function() {
+						Sortable.create( 'sortable_sub_sections', {tag: 'div', handle: 'workshop_tag_grabber', onUpdate: OnSubSectionReorder } );
+					});
+				</script>
+				<div class="editGuideTOCControls">
+					<a href="javascript:AddNewSubSection()" class="btn_blue_white_innerfade btn_small_thin">
+						<span>添加一个章节</span>
+					</a>
+				</div>
+							</div>
+			</form>
+		</div>
+	</div>
+
+	<div class="detailBox collection">
+		<div class="editGuidePageSectionTitle">图片</div>
+		<div class="editGuidePageSectionDesc">选择并上传您指南中的图片作为参考。在此上传所有必要的图片，它们将在您编辑指南的个别章节时，让您轻松选择。</div>
+
+		<div class="editGuidePreviews">
+					<form class="smallForm" method="POST" name="PreviewsForm" id="PreviewsForm" action="https://steamcommunity.com/sharedfiles/setpreviewsortorder" >
+				<input type="hidden" name="id" value="3595374622" />
+				<input type="hidden" name="sessionid" value="4f3d653f8ff053d573019b94" />
+				<div class="editGuidePreviewsContainer">
+					<div id="sortable_previews">
+														<div class="manageSortablePreview" id="preview_43096048">
+									<div class="manageSortablePreviewIndex">1</div>
+									<div class="manageSortablePreviewImageContainer">
+										<img src="https://images.steamusercontent.com/ugc/12278831822012809238/637AD7C70FCE75ED93AA444B6A0FCDB8D1221896/?imw=256&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false" title="2.jpg (45.452 kb)">
+									</div>
+									<div class="manageSortablePreviewControls">
+										<a class="btn_grey_black btn_small_thin" href="javascript:RemovePreviewForPublishedFile( preview_43096048, '3595374622', '43096048' );">
+											<img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+										</a>
+									</div>
+									<input type="hidden" class="preview_input" name="previews[43096048][sort_order]" value="1">
+									<div style="clear: both"></div>
+								</div>
+																<div class="manageSortablePreview" id="preview_43096931">
+									<div class="manageSortablePreviewIndex">2</div>
+									<div class="manageSortablePreviewImageContainer">
+										<img src="https://images.steamusercontent.com/ugc/12707002963633688113/0196C30460D54453A391415E518B3E1714E05235/?imw=256&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false" title="Legacy.jpg (173.612 kb)">
+									</div>
+									<div class="manageSortablePreviewControls">
+										<a class="btn_grey_black btn_small_thin" href="javascript:RemovePreviewForPublishedFile( preview_43096931, '3595374622', '43096931' );">
+											<img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+										</a>
+									</div>
+									<input type="hidden" class="preview_input" name="previews[43096931][sort_order]" value="2">
+									<div style="clear: both"></div>
+								</div>
+																<div class="manageSortablePreview" id="preview_43097047">
+									<div class="manageSortablePreviewIndex">3</div>
+									<div class="manageSortablePreviewImageContainer">
+										<img src="https://images.steamusercontent.com/ugc/18166447854815134431/84432BAFA3301DC25383F7D453970237AEBFF9F8/?imw=256&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false" title="head_2.jpg (165.350 kb)">
+									</div>
+									<div class="manageSortablePreviewControls">
+										<a class="btn_grey_black btn_small_thin" href="javascript:RemovePreviewForPublishedFile( preview_43097047, '3595374622', '43097047' );">
+											<img src="https://community.fastly.steamstatic.com/public/images//sharedfiles/icons/icon_delete.png">
+										</a>
+									</div>
+									<input type="hidden" class="preview_input" name="previews[43097047][sort_order]" value="3">
+									<div style="clear: both"></div>
+								</div>
+														<script type="text/javascript">
+							Position.includeScrollOffsets = true;
+							Position.prepare();
+							Event.observe( document, 'dom:loaded', function() {
+								Sortable.create( 'sortable_previews', { tag: 'div', overlap: 'horizontal', constraint: false, onUpdate: OnPreviewReorder, scroll: 'sortable_previews' } );
+							});
+						</script>
+					</div>
+					<div class="dotHR"></div>
+					<div class="editGuidePreviewsControls">
+						图像排序依据						<a href="javascript:SortPreviewImagesByFileName()">文件名</a>
+						<a href="javascript:SortPreviewImagesByDateUploaded()">上传日期</a>
+						<a href="javascript:ExpandAllImagesArea()" id="ExpandAllImagesAreaBtn">扩展图像区<span class="doubleArrow"></span></a>
+					</div>
+					<div style="clear: both"></div>
+				</div>
+			</form>
+
+			<div class="editGuideUploadImages">
+				<form class="smallForm" enctype="multipart/form-data" method="POST" name="PreviewFileUpload" id="PreviewFileUpload" action="https://ufs26.discovery.steamserver.net:8698/ugcupload" target="upload_target">
+					<input type="hidden" name="redirect_uri" value="https://steamcommunity.com/sharedfiles/fileuploaded/?id=3595374622" >
+					<input type="hidden" name="wg" value="a%3A5%3A%7Bs%3A7%3A%22request%22%3Bs%3A24%3A%22PublishedFile_PreviewAdd%22%3Bs%3A15%3A%22publishedfileid%22%3Bs%3A10%3A%223595374622%22%3Bs%3A12%3A%22preview_type%22%3Bi%3A0%3Bs%3A16%3A%22valid_file_types%22%3Bs%3A16%3A%22jpeg%2Cjpg%2Cgif%2Cpng%22%3Bs%3A13%3A%22max_file_size%22%3Bi%3A2097152%3B%7D" >
+					<input type="hidden" name="wg_hmac" value="787c95e1a60158cdb2cb48bb923a6040" >
+					<input type="hidden" name="realm" value="1">
+					<input type="hidden" name="publishedfileid" value="3595374622" >
+					<input type="hidden" name="appid" value="766" >
+					<input type="hidden" name="sessionid" value="4f3d653f8ff053d573019b94" />
+					<input type="hidden" name="token" value="a%3A4%3A%7Bs%3A5%3A%22token%22%3Bs%3A515%3A%22eyAidHlwIjogIkpXVCIsICJhbGciOiAiRWREU0EiIH0.eyAiaXNzIjogInI6MDAwOV8yNzJBRTU3MF9BNUU4RiIsICJzdWIiOiAiNzY1NjExOTgzOTcyNDA4MTAiLCAiYXVkIjogWyAid2ViOmNvbW11bml0eSIgXSwgImV4cCI6IDE3NjIxNDk4NzEsICJuYmYiOiAxNzUzNDIxNzM2LCAiaWF0IjogMTc2MjA2MTczNiwgImp0aSI6ICIwMDA4XzI3MkMzQzZCXzM2NTFEIiwgIm9hdCI6IDE3NjE3MjM0NzIsICJydF9leHAiOiAxNzc5OTIxNjU4LCAicGVyIjogMCwgImlwX3N1YmplY3QiOiAiMTE5LjE4LjIuOTIiLCAiaXBfY29uZmlybWVyIjogIjExOS4xOC4yLjkyIiB9.fQa0wB0hG5sclk5qfQ5-YvI4L_UphSvJLhGhDrdcuT2Cg5FrF2Y2CPFxRC2PGjYrEGOt0m-08g0dazdY6L0ZAQ%22%3Bs%3A7%3A%22steamID%22%3Bs%3A17%3A%2276561198397240810%22%3Bs%3A9%3A%22ipaddress%22%3Bs%3A11%3A%22119.18.2.92%22%3Bs%3A6%3A%22secure%22%3Bb%3A1%3B%7D" >
+					<input type="hidden" name="cloudfilenameprefix" value="">
+					<input type="file" name="file" id="files" multiple="true" onchange="ListSelectedPreviewFiles()">
+					<a href="#" class="btn_blue_white_innerfade btn_small" onclick="StartPreviewFileUpload(); return false;">
+						<span>上传</span>
+					</a>
+					<div class="editGuideUploadImagesDesc">
+						<div>上传相同文件名称的图片将会覆盖您之前为指南上传的图片。</div>
+						<div>您可以一次性选择多个文件上传，但每次最大为 8 MB 。</div>
+					</div>
+					<iframe id="upload_target" name="upload_target" src="#" style="display: none"></iframe>
+				</form>
+				<ul id="FileList" class="guidePreviewImagesToUpload"></ul>
+				<div id="PreviewFileUploadProgress" style="display: none">
+					<img src="https://community.fastly.steamstatic.com/public/images/login/throbber.gif">
+				</div>
+			</div>
+					</div>
+	</div>
+
+	<div class="detailBox collection">
+		<div class="editGuidePageSectionTitle">使用您的截图和视频</div>
+		<div class="editGuidePageSectionDesc">您也可以使用您上传到 Steam 的该游戏中的任何公开截图或视频。您可以在编辑指南的单独章节时方便的将它们添加进来。</div>
+	</div>
+
+		<div class="detailBox collection">
+		<div class="editGuidePageSectionTitle">添加贡献者</div>
+		<div class="editGuidePageSectionDesc">在这里，您可以添加好友为贡献者，授予他们编辑您指南的权限。</div>
+
+		<div class="editGuideContributors">
+					<div class="editGuideEmptyDetailBox">
+				<div class="editGuideEmptyDetailBoxTitle">添加好友为贡献者</div>
+				<a href="javascript:ShowContributorDialog( '3595374622' )" class="btn_blue_white_innerfade btn_small_thin">
+					<span>添加一名贡献者</span>
+				</a>
+			</div>
+					</div>
+	</div>
+	
+	<div class="editGuidePageControls">
+				<a class="btn_blue_white_innerfade btn_small_thin" href="https://steamcommunity.com/sharedfiles/filedetails/?id=3595374622&preview=true">
+			<span>预览指南</span>
+		</a>
+			</div>
+	<div style="clear: both"></div>
+
+</div>
+
+<center>
+	<!-- footer -->
+		<div id="footer_spacer" class=""></div>
+	<div id="footer_responsive_optin_spacer"></div>
+	<div id="footer">
+					<div class="footer_content">
+				<span id="footerLogo"><img src="https://community.fastly.steamstatic.com/public/images/skin_1/footerLogo_valve.png?v=1" width="96" height="26" border="0" alt="Valve 徽标" /></span>
+				<span id="footerText">
+					© Valve Corporation。保留所有权利。所有商标均为其在美国及其它国家/地区的各自持有者所有。 本网站上部分地理空间数据由 <a href="https://steamcommunity.com/linkfilter/?u=http%3A%2F%2Fwww.geonames.org" target="_blank" rel=" noopener">geonames.org</a> 提供。					<br>
+											<span class="valve_links">
+							<a href="http://store.steampowered.com/privacy_agreement/" target="_blank">隐私政策</a>
+							&nbsp; | &nbsp;<a href="https://store.steampowered.com/legal/" target="_blank">法律信息</a>
+							&nbsp; | &nbsp;<a href="https://help.steampowered.com/faqs/view/10BB-D27A-6378-4436" target="_blank">无障碍</a>
+							&nbsp;| &nbsp;<a href="http://store.steampowered.com/subscriber_agreement/" target="_blank">Steam 订户协议</a>
+                            &nbsp;| &nbsp;<a href="http://store.steampowered.com/account/cookiepreferences/" target="_blank">Cookie</a>
+						</span>
+									</span>
+			</div>
+							<div class="responsive_optin_link">
+				<div class="btn_medium btnv6_grey_black" role="link" onclick="Responsive_RequestMobileView()">
+					<span>查看移动版网站</span>
+				</div>
+			</div>
+			</div>
+		<!-- /footer -->
+</center>
+
+</body>
+</html>
