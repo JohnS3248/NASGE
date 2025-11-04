@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { useChapterSync } from '../hooks/useChapterSync';
-import { bbcodeToHtml } from '../utils/bbcode';
+import { bbcodeTitleToHtml } from '../utils/bbcode';
 
 interface ChapterNavProps {
   onRefresh?: () => Promise<void>;
@@ -100,28 +100,31 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   };
 
   /**
-   * 渲染章节标题（支持 BBCode 图片）
+   * 渲染章节标题（用于章节预览目录）
+   * - 不解析文字格式 BBCode（[b]、[i]、[u] 等保持原样）
+   * - 解析图片 BBCode 并显示
+   * - 如果有图片，只显示图片，忽略后面的文字
    */
   const renderChapterTitle = (title: string) => {
-    // 将 BBCode 转换为 HTML
-    const html = bbcodeToHtml(title);
+    // 使用章节标题专用解析函数
+    const html = bbcodeTitleToHtml(title);
 
-    // 如果标题包含 HTML 标签（图片等），使用 dangerouslySetInnerHTML
-    if (html.includes('<')) {
+    // 如果标题包含 HTML 标签（图片），使用 dangerouslySetInnerHTML
+    if (html.includes('<img')) {
       return (
         <span
           dangerouslySetInnerHTML={{ __html: html }}
           style={{
             display: 'inline-block',
             maxWidth: '100%',
-            wordBreak: 'break-word'
+            lineHeight: 1
           }}
         />
       );
     }
 
-    // 否则直接显示文本
-    return title;
+    // 否则直接显示纯文本（保留 BBCode 标签不解析）
+    return html;
   };
 
   return (

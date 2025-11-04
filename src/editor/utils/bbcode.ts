@@ -247,6 +247,53 @@ function wrapTextInParagraphs(html: string): string {
   return result.join("");
 }
 
+/**
+ * 章节标题专用 BBCode 解析（用于章节预览目录）
+ * - 不解析文字格式标签（[b]、[i]、[u] 等保持原样）
+ * - 解析图片 BBCode 为 <img>
+ * - 如果有图片，只显示图片，忽略后面的文字
+ */
+export function bbcodeTitleToHtml(bbcode: string): string {
+  // 类型保护：确保输入是字符串
+  if (typeof bbcode !== 'string') {
+    console.warn('[bbcodeTitleToHtml] 收到非字符串输入', { bbcode, type: typeof bbcode });
+    return String(bbcode || '');
+  }
+
+  let html = bbcode;
+
+  // 检查是否包含图片 BBCode
+  const hasImage = /\[previewicon=|\[previewimg=|\[img]/i.test(html);
+
+  if (hasImage) {
+    // Steam 图片格式：[previewicon=id;size,align;filename.png][/previewicon]
+    html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
+      const url = `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+      return `<img src="${url}" alt="${filename}" class="nasge-chapter-preview-image" style="max-height: 40px; object-fit: contain;" />`;
+    });
+
+    // Steam 图片格式：[previewimg=id;size,align;filename.png][/previewimg]
+    html = html.replace(/\[previewimg=(\d+);([^;]+);([^\]]+)]\[\/previewimg]/gi, (_, id, styleStr, filename) => {
+      const url = `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+      return `<img src="${url}" alt="${filename}" class="nasge-chapter-preview-image" style="max-height: 40px; object-fit: contain;" />`;
+    });
+
+    // 普通图片格式：[img]url[/img]
+    html = html.replace(/\[img]([^\[]+)\[\/img]/gi, (_, url) => {
+      return `<img src="${url}" alt="" class="nasge-chapter-preview-image" style="max-height: 40px; object-fit: contain;" />`;
+    });
+
+    // 如果有图片，移除图片后面的所有文字
+    // 找到最后一个 </img> 或 /> 之后的内容并删除
+    html = html.replace(/(<img[^>]*\/>)[\s\S]*$/, '$1');
+
+    return html;
+  }
+
+  // 没有图片时，返回纯文本（不解析任何 BBCode）
+  return bbcode;
+}
+
 export function bbcodeToHtml(bbcode: string): string {
   let html = bbcode;
 
