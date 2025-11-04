@@ -1,6 +1,6 @@
 {
   "name": "nasge",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "创建者友好的 Steam 指南编辑浏览器扩展",
   "type": "module",
   "scripts": {
