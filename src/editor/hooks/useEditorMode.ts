@@ -15,6 +15,7 @@ export function useEditorMode() {
     if (hasInitialized.current) {
       return;
     }
+
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get('mode') as EditorMode | null;
     const guideId = params.get('guideId');
@@ -31,8 +32,15 @@ export function useEditorMode() {
       }
     }
 
-    // 如果是指南模式且有 guideId，自动拉取指南信息
+    // 如果是指南模式且有 guideId，检查是否需要拉取指南信息
     if (urlMode === 'guide' && guideId) {
+      // 如果已经有相同 ID 的指南信息，跳过拉取
+      if (guideInfo?.id === guideId) {
+        console.log('[NASGE Editor] 指南信息已存在，跳过拉取', { guideId });
+        hasInitialized.current = true;
+        return;
+      }
+
       console.log('[NASGE Editor] 开始导入指南信息', { guideId });
 
       // 添加重试逻辑，处理 content script 未就绪的情况
@@ -82,7 +90,7 @@ export function useEditorMode() {
 
       hasInitialized.current = true;
     }
-  }, [setMode, setGuideInfo]);
+  }, [mode, setMode, setGuideInfo, guideInfo]);
 
   /**
    * 手动刷新指南信息（用于章节目录刷新）
