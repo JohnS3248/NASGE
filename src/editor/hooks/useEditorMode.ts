@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useGuideStore, type EditorMode } from '../stores/useGuideStore';
 import { fetchGuideInfo } from '../services/guideInfo';
 
@@ -8,8 +8,13 @@ import { fetchGuideInfo } from '../services/guideInfo';
 export function useEditorMode() {
   const { mode, setMode, setGuideInfo, guideInfo } = useGuideStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
+    // 防止重复初始化
+    if (hasInitialized.current) {
+      return;
+    }
     const params = new URLSearchParams(window.location.search);
     const urlMode = params.get('mode') as EditorMode | null;
     const guideId = params.get('guideId');
@@ -74,6 +79,8 @@ export function useEditorMode() {
         // 最终失败，已经记录了错误
         console.error('[NASGE Editor] fetchWithRetry 最终失败', error);
       });
+
+      hasInitialized.current = true;
     }
   }, [setMode, setGuideInfo]);
 
