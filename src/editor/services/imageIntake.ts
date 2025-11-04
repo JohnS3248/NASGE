@@ -6,6 +6,7 @@ import type {
 import { uploadImageViaSteam } from "./imageUploadManager";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 
 export type IncomingImageOptions = {
   source: ImageUploadSource;
@@ -92,6 +93,26 @@ export async function processIncomingImages(
       continue;
     }
 
+    // 检查是否应该自动上传
+    const config = useEditorConfigStore.getState();
+    const shouldAutoUpload =
+      (options.source === "paste" && config.autoUploadOnPaste) ||
+      (options.source === "drop" && config.autoUploadOnDrop);
+
+    if (!shouldAutoUpload) {
+      console.info(
+        "[NASGE] 自动上传已禁用，图片保持本地预览状态",
+        {
+          source: options.source,
+          fileName: file.name,
+          nodeId: node.nodeId
+        }
+      );
+      // 节点保持 status: "intake" 状态，显示本地预览
+      continue;
+    }
+
+    // 自动上传到 Steam
     try {
       await uploadImageViaSteam(file, "chapter-preview", metadata, {
         onPrepared: (record) => {

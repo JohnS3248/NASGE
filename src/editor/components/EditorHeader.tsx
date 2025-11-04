@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
+import { SettingsModal } from './SettingsModal';
 
 const EditorHeader: React.FC = () => {
   const { mode, guideInfo } = useGuideStore();
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   const getModeLabel = () => {
     switch (mode) {
@@ -31,18 +33,19 @@ const EditorHeader: React.FC = () => {
   };
 
   return (
-    <header
-      style={{
-        borderRadius: '1.05rem',
-        background: 'rgba(13, 23, 36, 0.9)',
-        border: '1px solid rgba(102, 192, 244, 0.25)',
-        padding: '1.2rem 1.6rem',
-        boxShadow: '0 24px 40px rgba(10, 18, 30, 0.45)',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1.5rem'
-      }}
-    >
+    <>
+      <header
+        style={{
+          borderRadius: '1.05rem',
+          background: 'rgba(13, 23, 36, 0.9)',
+          border: '1px solid rgba(102, 192, 244, 0.25)',
+          padding: '1.2rem 1.6rem',
+          boxShadow: '0 24px 40px rgba(10, 18, 30, 0.45)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1.5rem'
+        }}
+      >
       {/* 封面图 */}
       {guideInfo?.coverUrl && (
         <div
@@ -110,7 +113,47 @@ const EditorHeader: React.FC = () => {
             : '离线编辑模式 - 不关联任何 Steam 内容'}
         </p>
       </div>
+
+      {/* 设置按钮 */}
+      <button
+        type="button"
+        onClick={() => setSettingsVisible(true)}
+        style={{
+          flexShrink: 0,
+          width: '42px',
+          height: '42px',
+          border: '1px solid rgba(102, 192, 244, 0.3)',
+          background: 'rgba(20, 35, 55, 0.7)',
+          borderRadius: '0.6rem',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.2rem',
+          color: 'rgba(205, 226, 255, 0.85)',
+          transition: 'all 0.2s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
+          e.currentTarget.style.borderColor = 'rgba(102, 192, 244, 0.5)';
+          e.currentTarget.style.color = '#e5f3ff';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(20, 35, 55, 0.7)';
+          e.currentTarget.style.borderColor = 'rgba(102, 192, 244, 0.3)';
+          e.currentTarget.style.color = 'rgba(205, 226, 255, 0.85)';
+        }}
+        title="设置"
+      >
+        ⚙️
+      </button>
     </header>
+
+    <SettingsModal
+      visible={settingsVisible}
+      onClose={() => setSettingsVisible(false)}
+    />
+    </>
   );
 };
 

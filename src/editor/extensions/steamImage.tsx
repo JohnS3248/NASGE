@@ -102,7 +102,6 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const imageNode = useEditorImageNodeStore(
     (state) => (imageNodeId ? state.nodes[imageNodeId] : undefined)
   );
-  const removeNode = useEditorImageNodeStore((state) => state.removeNode);
 
   useEffect(() => {
     if (!imageNodeId || imageNode) {
@@ -117,13 +116,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     }
   }, [imageNode, imageNodeId, node.attrs.previewDataUrl]);
 
-  useEffect(() => {
-    return () => {
-      if (imageNodeId) {
-        removeNode(imageNodeId);
-      }
-    };
-  }, [imageNodeId, removeNode]);
+  // 移除自动清理逻辑：节点的删除应该由编辑器的 deleteSelection 命令触发
+  // 不应该在组件卸载时自动删除 store 数据，因为 TipTap 会在内容更新时重新挂载组件
+  // 这会导致节点被意外删除
 
   useEffect(() => {
     if (!imageNode) {

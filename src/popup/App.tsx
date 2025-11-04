@@ -6,6 +6,7 @@ const runtime = chrome?.runtime;
 const App: React.FC = () => {
   const pageInfo = useCurrentPage();
   const editorUrl = useMemo(() => runtime?.getURL("src/editor/index.html"), []);
+  const version = useMemo(() => runtime?.getManifest()?.version || "0.0.0", []);
 
   const openEditor = useCallback((mode: 'guide' | 'review' | 'offline', guideId?: string) => {
     if (!editorUrl) {
@@ -92,7 +93,7 @@ const App: React.FC = () => {
             color: "#9eb7d6"
           }}
         >
-          New Awesome Steam Guide Editor · v0.3.0
+          New Awesome Steam Guide Editor · v{version}
         </p>
       </header>
 
