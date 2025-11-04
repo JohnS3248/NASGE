@@ -108,6 +108,10 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     return block("[hr]", context);
   }
 
+  if (tagName === "br") {
+    return "\n";
+  }
+
   if (tagName === "table") {
     const body = serializeChildren(node).replace(/\n+$/, "\n");
     return block(`[table]\n${body}[/table]`, context);
@@ -160,11 +164,96 @@ function wrap(tag: string, content: string): string {
   return `${tag}${content}${close}`;
 }
 
+function wrapTextInParagraphs(html: string): string {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  if (!root) return html;
+
+  const result: string[] = [];
+  const paragraphBuffer: ChildNode[] = [];
+
+  const flushParagraph = () => {
+    if (paragraphBuffer.length === 0) return;
+
+    // 创建临时容器来渲染段落内容
+    const tempDiv = document.createElement('div');
+    paragraphBuffer.forEach(node => {
+      tempDiv.appendChild(node.cloneNode(true));
+    });
+
+    const content = tempDiv.innerHTML.trim();
+    if (content) {
+      result.push(`<p>${content}</p>`);
+    }
+
+    paragraphBuffer.length = 0;
+  };
+
+  const processNode = (node: ChildNode) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
+
+      // 检查是否在块级元素之间的空白
+      const prevSibling = node.previousSibling;
+      const nextSibling = node.nextSibling;
+
+      const prevIsBlock = prevSibling?.nodeType === Node.ELEMENT_NODE &&
+        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/i.test((prevSibling as Element).tagName);
+      const nextIsBlock = nextSibling?.nodeType === Node.ELEMENT_NODE &&
+        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/i.test((nextSibling as Element).tagName);
+
+      if ((prevIsBlock || nextIsBlock) && !text.trim()) {
+        return;
+      }
+
+      // 按换行符分割文本，每个换行符创建新段落
+      const lines = text.split('\n');
+      lines.forEach((line, index) => {
+        if (line) {
+          // 添加文本节点到当前段落
+          paragraphBuffer.push(document.createTextNode(line));
+        }
+
+        // 如果不是最后一行，刷新当前段落并开始新段落
+        if (index < lines.length - 1) {
+          flushParagraph();
+        }
+      });
+
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const tagName = element.tagName.toLowerCase();
+
+      const isBlock = /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/.test(tagName);
+
+      if (isBlock) {
+        // 遇到块级元素，先刷新当前段落
+        flushParagraph();
+        // 添加块级元素本身
+        result.push(element.outerHTML);
+      } else {
+        // 行内元素，添加到当前段落缓冲区
+        paragraphBuffer.push(element.cloneNode(true) as ChildNode);
+      }
+    }
+  };
+
+  Array.from(root.childNodes).forEach(processNode);
+
+  // 刷新最后的段落
+  flushParagraph();
+
+  return result.join("");
+}
+
 export function bbcodeToHtml(bbcode: string): string {
   let html = bbcode;
+
+  // 先处理引用（递归转换）
   html = html.replace(/\[quote=([^\]]+)]([\s\S]*?)\[\/quote]/gi, (_, author, body) => {
     const inner = bbcodeToHtml(body.trim());
-    return `<blockquote class="nasge-quote" data-author="${author}">${inner}</blockquote>`;
+    return `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 ${author}：</p>${inner}</blockquote>`;
   });
 
   html = html.replace(/\[quote]([\s\S]*?)\[\/quote]/gi, (_, body) => {
@@ -172,31 +261,52 @@ export function bbcodeToHtml(bbcode: string): string {
     return `<blockquote class="nasge-quote">${inner}</blockquote>`;
   });
 
+  // 处理标题（保留标题内的换行）
+  html = html.replace(/\[h1]([\s\S]*?)\[\/h1]/gi, (_, content) => {
+    return `<h1>${content.replace(/\n/g, '<br />')}</h1>`;
+  });
+  html = html.replace(/\[h2]([\s\S]*?)\[\/h2]/gi, (_, content) => {
+    return `<h2>${content.replace(/\n/g, '<br />')}</h2>`;
+  });
+  html = html.replace(/\[h3]([\s\S]*?)\[\/h3]/gi, (_, content) => {
+    return `<h3>${content.replace(/\n/g, '<br />')}</h3>`;
+  });
+
+  // 行内格式标签
   html = html.replace(/\[b]/gi, "<strong>").replace(/\[\/b]/gi, "</strong>");
   html = html.replace(/\[i]/gi, "<em>").replace(/\[\/i]/gi, "</em>");
   html = html.replace(/\[u]/gi, "<u>").replace(/\[\/u]/gi, "</u>");
   html = html.replace(/\[strike]/gi, "<s>").replace(/\[\/strike]/gi, "</s>");
   html = html.replace(/\[spoiler]/gi, '<span class="nasge-spoiler" data-nasge-spoiler>')
     .replace(/\[\/spoiler]/gi, "</span>");
-  html = html.replace(/\[h1]/gi, "<h1>").replace(/\[\/h1]/gi, "</h1>");
-  html = html.replace(/\[h2]/gi, "<h2>").replace(/\[\/h2]/gi, "</h2>");
-  html = html.replace(/\[h3]/gi, "<h3>").replace(/\[\/h3]/gi, "</h3>");
+
+  // 列表
   html = html.replace(/\[list]/gi, "<ul>").replace(/\[\/list]/gi, "</ul>");
   html = html.replace(/\[olist]/gi, "<ol>").replace(/\[\/olist]/gi, "</ol>");
   html = html.replace(/\[\*]/gi, "<li>");
+
+  // 代码块
   html = html.replace(/\[code]/gi, "<pre><code>").replace(/\[\/code]/gi, "</code></pre>");
+
+  // 分隔线
   html = html.replace(/\[hr]/gi, "<hr />");
+
+  // 表格
   html = html.replace(/\[table]/gi, "<table>").replace(/\[\/table]/gi, "</table>");
   html = html.replace(/\[tr]/gi, "<tr>").replace(/\[\/tr]/gi, "</tr>");
   html = html.replace(/\[td]/gi, "<td>").replace(/\[\/td]/gi, "</td>");
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
 
-  // Links
+  // 链接和图片
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
+
+  // 检查是否有块级元素
   const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr|blockquote)/i.test(html);
   if (hasBlock) {
-    return html;
+    // 有块级元素时，使用 wrapTextInParagraphs 处理混合内容
+    // 确保块级元素外的文本正确包装成段落，并保留换行
+    return wrapTextInParagraphs(html);
   }
 
   const paragraphs: string[] = [];
