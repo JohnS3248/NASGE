@@ -66,7 +66,6 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       display: 'flex',
       flexDirection: 'column',
       gap: '0.5rem',
-      flex: 1,
       width: '100%'
     }}>
       {/* 标题编辑器 */}
