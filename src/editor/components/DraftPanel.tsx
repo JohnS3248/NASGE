@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
+import { extractTitleText } from '../utils/titleHelpers';
 
 const DraftPanel: React.FC = () => {
   const { drafts, activeDraftId, selectDraft, addDraft, updateDraft, deleteDraft, duplicateDraft, reorderDrafts } = useGuideStore();
@@ -144,7 +145,7 @@ const DraftPanel: React.FC = () => {
               fontSize: '0.8rem'
             }}>
               <span style={{ color: '#d7e8ff', fontWeight: 500 }}>
-                {activeDraft.title || '未命名章节'}
+                {extractTitleText(activeDraft.title) || '未命名章节'}
               </span>
               <span style={{ fontSize: '0.75rem', color: '#8aa4c7', opacity: 0.85 }}>
                 {activeDraft.draftName}
@@ -269,7 +270,7 @@ const DraftPanel: React.FC = () => {
                       color: '#d7e8ff',
                       lineHeight: 1.3
                     }}>
-                      {draft.title || '未命名章节'}
+                      {extractTitleText(draft.title) || '未命名章节'}
                     </span>
 
                     {/* 第二行：草稿名（中号灰色） */}

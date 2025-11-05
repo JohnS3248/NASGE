@@ -15,6 +15,7 @@ import EditorHeader from "./components/EditorHeader";
 import ChapterNav from "./components/ChapterNav";
 import DraftPanel from "./components/DraftPanel";
 import TitleEditor from "./components/TitleEditor";
+import { extractTitleText, createTitleFromText, createEmptyTitle } from "./utils/titleHelpers";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
@@ -182,11 +183,13 @@ const App: React.FC = () => {
             }}
           >
             <TitleEditor
-              value={activeDraft?.title || ""}
+              value={activeDraft ? extractTitleText(activeDraft.title) : ""}
               style={activeDraft?.titleStyle || 'short'}
               onChange={(newTitle) => {
                 if (activeDraft) {
-                  updateDraft(activeDraft.id, { title: newTitle });
+                  // 临时：将字符串转换为 JSONContent
+                  // TODO: 在阶段1中，TitleEditor 将改为完整的编辑器，直接返回 JSONContent
+                  updateDraft(activeDraft.id, { title: createTitleFromText(newTitle) });
                 }
               }}
               onStyleChange={(newStyle) => {

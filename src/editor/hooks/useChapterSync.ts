@@ -4,6 +4,7 @@ import { fetchChapterFromSteam, saveChapterToSteam, reorderChaptersOnSteam } fro
 import { bbcodeToHtml, htmlToBBCode } from '../utils/bbcode';
 import { generateJSON, generateHTML } from '@tiptap/html';
 import { createEditorExtensions } from '../utils/editorExtensions';
+import { createTitleFromHtml, extractTitleText } from '../utils/titleHelpers';
 
 export type ChapterSyncStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -37,6 +38,10 @@ export function useChapterSync() {
         const extensions = createEditorExtensions();
         const contentJson = generateJSON(html, extensions);
 
+        // 2.5. 将标题 BBCode 转换为 JSON
+        const titleHtml = bbcodeToHtml(chapterContent.title);
+        const titleJson = createTitleFromHtml(titleHtml);
+
         // 3. 查找是否已有关联的草稿
         const existingDraft = drafts.find((d) => d.linkedChapterId === sectionId);
 
@@ -44,7 +49,7 @@ export function useChapterSync() {
           // 更新现有草稿
           console.log('[NASGE] 更新现有草稿', { draftId: existingDraft.id, sectionId });
           updateDraft(existingDraft.id, {
-            title: chapterContent.title,
+            title: titleJson,
             content: contentJson,
             lastSyncedAt: Date.now()
           });
@@ -52,8 +57,11 @@ export function useChapterSync() {
         } else {
           // 创建新草稿
           console.log('[NASGE] 创建新草稿', { sectionId });
-          const newDraft = addDraft(chapterContent.title);
+          // addDraft 接受字符串参数，但会自动转换为 JSON
+          const titleText = extractTitleText(titleJson);
+          const newDraft = addDraft(titleText);
           updateDraft(newDraft.id, {
+            title: titleJson, // 使用完整的 JSON（包含图片）
             content: contentJson,
             linkedChapterId: sectionId,
             linkedGuideId: guideInfo.id,
@@ -123,19 +131,23 @@ export function useChapterSync() {
       setSyncError((prev) => ({ ...prev, [sectionId]: '' }));
 
       try {
-        // 1. 将 JSON 内容转换为 HTML
+        // 1. 将标题 JSON 转换为 HTML 再转换为 BBCode
         console.log('[NASGE] 上传草稿到 Steam', { draftId, sectionId });
         const extensions = createEditorExtensions();
+        const titleHtml = generateHTML(draft.title, extensions);
+        const titleBBCode = htmlToBBCode(titleHtml);
+
+        // 2. 将内容 JSON 转换为 HTML
         const html = generateHTML(draft.content, extensions);
 
-        // 2. 将 HTML 转换为 BBCode
+        // 3. 将 HTML 转换为 BBCode
         const bbcode = htmlToBBCode(html);
 
-        // 3. 上传到 Steam
+        // 4. 上传到 Steam
         await saveChapterToSteam(
           draft.linkedGuideId,
           draft.linkedChapterId,
-          draft.title,
+          titleBBCode, // 上传BBCode格式的标题
           bbcode
         );
 

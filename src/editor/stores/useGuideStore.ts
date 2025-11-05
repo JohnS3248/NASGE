@@ -6,6 +6,7 @@ import { bbcodeToHtml } from "../utils/bbcode";
 import { JSONContent } from "@tiptap/core";
 import { createEditorExtensions, createEmptyDoc } from "../utils/editorExtensions";
 import { generateJSON } from "@tiptap/html";
+import { createTitleFromText, createEmptyTitle } from "../utils/titleHelpers";
 
 /**
  * 编辑器模式
@@ -45,7 +46,7 @@ export type TitleStyle = 'short' | 'long';
 export type Draft = {
   id: string;
   draftName: string;        // 草稿名（本地管理用，如"草稿 1"）
-  title: string;            // 章节标题（Steam 上传用）
+  title: JSONContent;       // 章节标题（JSON格式，支持图片等富文本）
   content: JSONContent;
   updatedAt: number;
   linkedChapterId?: string; // 关联的 Steam 章节 ID (sectionId)
@@ -167,7 +168,7 @@ export const useGuideStore = create<GuideState>()(
         const draft: Draft = {
           id: crypto.randomUUID(),
           draftName: `草稿 ${draftNumber}`,  // 草稿名
-          title: title || "",                 // 章节标题（默认空）
+          title: title ? createTitleFromText(title) : createEmptyTitle(),  // 章节标题（JSON格式）
           content: createEmptyDoc(),
           updatedAt: Date.now()
         };
@@ -312,7 +313,7 @@ export const useGuideStore = create<GuideState>()(
     },
     {
       name: "nasge-guide-drafts",
-      version: 6, // v6: 分离 draftName 和 title
+      version: 7, // v7: title 从 string 改为 JSONContent
       storage: {
         getItem: (name: string) => {
           const str = localStorage.getItem(name);
@@ -392,7 +393,7 @@ export const useGuideStore = create<GuideState>()(
           const defaultDraft = {
             id: crypto.randomUUID(),
             draftName: "草稿 1",
-            title: "",
+            title: createEmptyTitle(),
             content: createEmptyDoc(),
             updatedAt: Date.now()
           };
@@ -418,7 +419,7 @@ export const useGuideStore = create<GuideState>()(
             const defaultDraft = {
               id: crypto.randomUUID(),
               draftName: "草稿 1",
-              title: "",
+              title: createEmptyTitle(),
               content: createEmptyDoc(),
               updatedAt: Date.now()
             };
@@ -429,32 +430,71 @@ export const useGuideStore = create<GuideState>()(
             const defaultDraft = {
               id: crypto.randomUUID(),
               draftName: "草稿 1",
-              title: "",
+              title: createEmptyTitle(),
               content: createEmptyDoc(),
               updatedAt: Date.now()
             };
             persistedState.drafts = [defaultDraft];
             persistedState.activeDraftId = defaultDraft.id;
           } else {
-            // 迁移现有草稿：将 title 复制为 draftName
+            // 迁移现有草稿：将 title 复制为 draftName，并转换为 JSONContent
             persistedState.drafts = persistedState.drafts.map((draft: any, index: number) => ({
               ...draft,
               draftName: draft.title || `草稿 ${index + 1}`,
-              title: draft.title || ""
+              title: draft.title ? createTitleFromText(draft.title) : createEmptyTitle()
             }));
           }
 
           return persistedState;
         }
 
-        // v6+: 已经是最新版本
-        if (version >= 6) {
+        // v6 -> v7: title 从 string 改为 JSONContent
+        if (version >= 6 && version < 7) {
+          console.log('[NASGE] v6 -> v7 迁移：title 从 string 改为 JSONContent', {
+            draftsCount: persistedState.drafts?.length
+          });
+
           // 确保 drafts 数组存在
           if (!persistedState.drafts || !Array.isArray(persistedState.drafts) || persistedState.drafts.length === 0) {
             const defaultDraft = {
               id: crypto.randomUUID(),
               draftName: "草稿 1",
-              title: "",
+              title: createEmptyTitle(),
+              content: createEmptyDoc(),
+              updatedAt: Date.now()
+            };
+            persistedState.drafts = [defaultDraft];
+            persistedState.activeDraftId = defaultDraft.id;
+          } else {
+            // 迁移现有草稿：将 string 标题转换为 JSONContent
+            persistedState.drafts = persistedState.drafts.map((draft: any, index: number) => {
+              // 如果 title 已经是对象（JSON），说明已经迁移过了
+              if (typeof draft.title === 'object' && draft.title !== null && 'type' in draft.title) {
+                return draft;
+              }
+
+              // 将字符串标题转换为 JSONContent
+              const titleStr = typeof draft.title === 'string' ? draft.title : '';
+              console.log(`[NASGE] 迁移草稿 ${index + 1} 标题: "${titleStr}"`);
+
+              return {
+                ...draft,
+                title: titleStr ? createTitleFromText(titleStr) : createEmptyTitle()
+              };
+            });
+          }
+
+          return persistedState;
+        }
+
+        // v7+: 已经是最新版本
+        if (version >= 7) {
+          // 确保 drafts 数组存在
+          if (!persistedState.drafts || !Array.isArray(persistedState.drafts) || persistedState.drafts.length === 0) {
+            const defaultDraft = {
+              id: crypto.randomUUID(),
+              draftName: "草稿 1",
+              title: createEmptyTitle(),
               content: createEmptyDoc(),
               updatedAt: Date.now()
             };
