@@ -260,15 +260,9 @@ const App: React.FC = () => {
           {/* 标题编辑器 */}
           <TitleEditor
             value={activeDraft?.title || createEmptyTitle()}
-            style={activeDraft?.titleStyle || 'short'}
             onChange={(newTitle) => {
               if (activeDraft) {
                 updateDraft(activeDraft.id, { title: newTitle });
-              }
-            }}
-            onStyleChange={(newStyle) => {
-              if (activeDraft) {
-                updateDraft(activeDraft.id, { titleStyle: newStyle });
               }
             }}
           />

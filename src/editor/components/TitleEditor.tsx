@@ -1,14 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
-import { TitleStyle } from '../stores/useGuideStore';
+import { titleHasImage } from '../utils/titleHelpers';
 
 interface TitleEditorProps {
   value: JSONContent;
-  style: TitleStyle;
   onChange: (newValue: JSONContent) => void;
-  onStyleChange: (newStyle: TitleStyle) => void;
 }
 
 /**
@@ -16,16 +14,16 @@ interface TitleEditorProps {
  *
  * 特性：
  * - 支持富文本编辑（图片、粗体等）
- * - 默认高度：2行文本（约 60px）
- * - 自动扩展：插入图片后根据图片高度自动调整
+ * - 默认高度：1行文本（约 40px）
+ * - 自动扩展：插入图片后自动调整高度以适应图片
  * - 支持拖拽/粘贴图片
  */
 const TitleEditor: React.FC<TitleEditorProps> = ({
   value,
-  style,
-  onChange,
-  onStyleChange
+  onChange
 }) => {
+  // 检测标题中是否包含图片
+  const [hasImage, setHasImage] = useState(false);
   // 创建 TipTap 编辑器实例
   const editor = useEditor({
     extensions: createEditorExtensions(),
@@ -33,13 +31,15 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     onUpdate: ({ editor }) => {
       const json = editor.getJSON();
       onChange(json);
+      // 检测内容中是否有图片
+      setHasImage(titleHasImage(json));
     },
     editorProps: {
       attributes: {
         class: 'title-editor-content',
-        style: style === 'short'
-          ? 'min-height: 60px; max-height: 60px; overflow-y: auto;'
-          : 'min-height: 60px; max-height: none;'
+        style: hasImage
+          ? 'min-height: 40px; max-height: none;'
+          : 'min-height: 40px; max-height: 40px; overflow-y: auto;'
       }
     }
   });
@@ -52,14 +52,10 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       if (JSON.stringify(currentContent) !== JSON.stringify(value)) {
         editor.commands.setContent(value);
       }
+      // 同步检测图片状态
+      setHasImage(titleHasImage(value));
     }
   }, [editor, value]);
-
-  // 切换样式
-  const toggleStyle = () => {
-    const newStyle = style === 'short' ? 'long' : 'short';
-    onStyleChange(newStyle);
-  };
 
   if (!editor) {
     return null;
@@ -96,38 +92,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         <EditorContent editor={editor} />
       </div>
 
-      {/* 工具栏 */}
+      {/* 提示信息 */}
       <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        {/* 样式切换按钮 */}
-        <button
-          type="button"
-          onClick={toggleStyle}
-          style={{
-            padding: '0.4rem 0.8rem',
-            border: 'none',
-            borderRadius: '0.4rem',
-            background: 'rgba(102, 192, 244, 0.15)',
-            color: '#66c0f4',
-            fontSize: '0.8rem',
-            cursor: 'pointer',
-            transition: 'all 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(102, 192, 244, 0.25)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
-          }}
-          title={style === 'short' ? '允许多行和大图片' : '限制为2行高度'}
-        >
-          {style === 'short' ? '⬇ 允许扩展' : '⬆ 限制高度'}
-        </button>
-
-        {/* 提示文字 */}
         <span style={{ fontSize: '0.75rem', color: '#8aa4c7' }}>
-          {style === 'short'
-            ? '2行高度 • 可拖拽/粘贴图片'
-            : '不限高度 • 可拖拽/粘贴图片'}
+          {hasImage
+            ? '已包含图片 • 高度自动调整'
+            : '1行高度 • 可拖拽/粘贴图片自动扩展'}
         </span>
       </div>
 
@@ -161,9 +131,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           margin: 0.5rem 0;
         }
 
-        /* 短样式下限制图片高度 */
-        .title-editor-content[style*="max-height: 60px"] img {
-          max-height: 40px;
+        /* 单行模式下限制图片高度 */
+        .title-editor-content[style*="max-height: 40px"] img {
+          max-height: 30px;
           width: auto;
           display: inline-block;
           margin: 0 0.25rem;

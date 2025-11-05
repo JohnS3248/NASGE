@@ -36,11 +36,6 @@ export type GuideInfo = {
 };
 
 /**
- * 标题样式
- */
-export type TitleStyle = 'short' | 'long';
-
-/**
  * 草稿（本地编辑的内容）
  */
 export type Draft = {
@@ -52,7 +47,6 @@ export type Draft = {
   linkedChapterId?: string; // 关联的 Steam 章节 ID (sectionId)
   linkedGuideId?: string;   // 关联的 Steam 指南 ID
   lastSyncedAt?: number;    // 最后同步到 Steam 的时间
-  titleStyle?: TitleStyle;  // 标题样式偏好（默认 'short'）
 };
 
 /**
