@@ -145,8 +145,129 @@ const ChapterTitleImage: React.FC<{
   );
 };
 
+/**
+ * 单个章节项组件（使用 React.memo 避免不必要的重渲染）
+ * 🔧 性能优化：只在章节自身属性变化时重渲染
+ */
+const ChapterItem = React.memo<{
+  chapter: { sectionId: string; title: string };
+  isLinked: boolean;
+  isLoading: boolean;
+  isDragging: boolean;
+  isDragOver: boolean;
+  onChapterClick: (sectionId: string) => void;
+  onPullChapter: (sectionId: string) => void;
+  onDragStart: (e: React.DragEvent, sectionId: string) => void;
+  onDragOver: (e: React.DragEvent, sectionId: string) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent, targetId: string) => void;
+  onDragEnd: () => void;
+  renderTitle: (title: string) => React.ReactNode;
+}>(({
+  chapter,
+  isLinked,
+  isLoading,
+  isDragging,
+  isDragOver,
+  onChapterClick,
+  onPullChapter,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
+  renderTitle
+}) => {
+  return (
+    <div
+      key={chapter.sectionId}
+      draggable
+      onDragStart={(e) => onDragStart(e, chapter.sectionId)}
+      onDragOver={(e) => onDragOver(e, chapter.sectionId)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, chapter.sectionId)}
+      onDragEnd={onDragEnd}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        borderLeft: isDragOver
+          ? '3px solid rgba(102, 192, 244, 0.8)'
+          : isLinked ? '3px solid #66c0f4' : '3px solid transparent',
+        background: isLinked ? 'rgba(102, 192, 244, 0.1)' : 'transparent',
+        transition: 'all 0.15s ease',
+        opacity: isDragging ? 0.5 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab'
+      }}
+      onMouseEnter={(e) => {
+        if (!isLinked && !isDragging) {
+          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isLinked && !isDragging) {
+          e.currentTarget.style.background = 'transparent';
+        }
+      }}
+    >
+      <button
+        onClick={() => onChapterClick(chapter.sectionId)}
+        disabled={isLoading}
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: isLinked ? '#ffffff' : '#c5c5c5',
+          textAlign: 'left',
+          padding: '0.9rem 0.8rem',
+          fontSize: '0.88rem',
+          cursor: isLoading ? 'wait' : 'pointer',
+          flex: 1,
+          fontWeight: 400,
+          lineHeight: 1.4,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          opacity: isLoading ? 0.6 : 1,
+          overflow: 'hidden'
+        }}
+      >
+        {isLoading ? `拉取中...` : renderTitle(chapter.title)}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onPullChapter(chapter.sectionId);
+        }}
+        disabled={isLoading}
+        title="从 Steam 拉取章节内容"
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: '#66c0f4',
+          padding: '0.5rem 0.8rem',
+          fontSize: '0.85rem',
+          cursor: isLoading ? 'wait' : 'pointer',
+          opacity: isLoading ? 0.5 : 0.7,
+          transition: 'opacity 0.15s ease'
+        }}
+        onMouseEnter={(e) => {
+          if (!isLoading) e.currentTarget.style.opacity = '1';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '0.7';
+        }}
+      >
+        ↓
+      </button>
+    </div>
+  );
+});
+
+ChapterItem.displayName = 'ChapterItem';
+
 const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false }) => {
-  const { mode, guideInfo, reorderChapters } = useGuideStore();
+  // 🔧 性能优化：使用选择器仅订阅需要的状态，避免每次 draft 更新都触发重渲染
+  const mode = useGuideStore((state) => state.mode);
+  const guideInfo = useGuideStore((state) => state.guideInfo);
+  const reorderChapters = useGuideStore((state) => state.reorderChapters);
+
   const { pullChapter, switchToChapter, getChapterDraft, syncStatus, syncChapterOrder } = useChapterSync();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -417,84 +538,22 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             const isDragOver = dragOverId === chapter.sectionId;
 
             return (
-              <div
+              <ChapterItem
                 key={chapter.sectionId}
-                draggable
-                onDragStart={(e) => handleDragStart(e, chapter.sectionId)}
-                onDragOver={(e) => handleDragOver(e, chapter.sectionId)}
+                chapter={chapter}
+                isLinked={isLinked}
+                isLoading={isLoading}
+                isDragging={isDragging}
+                isDragOver={isDragOver}
+                onChapterClick={handleChapterClick}
+                onPullChapter={pullChapter}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, chapter.sectionId)}
+                onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  borderLeft: isDragOver
-                    ? '3px solid rgba(102, 192, 244, 0.8)'
-                    : isLinked ? '3px solid #66c0f4' : '3px solid transparent',
-                  background: isLinked ? 'rgba(102, 192, 244, 0.1)' : 'transparent',
-                  transition: 'all 0.15s ease',
-                  opacity: isDragging ? 0.5 : 1,
-                  cursor: isDragging ? 'grabbing' : 'grab'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLinked && !isDragging) {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isLinked && !isDragging) {
-                    e.currentTarget.style.background = 'transparent';
-                  }
-                }}
-              >
-                <button
-                  onClick={() => handleChapterClick(chapter.sectionId)}
-                  disabled={isLoading}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: isLinked ? '#ffffff' : '#c5c5c5',
-                    textAlign: 'left',
-                    padding: '0.9rem 0.8rem',
-                    fontSize: '0.88rem',
-                    cursor: isLoading ? 'wait' : 'pointer',
-                    flex: 1,
-                    fontWeight: 400,
-                    lineHeight: 1.4,
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                    opacity: isLoading ? 0.6 : 1,
-                    overflow: 'hidden'
-                  }}
-                >
-                  {isLoading ? `拉取中...` : renderChapterTitle(chapter.title)}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    pullChapter(chapter.sectionId);
-                  }}
-                  disabled={isLoading}
-                  title="从 Steam 拉取章节内容"
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    color: '#66c0f4',
-                    padding: '0.5rem 0.8rem',
-                    fontSize: '0.85rem',
-                    cursor: isLoading ? 'wait' : 'pointer',
-                    opacity: isLoading ? 0.5 : 0.7,
-                    transition: 'opacity 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isLoading) e.currentTarget.style.opacity = '1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.opacity = '0.7';
-                  }}
-                >
-                  ↓
-                </button>
-              </div>
+                renderTitle={renderChapterTitle}
+              />
             );
           })
         )}

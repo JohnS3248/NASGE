@@ -11,6 +11,8 @@ import {
   type ImageAlignment,
   type ImageDisplayPreset
 } from '../stores/useEditorImageNodeStore';
+import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
+import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
 
 interface TitleEditorProps {
   value: JSONContent;
@@ -67,6 +69,14 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   const [hasImage, setHasImage] = useState(false);
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
+  // 字符数限制信息
+  const [characterInfo, setCharacterInfo] = useState(() => ({
+    length: 0,
+    remaining: TITLE_CHARACTER_LIMIT,
+    exceeded: false,
+    warning: false,
+    limit: TITLE_CHARACTER_LIMIT
+  }));
   // 图片节点存储
   const updateImageDisplay = useEditorImageNodeStore((state) => state.updateDisplay);
   const removeImageNode = useEditorImageNodeStore((state) => state.removeNode);
@@ -81,6 +91,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       onChange(json);
       // 检测内容中是否有图片
       setHasImage(titleHasImage(json));
+      // 更新字符数信息
+      setCharacterInfo(checkCharacterLimit(editor, TITLE_CHARACTER_LIMIT));
     },
     editorProps: {
       attributes: {
@@ -102,6 +114,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       }
       // 同步检测图片状态
       setHasImage(titleHasImage(value));
+      // 更新字符数信息
+      setCharacterInfo(checkCharacterLimit(editor, TITLE_CHARACTER_LIMIT));
     }
   }, [editor, value]);
 
@@ -319,6 +333,20 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         }}
       >
         <EditorContent editor={editor} />
+      </div>
+
+      {/* 字符数统计 */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          marginTop: '0.5rem',
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          color: getCharacterCountColor(characterInfo)
+        }}
+      >
+        {getCharacterCountText(characterInfo)}
       </div>
 
       {/* 右键菜单 */}

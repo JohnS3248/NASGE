@@ -176,7 +176,7 @@ export const useGuideStore = create<GuideState>()(
 
       updateDraft: (id, patch) => {
         set((state) => ({
-          drafts: state.drafts.map((draft) =>
+          drafts: state.drafts.map((draft: Draft) =>
             draft.id === id
               ? {
                   ...draft,
@@ -192,8 +192,8 @@ export const useGuideStore = create<GuideState>()(
 
       deleteDraft: (id) => {
         set((state) => {
-          const remaining = state.drafts.filter((draft) => draft.id !== id);
-          const removed = state.drafts.find((draft) => draft.id === id) ?? null;
+          const remaining = state.drafts.filter((draft: Draft) => draft.id !== id);
+          const removed = state.drafts.find((draft: Draft) => draft.id === id) ?? null;
           deletedCache = removed;
 
           // 如果没有草稿了，保留最后一个
@@ -214,7 +214,7 @@ export const useGuideStore = create<GuideState>()(
 
       duplicateDraft: (id) => {
         const state = get();
-        const original = state.drafts.find((d) => d.id === id);
+        const original = state.drafts.find((d: Draft) => d.id === id);
         if (!original) return null;
 
         const duplicated: Draft = {
@@ -249,7 +249,7 @@ export const useGuideStore = create<GuideState>()(
       reorderDrafts: (newOrder) => {
         set((state) => {
           const reorderedDrafts = newOrder
-            .map(id => state.drafts.find(d => d.id === id))
+            .map(id => state.drafts.find((d: Draft) => d.id === id))
             .filter((d): d is Draft => d !== undefined);
           return { drafts: reorderedDrafts };
         });
@@ -265,7 +265,7 @@ export const useGuideStore = create<GuideState>()(
           if (!state.guideInfo) return state;
 
           const reorderedChapters = newOrder
-            .map(sectionId => state.guideInfo!.chapters.find(c => c.sectionId === sectionId))
+            .map(sectionId => state.guideInfo!.chapters.find((c: ChapterInfo) => c.sectionId === sectionId))
             .filter((c): c is ChapterInfo => c !== undefined)
             .map((chapter, index) => ({ ...chapter, order: index }));
 
@@ -308,56 +308,143 @@ export const useGuideStore = create<GuideState>()(
     {
       name: "nasge-guide-drafts",
       version: 7, // v7: title 从 string 改为 JSONContent
-      storage: {
-        getItem: (name: string) => {
-          const str = localStorage.getItem(name);
-          console.log('[NASGE Persist] getItem', { name, exists: !!str, length: str?.length });
-          if (!str) return null;
-          try {
-            const parsed = JSON.parse(str);
-            console.log('[NASGE Persist] getItem parsed', {
-              version: parsed.version,
-              hasState: !!parsed.state,
-              stateDraftsCount: parsed.state?.drafts?.length
-            });
-            return parsed;
-          } catch (e) {
-            console.error('[NASGE Persist] getItem parse error', e);
-            return null;
+      storage: (() => {
+        // 创建防抖的 setItem，避免每次输入都触发持久化
+        let debounceTimer: NodeJS.Timeout | null = null;
+        let pendingValue: { name: string; value: any } | null = null;
+
+        const debouncedSetItem = (name: string, value: any) => {
+          pendingValue = { name, value };
+
+          // 清除之前的定时器
+          if (debounceTimer) {
+            clearTimeout(debounceTimer);
           }
-        },
-        setItem: (name: string, value: any) => {
-          const valueStr = typeof value === 'string' ? value : JSON.stringify(value);
-          console.log('[NASGE Persist] setItem', { name, length: valueStr.length });
-          localStorage.setItem(name, valueStr);
-        },
-        removeItem: (name: string) => {
-          console.log('[NASGE Persist] removeItem', { name });
-          localStorage.removeItem(name);
-        }
-      },
+
+          // 500ms 后执行实际的持久化
+          debounceTimer = setTimeout(() => {
+            if (pendingValue) {
+              const valueStr = typeof pendingValue.value === 'string'
+                ? pendingValue.value
+                : JSON.stringify(pendingValue.value);
+              console.log('[NASGE Persist] setItem (debounced)', {
+                name: pendingValue.name,
+                length: valueStr.length
+              });
+              localStorage.setItem(pendingValue.name, valueStr);
+              pendingValue = null;
+              debounceTimer = null;
+            }
+          }, 500); // 500ms 防抖延迟
+        };
+
+        return {
+          getItem: (name: string) => {
+            const str = localStorage.getItem(name);
+            console.log('[NASGE Persist] getItem', { name, exists: !!str, length: str?.length });
+            if (!str) return null;
+            try {
+              const parsed = JSON.parse(str);
+              console.log('[NASGE Persist] getItem parsed', {
+                version: parsed.version,
+                hasState: !!parsed.state,
+                stateDraftsCount: parsed.state?.drafts?.length
+              });
+              return parsed;
+            } catch (e) {
+              console.error('[NASGE Persist] getItem parse error', e);
+              return null;
+            }
+          },
+          setItem: debouncedSetItem,
+          removeItem: (name: string) => {
+            console.log('[NASGE Persist] removeItem', { name });
+            localStorage.removeItem(name);
+          }
+        };
+      })(),
       // 关键修复：使用自定义 merge 策略，确保持久化数据完全覆盖初始状态
+      // 但保留 currentState 中的函数引用（函数不会被序列化）
       merge: (persistedState: any, currentState: GuideState) => {
-        console.log('[NASGE Persist] merge 调用', {
-          persistedStateKeys: Object.keys(persistedState || {}),
-          persistedDraftsCount: persistedState?.drafts?.length,
-          currentDraftsCount: currentState.drafts?.length,
-          persistedPreview: persistedState ? JSON.stringify(persistedState).substring(0, 200) : 'null'
-        });
-
-        // Zustand persist 会自动从 { state: {...}, version } 中提取 state
-        // 所以这里收到的 persistedState 就是之前保存的 state 对象
-        if (persistedState && persistedState.drafts && Array.isArray(persistedState.drafts)) {
-          console.log('[NASGE Persist] merge 成功恢复草稿', {
-            draftsCount: persistedState.drafts.length,
-            draftTitles: persistedState.drafts.map((d: any) => d.title)
+        try {
+          console.log('[NASGE Persist] merge 调用', {
+            persistedStateKeys: Object.keys(persistedState || {}),
+            persistedDraftsCount: persistedState?.drafts?.length,
+            currentDraftsCount: currentState.drafts?.length,
+            persistedPreview: persistedState ? JSON.stringify(persistedState).substring(0, 200) : 'null'
           });
-          // 完全使用持久化状态，忽略初始状态
-          return persistedState as GuideState;
-        }
 
-        console.warn('[NASGE Persist] merge 未找到草稿数据，使用初始状态');
-        return currentState;
+          // Zustand persist 会自动从 { state: {...}, version } 中提取 state
+          // 所以这里收到的 persistedState 就是之前保存的 state 对象
+          if (persistedState && persistedState.drafts && Array.isArray(persistedState.drafts)) {
+            console.log('[NASGE Persist] merge 成功恢复草稿', {
+              draftsCount: persistedState.drafts.length,
+              draftTitles: persistedState.drafts.map((d: any) => d.title)
+            });
+
+            // 验证 guideInfo 的完整性
+            let safeGuideInfo = persistedState.guideInfo;
+            if (safeGuideInfo && !safeGuideInfo.chapters) {
+              console.warn('[NASGE Persist] guideInfo 缺少 chapters，设为 null');
+              safeGuideInfo = null;
+            }
+
+            // 只恢复数据字段，保留 currentState 中的函数
+            // 这样可以避免 "t is not a function" 错误
+            //
+            // 🔧 重要：不能使用 ...currentState，因为它会复制 getter 属性
+            // getter 内部调用 get() 可能导致在 merge 过程中访问不完整的状态
+            const mergedState = {
+              // 数据字段（从 persistedState 恢复）
+              mode: persistedState.mode ?? currentState.mode,
+              guideInfo: safeGuideInfo ?? currentState.guideInfo,
+              drafts: persistedState.drafts ?? currentState.drafts,
+              activeDraftId: persistedState.activeDraftId ?? currentState.activeDraftId,
+              currentChapterId: persistedState.currentChapterId ?? currentState.currentChapterId,
+              isDirty: persistedState.isDirty ?? currentState.isDirty,
+
+              // 方法函数（从 currentState 保留）
+              setMode: currentState.setMode,
+              setGuideInfo: currentState.setGuideInfo,
+              clearGuideInfo: currentState.clearGuideInfo,
+              selectDraft: currentState.selectDraft,
+              addDraft: currentState.addDraft,
+              updateDraft: currentState.updateDraft,
+              deleteDraft: currentState.deleteDraft,
+              duplicateDraft: currentState.duplicateDraft,
+              restoreDraft: currentState.restoreDraft,
+              reorderDrafts: currentState.reorderDrafts,
+              setCurrentChapter: currentState.setCurrentChapter,
+              reorderChapters: currentState.reorderChapters,
+              setDirty: currentState.setDirty,
+              markDirty: currentState.markDirty,
+              markClean: currentState.markClean,
+
+              // 向后兼容的 getter（从 currentState 保留）
+              get chapters() {
+                return mergedState.drafts;
+              },
+              get activeId() {
+                return mergedState.activeDraftId;
+              },
+
+              // 向后兼容的方法别名
+              selectChapter: currentState.selectChapter,
+              addChapter: currentState.addChapter,
+              updateChapter: currentState.updateChapter,
+              deleteChapter: currentState.deleteChapter,
+              restoreChapter: currentState.restoreChapter
+            };
+
+            return mergedState as GuideState;
+          }
+
+          console.warn('[NASGE Persist] merge 未找到草稿数据，使用初始状态');
+          return currentState;
+        } catch (error) {
+          console.error('[NASGE Persist] merge 发生错误，使用初始状态', error);
+          return currentState;
+        }
       },
       onRehydrateStorage: () => {
         console.log('[NASGE Persist] 开始 rehydration');

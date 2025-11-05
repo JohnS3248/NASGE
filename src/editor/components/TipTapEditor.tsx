@@ -10,6 +10,8 @@ import {
   type ImageAlignment,
   type ImageDisplayPreset
 } from "../stores/useEditorImageNodeStore";
+import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
+import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 
 const toolbarButton: React.CSSProperties = {
   border: "none",
@@ -69,6 +71,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const extensions = useMemo(() => createEditorExtensions(), []);
   const ignoreNextUpdateRef = useRef(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
+  // 字符数限制信息
+  const [characterInfo, setCharacterInfo] = useState(() => ({
+    length: 0,
+    remaining: CONTENT_CHARACTER_LIMIT,
+    exceeded: false,
+    warning: false,
+    limit: CONTENT_CHARACTER_LIMIT
+  }));
 
   const editor = useEditor({
     extensions,
@@ -88,6 +98,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         html: editor.getHTML(),
         json: editor.getJSON()
       });
+      // 更新字符数信息
+      setCharacterInfo(checkCharacterLimit(editor, CONTENT_CHARACTER_LIMIT));
     }
   });
 
@@ -350,6 +362,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     if (!editor || externalDoc === undefined) return;
     ignoreNextUpdateRef.current = true;
     editor.commands.setContent(externalDoc ?? EMPTY_DOC, { emitUpdate: false });
+    // 更新字符数信息
+    setCharacterInfo(checkCharacterLimit(editor, CONTENT_CHARACTER_LIMIT));
   }, [editor, externalDoc]);
 
   if (!editor) return null;
@@ -495,7 +509,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           borderRadius: "0.9rem",
           padding: "1.1rem",
           border: "1px solid rgba(102, 192, 244, 0.18)",
-          overflowY: "auto"
+          overflowY: "auto",
+          position: "relative"
         }}
         className="nasge-editor-container"
         onContextMenu={(event) => {
@@ -545,6 +560,26 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }}
       >
         <EditorContent editor={editor} />
+
+        {/* 字符数统计 - 固定在编辑器右下角 */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "0.75rem",
+            right: "0.75rem",
+            fontSize: "0.8rem",
+            fontWeight: 500,
+            color: getCharacterCountColor(characterInfo),
+            background: "rgba(9, 15, 25, 0.85)",
+            padding: "0.35rem 0.65rem",
+            borderRadius: "0.5rem",
+            border: `1px solid ${characterInfo.exceeded ? 'rgba(239, 68, 68, 0.3)' : 'rgba(102, 192, 244, 0.2)'}`,
+            backdropFilter: "blur(4px)",
+            pointerEvents: "none"
+          }}
+        >
+          {getCharacterCountText(characterInfo)}
+        </div>
       </div>
 
       {contextMenu.visible ? (
