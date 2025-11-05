@@ -58,16 +58,34 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       refresh: async () => {
         set({ status: "loading", error: undefined });
 
-        // 添加初始延迟和重试逻辑，解决首次加载连接失败问题
-        const fetchWithRetry = async (retries = 3, initialDelay = 300) => {
-          // 初始延迟：给 Steam content script 时间准备
+        // 添加初始延迟和重试逻辑，解决首次加载和页面刷新后的连接/数据问题
+        const fetchWithRetry = async (retries = 5, initialDelay = 500) => {
+          // 初始延迟：给 Steam content script 和桥接脚本时间准备
+          // 特别是在页面刷新后，需要等待 gPreviewImagesBridge 执行
           await new Promise(resolve => setTimeout(resolve, initialDelay));
 
-          let delay = 500;
+          let delay = 800;
           for (let i = 0; i < retries; i++) {
             try {
               const list = await fetchSteamGuideImages("chapter-preview");
-              console.log('[NASGE] 图片池加载成功', { count: list.length });
+              console.log('[NASGE] 图片池加载成功', { count: list.length, attempt: i + 1 });
+
+              // 检查是否所有图片都有 originalUrl（透明背景 URL）
+              const hasTransparentUrls = list.every(item => item.originalUrl);
+              console.log('[NASGE] 图片池透明 URL 检查', {
+                total: list.length,
+                hasTransparent: hasTransparentUrls,
+                urls: list.map(item => ({ id: item.previewId, hasOriginal: !!item.originalUrl }))
+              });
+
+              // 如果获取到的图片没有 originalUrl，可能是桥接脚本还没执行完成
+              // 继续重试（除非是最后一次）
+              if (list.length > 0 && !hasTransparentUrls && i < retries - 1) {
+                console.warn(`[NASGE] 图片池数据不完整（缺少透明 URL），${delay}ms 后重试 (${i + 1}/${retries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 1.5;
+                continue;
+              }
 
               // 将 Steam 图片标记为 success 状态
               const itemsWithState: ImageWithState[] = list.map(item => ({
@@ -92,7 +110,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
                 // 静默重试
                 console.info(`[NASGE] 连接图片池中，${delay}ms 后重试 (${i + 1}/${retries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
-                delay *= 2;
+                delay *= 1.5;
               } else {
                 // 最终失败
                 const errorMessage = error instanceof Error ? error.message : String(error);

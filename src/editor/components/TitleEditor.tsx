@@ -265,13 +265,24 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         onContextMenu={(event) => {
           event.preventDefault();
           if (!editor) {
+            console.log('[TitleEditor] onContextMenu: editor not ready');
             return;
           }
 
           const target = event.target as HTMLElement;
+          console.log('[TitleEditor] onContextMenu triggered', {
+            target: target.tagName,
+            targetClass: target.className,
+            hasDataAttr: target.hasAttribute('data-image-node-id')
+          });
+
           const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
+          console.log('[TitleEditor] imageElement found:', imageElement);
+
           if (imageElement) {
             const imageNodeId = imageElement.dataset.imageNodeId;
+            console.log('[TitleEditor] imageNodeId:', imageNodeId);
+
             if (imageNodeId) {
               const coords = editor.view.posAtCoords({
                 left: event.clientX,
@@ -287,6 +298,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
                 editor.commands.focus();
               }
 
+              console.log('[TitleEditor] Setting context menu', {
+                x: event.clientX,
+                y: event.clientY,
+                imageNodeId
+              });
+
               setContextMenu({
                 visible: true,
                 x: event.clientX,
@@ -296,6 +313,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
               });
               return;
             }
+          } else {
+            console.log('[TitleEditor] No image element found, event target:', target);
           }
         }}
       >
