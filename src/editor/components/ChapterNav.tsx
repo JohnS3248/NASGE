@@ -59,6 +59,7 @@ const ChapterTitleImage: React.FC<{
   titleText?: string; // 可选，目前章节目录不显示文字
 }> = ({ previewId, fileName }) => {
   const imagePool = useSteamGuideImageStore((state) => state.items);
+  const imagePoolStatus = useSteamGuideImageStore((state) => state.status);
   const [imageError, setImageError] = useState(false);
 
   // 从图片池查找图片信息
@@ -67,11 +68,11 @@ const ChapterTitleImage: React.FC<{
   }, [imagePool, previewId]);
 
   // 构建图片URL
-  // 优先使用图片池中的 originalUrl（透明背景），其次 thumbnailUrl，最后使用默认URL
+  // 优先使用图片池中的 originalUrl（透明背景），其次 thumbnailUrl
+  // 如果图片池还在加载中且找不到图片信息，返回 null（显示占位符）
   const imageUrl = useMemo(() => {
     const poolOriginal = imageInfo?.originalUrl;
     const poolThumbnail = imageInfo?.thumbnailUrl;
-    const fallbackUrl = `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}`;
 
     console.log('[ChapterTitleImage] Building image URL:', {
       previewId,
@@ -79,11 +80,18 @@ const ChapterTitleImage: React.FC<{
       imageInfo,
       poolOriginal,
       poolThumbnail,
-      finalUrl: poolOriginal || poolThumbnail || fallbackUrl
+      imagePoolStatus,
+      finalUrl: poolOriginal || poolThumbnail || null
     });
 
-    return poolOriginal || poolThumbnail || fallbackUrl;
-  }, [previewId, fileName, imageInfo]);
+    // 如果图片池正在加载且没有找到图片信息，返回 null（显示加载占位符）
+    if (!imageInfo && (imagePoolStatus === "loading" || imagePoolStatus === "idle")) {
+      return null;
+    }
+
+    // 如果图片池已就绪但仍找不到图片，返回 null（显示错误占位符）
+    return poolOriginal || poolThumbnail || null;
+  }, [previewId, fileName, imageInfo, imagePoolStatus]);
 
   // 获取图片状态
   const imageState: ImageState = imageInfo?.state || "success";
@@ -95,13 +103,13 @@ const ChapterTitleImage: React.FC<{
         position: 'relative',
         width: '100%',
         maxWidth: '240px',
-        backgroundColor: imageError ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
-        border: imageError ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
+        backgroundColor: (imageError || !imageUrl) ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
+        border: (imageError || !imageUrl) ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
         borderRadius: '3px',
         overflow: 'hidden'
       }}
     >
-      {!imageError ? (
+      {!imageError && imageUrl ? (
         <>
           <img
             src={imageUrl}
@@ -120,7 +128,7 @@ const ChapterTitleImage: React.FC<{
           <MiniStateIndicator state={imageState} />
         </>
       ) : (
-        // 图片加载失败时显示占位符
+        // 图片URL不存在或加载失败时显示占位符
         <div style={{
           width: '100%',
           minHeight: '80px',
@@ -130,7 +138,7 @@ const ChapterTitleImage: React.FC<{
           fontSize: '32px',
           opacity: 0.3
         }}>
-          🖼️
+          {imagePoolStatus === "loading" || imagePoolStatus === "idle" ? '⏳' : '🖼️'}
         </div>
       )}
     </div>
