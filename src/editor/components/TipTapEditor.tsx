@@ -4,6 +4,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { processIncomingImages } from "../services/imageIntake";
+import { uploadSingleImage } from "../services/imageUpload";
 import {
   useEditorImageNodeStore,
   type ImageAlignment,
@@ -201,6 +202,27 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     editor.chain().focus().deleteSelection().run();
     removeImageNode(nodeId);
   }, [contextMenu, editor, removeImageNode]);
+
+  const handleUploadImage = useCallback(async () => {
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+      return;
+    }
+
+    const nodeId = contextMenu.payload.imageNodeId;
+
+    try {
+      console.log('[NASGE] 开始上传图片:', nodeId);
+      const previewId = await uploadSingleImage(nodeId);
+      console.log('[NASGE] 图片上传成功，预览码:', previewId);
+
+      // 可选：显示成功提示
+      // window.alert(`图片上传成功！预览码：${previewId}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[NASGE] 图片上传失败:', errorMessage);
+      window.alert(`图片上传失败：${errorMessage}`);
+    }
+  }, [contextMenu, editor]);
 
   const insertImage = useCallback(() => {
     if (!editor) return;
@@ -568,6 +590,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                   />
                 ))}
                 <MenuDivider />
+                <MenuItem
+                  label="上传图片"
+                  onClick={handleUploadImage}
+                  onComplete={closeContextMenu}
+                />
                 <MenuItem
                   label="删除图片"
                   danger

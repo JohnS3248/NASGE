@@ -180,9 +180,11 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       return attrPreview;
     }
 
+    // 优先使用 CDN URL（真实上传后的图片）
+    // 如果没有 CDN URL，则使用本地 blob URL（模拟上传或离线编辑）
+    // redirectUrl 是 Steam 社区页面链接，不是图片 URL，所以不应该用于预览
     return (
       imageNode.cdnUrl ??
-      imageNode.redirectUrl ??
       imageNode.metadata.previewDataUrl ??
       attrPreview
     );

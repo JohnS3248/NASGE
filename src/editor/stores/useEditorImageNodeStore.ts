@@ -135,6 +135,9 @@ export const useEditorImageNodeStore = create<EditorImageNodeState>(
       const cdnUrl = previewId ? buildPreviewImageUrl(previewId) : undefined;
 
       const previous = get().nodes[nodeId];
+
+      // Only clear previewDataUrl if we have a valid CDN URL to replace it
+      // This preserves local blob URL for mock uploads without real preview IDs
       set((state) =>
         updateNode(state, nodeId, {
           status: "ready",
@@ -143,9 +146,9 @@ export const useEditorImageNodeStore = create<EditorImageNodeState>(
           cdnUrl,
           uploadId: record.id,
           fileName: record.generatedName ?? record.originalName,
-          metadata: {
+          metadata: cdnUrl ? {
             previewDataUrl: undefined
-          }
+          } : {}
         })
       );
     },
