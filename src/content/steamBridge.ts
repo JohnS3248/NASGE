@@ -285,6 +285,12 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
   const isManageGuidePage = window.location.href.includes("/manageguide/");
   const isEditSubsectionPage = window.location.href.includes("/editguidesubsection/");
 
+  console.log('[NASGE DEBUG] fetchGuideImagePool 调用', {
+    currentUrl: window.location.href,
+    isManageGuidePage,
+    isEditSubsectionPage
+  });
+
   if (isManageGuidePage) {
     console.info("[NASGE] 在 manageguide 页面，直接从 DOM 解析图片池");
     return parseGuideImagePoolFromDOM();
@@ -490,7 +496,8 @@ function parseGuideImagePool(html: string): SteamGuideImage[] {
     const record: SteamGuideImage = {
       previewId,
       fileName,
-      thumbnailUrl
+      thumbnailUrl,
+      originalUrl: thumbnailUrl  // AJAX: 使用 thumbnailUrl 作为 originalUrl
     };
 
     if (!images.has(previewId)) {
@@ -513,76 +520,220 @@ function absoluteUrl(src: string): string | undefined {
 function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
   const images = new Map<string, SteamGuideImage>();
 
-  const globalVar = (window as any).gPreviewImages;
+  // 从页面桥接脚本写入的 DOM 属性读取 gPreviewImages
+  // Content script 运行在隔离环境，无法直接访问页面的全局变量
+  let globalVar: any = null;
+
+  try {
+    // 读取页面桥接脚本写入的数据
+    const attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
+    if (attr && attr !== 'null') {
+      globalVar = JSON.parse(attr);
+      console.log('[NASGE Content Script] ✅ 从页面桥接读取 gPreviewImages，共', globalVar?.length, '张图片');
+
+      // 打印调试信息
+      if (Array.isArray(globalVar)) {
+        globalVar.forEach((img: any, idx: number) => {
+          console.log(`[NASGE Content Script] 图片${idx}:`, {
+            previewid: img.previewid,
+            filename: img.filename,
+            url: img.url,
+            hasLetterbox: img.url?.includes('Letterbox'),
+            hasImcolor: img.url?.includes('imcolor')
+          });
+        });
+      }
+    } else {
+      console.warn('[NASGE Content Script] ❌ 页面桥接数据不存在，尝试手动触发');
+
+      // 手动触发一次（以防时序问题）
+      const script = document.createElement('script');
+      script.textContent = `
+        (function() {
+          if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
+            document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
+            console.log('[NASGE 手动桥接] ✅ gPreviewImages 已写入 DOM，共', window.gPreviewImages.length, '张图片');
+          } else {
+            console.warn('[NASGE 手动桥接] ⚠️ gPreviewImages 不存在');
+          }
+        })();
+      `;
+      (document.head || document.documentElement).appendChild(script);
+      script.remove();
+
+      // 再次尝试读取
+      const retryAttr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
+      if (retryAttr && retryAttr !== 'null') {
+        globalVar = JSON.parse(retryAttr);
+        console.log('[NASGE Content Script] ✅ 手动触发后成功读取，共', globalVar?.length, '张图片');
+      }
+    }
+  } catch (error) {
+    console.error('[NASGE] 读取页面桥接数据失败:', error);
+  }
+
   if (Array.isArray(globalVar) && globalVar.length > 0) {
-    console.info('[NASGE] 从全局变量 gPreviewImages 解析图片池');
+    console.info('[NASGE] ✅ 从全局变量 gPreviewImages 解析图片池');
+    console.log('[NASGE DEBUG] gPreviewImages 原始数据:', JSON.stringify(globalVar, null, 2));
+
     for (const item of globalVar) {
       if (item.previewid) {
-        images.set(item.previewid, {
+        const imageData = {
           previewId: item.previewid,
           fileName: item.filename || `preview_${item.previewid}`,
           thumbnailUrl: item.url,
           originalUrl: item.url  // 完整的透明背景 URL
+        };
+
+        console.log('[NASGE DEBUG] 处理图片:', {
+          previewId: item.previewid,
+          originalUrl: item.url,
+          urlHasLetterbox: item.url?.includes('Letterbox'),
+          urlHasImcolor: item.url?.includes('imcolor')
+        });
+
+        images.set(item.previewid, imageData);
+      }
+    }
+
+    console.info('[NASGE DEBUG] 图片池解析完成，共', images.size, '张图片');
+    console.log('[NASGE DEBUG] 解析后的图片池:', Array.from(images.values()));
+
+    // 成功使用 gPreviewImages，直接返回
+    console.info(`[NASGE] 从 gPreviewImages 解析到 ${images.size} 张图片`, Array.from(images.values()));
+    return Array.from(images.values());
+  }
+
+  // Fallback: 从 DOM 解析
+  console.warn('[NASGE] ❌ gPreviewImages 不可用，尝试从 DOM 解析');
+  console.log('[NASGE DEBUG] gPreviewImages 状态:', {
+    exists: globalVar !== null,
+    isArray: Array.isArray(globalVar),
+    length: globalVar?.length
+  });
+
+  try {
+    const debugScript = document.createElement('script');
+    debugScript.textContent = `if (window.__NASGE_LAST_PARSE__) window.__NASGE_LAST_PARSE__.usedFallback = true;`;
+    document.documentElement.appendChild(debugScript);
+    debugScript.remove();
+  } catch (error) {
+    // 忽略
+  }
+
+  const imageContainers = document.querySelectorAll('.manageSortablePreview, .guide_preview_image_small, .preview_image, [data-previewid]');
+
+  for (const container of Array.from(imageContainers)) {
+    let previewId: string | undefined;
+    let thumbnailUrl: string | undefined;
+    let fileName: string | undefined;
+
+    const idMatch = /preview_(\d+)/.exec(container.id || '');
+    if (idMatch) {
+      previewId = idMatch[1];
+    }
+
+    const dataPreviewId = container.getAttribute('data-previewid');
+    if (dataPreviewId && !previewId) {
+      previewId = dataPreviewId;
+    }
+
+    const img = container.querySelector('img') || (container instanceof HTMLImageElement ? container : null);
+    if (img) {
+      const src = img.getAttribute('src') || '';
+      console.log('[NASGE DEBUG] DOM解析图片src:', src);
+      const match = /UGC\/(\d+)|ugc\/(\d+)/i.exec(src);
+      if (match && !previewId) {
+        previewId = match[1] || match[2];
+      }
+      if (src) {
+        thumbnailUrl = absoluteUrl(src);
+        console.log('[NASGE DEBUG] 转换后的thumbnailUrl:', thumbnailUrl);
+      }
+      fileName = img.getAttribute('alt') || img.getAttribute('title') || fileName;
+    }
+
+    const onclick = container.getAttribute('onclick') || '';
+    if (!previewId) {
+      const match = /previewid[=\s]+['"]?(\d+)['"]?/i.exec(onclick) || /preview_(\d+)/i.exec(onclick);
+      if (match) {
+        previewId = match[1];
+      }
+    }
+
+    if (!fileName) {
+      const titleElem = container.querySelector('.preview_title, .file_name');
+      if (titleElem) {
+        fileName = titleElem.textContent?.trim() || fileName;
+      }
+    }
+
+    if (previewId) {
+      if (!fileName) {
+        fileName = `preview_${previewId}`;
+      }
+      if (!images.has(previewId)) {
+        images.set(previewId, {
+          previewId,
+          fileName,
+          thumbnailUrl,
+          originalUrl: thumbnailUrl  // DOM fallback: 使用 thumbnailUrl 作为 originalUrl
         });
       }
     }
-  } else {
-    console.info('[NASGE] gPreviewImages 不可用，尝试从 DOM 解析');
+  }
 
-    const imageContainers = document.querySelectorAll('.manageSortablePreview, .guide_preview_image_small, .preview_image, [data-previewid]');
+  // 最后尝试从页面桥接合并透明背景URL（如果之前走了DOM fallback）
+  let globalVarFinal: any = null;
+  try {
+    // 尝试从页面桥接读取
+    let attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
 
-    for (const container of Array.from(imageContainers)) {
-      let previewId: string | undefined;
-      let thumbnailUrl: string | undefined;
-      let fileName: string | undefined;
+    if (!attr || attr === 'null') {
+      // 如果没有，手动触发一次
+      const script = document.createElement('script');
+      script.textContent = `
+        (function() {
+          if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
+            document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
+            console.log('[NASGE 最终检查] ✅ gPreviewImages 已写入 DOM，共', window.gPreviewImages.length, '张图片');
+          }
+        })();
+      `;
+      (document.head || document.documentElement).appendChild(script);
+      script.remove();
 
-      const idMatch = /preview_(\d+)/.exec(container.id || '');
-      if (idMatch) {
-        previewId = idMatch[1];
-      }
+      attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
+    }
 
-      const dataPreviewId = container.getAttribute('data-previewid');
-      if (dataPreviewId && !previewId) {
-        previewId = dataPreviewId;
-      }
+    if (attr && attr !== 'null') {
+      globalVarFinal = JSON.parse(attr);
+      console.log('[NASGE Content Script] ✅ 最终检查成功，共', globalVarFinal?.length, '张图片');
+    }
+  } catch (error) {
+    console.warn('[NASGE] 最终检查失败:', error);
+  }
 
-      const img = container.querySelector('img') || (container instanceof HTMLImageElement ? container : null);
-      if (img) {
-        const src = img.getAttribute('src') || '';
-        const match = /UGC\/(\d+)|ugc\/(\d+)/i.exec(src);
-        if (match && !previewId) {
-          previewId = match[1] || match[2];
-        }
-        if (src) {
-          thumbnailUrl = absoluteUrl(src);
-        }
-        fileName = img.getAttribute('alt') || img.getAttribute('title') || fileName;
-      }
-
-      const onclick = container.getAttribute('onclick') || '';
-      if (!previewId) {
-        const match = /previewid[=\s]+['"]?(\d+)['"]?/i.exec(onclick) || /preview_(\d+)/i.exec(onclick);
-        if (match) {
-          previewId = match[1];
-        }
-      }
-
-      if (!fileName) {
-        const titleElem = container.querySelector('.preview_title, .file_name');
-        if (titleElem) {
-          fileName = titleElem.textContent?.trim() || fileName;
-        }
-      }
-
-      if (previewId) {
-        if (!fileName) {
-          fileName = `preview_${previewId}`;
-        }
-        if (!images.has(previewId)) {
-          images.set(previewId, {
-            previewId,
-            fileName,
-            thumbnailUrl
+  if (Array.isArray(globalVarFinal) && globalVarFinal.length > 0) {
+    console.log('[NASGE] ✅ 最终检查：发现 gPreviewImages，合并透明URL');
+    for (const item of globalVarFinal) {
+      if (item.previewid && item.url) {
+        const existing = images.get(item.previewid);
+        if (existing) {
+          existing.originalUrl = item.url;  // 使用透明背景URL覆盖
+          existing.fileName = item.filename || existing.fileName;
+          console.log('[NASGE DEBUG] 更新图片URL:', {
+            previewId: item.previewid,
+            oldUrl: existing.thumbnailUrl,
+            newOriginalUrl: item.url
+          });
+        } else {
+          // 如果DOM中没有找到，直接添加
+          images.set(item.previewid, {
+            previewId: item.previewid,
+            fileName: item.filename || `preview_${item.previewid}`,
+            thumbnailUrl: item.url,
+            originalUrl: item.url
           });
         }
       }
@@ -611,10 +762,12 @@ function parseGuideImagePoolFromEditSubsectionDOM(): SteamGuideImage[] {
     const fileName = img.getAttribute('title') || `preview_${previewId}`;
 
     if (previewId && thumbnailUrl) {
+      const absoluteThumbnailUrl = absoluteUrl(thumbnailUrl);
       images.set(previewId, {
         previewId,
         fileName,
-        thumbnailUrl: absoluteUrl(thumbnailUrl)
+        thumbnailUrl: absoluteThumbnailUrl,
+        originalUrl: absoluteThumbnailUrl  // editguidesubsection: 使用 thumbnailUrl 作为 originalUrl
       });
     }
   }

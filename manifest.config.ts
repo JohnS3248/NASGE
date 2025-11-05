@@ -18,6 +18,11 @@ export default defineManifest({
   content_scripts: [
     {
       matches: ["https://steamcommunity.com/*"],
+      js: ["src/content/gPreviewImagesBridge.ts"],
+      world: "MAIN"
+    },
+    {
+      matches: ["https://steamcommunity.com/*"],
       js: ["src/content/main.ts"]
     },
     {

@@ -18,14 +18,34 @@ const INLINE_MARKS: Record<string, { open: string; close: string }> = {
  */
 function getImageUrlFromPool(previewId: string): string | null {
   const imagePool = useSteamGuideImageStore.getState().items;
+
+  console.log('[bbcodeToHtml DEBUG] 查找图片:', {
+    previewId,
+    imagePoolSize: imagePool.length,
+    imagePoolPreviewIds: imagePool.map(img => img.previewId)
+  });
+
   const image = imagePool.find(img => img.previewId === previewId);
 
+  console.log('[bbcodeToHtml DEBUG] 查找结果:', {
+    previewId,
+    found: !!image,
+    imageData: image ? {
+      previewId: image.previewId,
+      fileName: image.fileName,
+      hasOriginalUrl: !!image.originalUrl,
+      hasThumbnailUrl: !!image.thumbnailUrl,
+      originalUrl: image.originalUrl,
+      thumbnailUrl: image.thumbnailUrl
+    } : null
+  });
+
   if (image?.originalUrl) {
-    console.log('[bbcodeToHtml] 从图片池找到透明图片:', { previewId, url: image.originalUrl });
+    console.log('[bbcodeToHtml] ✅ 从图片池找到透明图片:', { previewId, url: image.originalUrl });
     return image.originalUrl;
   }
 
-  console.warn('[bbcodeToHtml] 图片池中未找到 previewId:', previewId);
+  console.warn('[bbcodeToHtml] ❌ 图片池中未找到 previewId:', previewId, '或 originalUrl 为空');
   return null;
 }
 

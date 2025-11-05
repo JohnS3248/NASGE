@@ -1,0 +1,67 @@
+/**
+ * 此脚本运行在 MAIN world，可以直接访问页面的 window.gPreviewImages
+ * 通过 DOM 属性将数据传递给隔离的 content script
+ */
+
+declare global {
+  interface Window {
+    gPreviewImages?: Array<{
+      previewid: string;
+      filename: string;
+      url: string;
+      size: number;
+      sortorder: number;
+      preview_type: number;
+    }>;
+  }
+}
+
+// 必须有export让文件成为模块
+export {};
+
+(function() {
+  console.log('[NASGE 页面桥接 MAIN] 开始执行');
+
+  function exposeGPreviewImages() {
+    try {
+      if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
+        const data = window.gPreviewImages;
+        document.documentElement.setAttribute(
+          'data-nasge-gpreview-bridge',
+          JSON.stringify(data)
+        );
+        console.log('[NASGE 页面桥接 MAIN] ✅ gPreviewImages 已写入 DOM，共', data.length, '张图片');
+
+        // 打印每张图片的信息
+        data.forEach((img: any, idx: number) => {
+          console.log(`[NASGE 页面桥接 MAIN] 图片${idx}:`, {
+            previewid: img.previewid,
+            filename: img.filename,
+            url: img.url,
+            hasLetterbox: img.url && img.url.includes('Letterbox'),
+            hasImcolor: img.url && img.url.includes('imcolor')
+          });
+        });
+      } else {
+        console.warn('[NASGE 页面桥接 MAIN] ⚠️ gPreviewImages 不存在或为空');
+      }
+    } catch (error) {
+      console.error('[NASGE 页面桥接 MAIN] ❌ 错误:', error);
+    }
+  }
+
+  // 多次尝试以确保捕获到数据
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', exposeGPreviewImages);
+  } else {
+    exposeGPreviewImages();
+  }
+
+  // 延迟尝试（以防 gPreviewImages 是异步加载的）
+  setTimeout(exposeGPreviewImages, 100);
+  setTimeout(exposeGPreviewImages, 500);
+  setTimeout(exposeGPreviewImages, 1000);
+  setTimeout(exposeGPreviewImages, 2000);
+
+  console.log('[NASGE 页面桥接 MAIN] 已设置多次尝试');
+})();
