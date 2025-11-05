@@ -173,86 +173,105 @@ const App: React.FC = () => {
             gap: "1rem"
           }}
         >
-          {/* 工具栏 */}
+          {/* 工具栏按钮 */}
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: "1rem"
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: "0.6rem"
             }}
           >
-            <TitleEditor
-              value={activeDraft?.title || createEmptyTitle()}
-              style={activeDraft?.titleStyle || 'short'}
-              onChange={(newTitle) => {
-                if (activeDraft) {
-                  updateDraft(activeDraft.id, { title: newTitle });
-                }
+            <button
+              type="button"
+              onClick={() => {
+                // TODO: 实现导出草稿功能
+                window.alert('导出草稿功能待实现');
               }}
-              onStyleChange={(newStyle) => {
-                if (activeDraft) {
-                  updateDraft(activeDraft.id, { titleStyle: newStyle });
-                }
+              style={{
+                padding: "0.45rem 1rem",
+                borderRadius: "0.6rem",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: "0.85rem"
               }}
-            />
-            <div style={{ display: "flex", gap: "0.6rem" }}>
+            >
+              导出草稿
+            </button>
+            <button
+              type="button"
+              onClick={handleImportBBCode}
+              style={{
+                padding: "0.45rem 1rem",
+                borderRadius: "0.6rem",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: "0.85rem"
+              }}
+            >
+              导入 BBCode
+            </button>
+            <button
+              type="button"
+              onClick={handleExportBBCode}
+              style={{
+                padding: "0.45rem 1rem",
+                borderRadius: "0.6rem",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: "0.85rem"
+              }}
+            >
+              导出 BBCode
+            </button>
+            {activeDraft?.linkedChapterId && (
               <button
                 type="button"
-                onClick={handleImportBBCode}
+                onClick={handleUploadToSteam}
+                disabled={isUploading}
                 style={{
                   padding: "0.45rem 1rem",
                   borderRadius: "0.6rem",
-                  border: "1px solid rgba(102, 192, 244, 0.35)",
-                  background: "rgba(12, 21, 33, 0.85)",
-                  color: "#cfe7ff",
+                  border: "none",
+                  background: isUploading
+                    ? "rgba(102, 192, 244, 0.5)"
+                    : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                  color: "#06101e",
                   fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "0.85rem"
+                  cursor: isUploading ? "wait" : "pointer",
+                  fontSize: "0.85rem",
+                  opacity: isUploading ? 0.7 : 1
                 }}
               >
-                导入 BBCode
+                {isUploading ? "上传中..." : "上传到 Steam"}
               </button>
-              <button
-                type="button"
-                onClick={handleExportBBCode}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "0.6rem",
-                  border: "1px solid rgba(102, 192, 244, 0.35)",
-                  background: "rgba(12, 21, 33, 0.85)",
-                  color: "#cfe7ff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "0.85rem"
-                }}
-              >
-                导出 BBCode
-              </button>
-              {activeDraft?.linkedChapterId && (
-                <button
-                  type="button"
-                  onClick={handleUploadToSteam}
-                  disabled={isUploading}
-                  style={{
-                    padding: "0.45rem 1rem",
-                    borderRadius: "0.6rem",
-                    border: "none",
-                    background: isUploading
-                      ? "rgba(102, 192, 244, 0.5)"
-                      : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-                    color: "#06101e",
-                    fontWeight: 600,
-                    cursor: isUploading ? "wait" : "pointer",
-                    fontSize: "0.85rem",
-                    opacity: isUploading ? 0.7 : 1
-                  }}
-                >
-                  {isUploading ? "上传中..." : "上传到 Steam"}
-                </button>
-              )}
-            </div>
+            )}
           </div>
+
+          {/* 标题编辑器 */}
+          <TitleEditor
+            value={activeDraft?.title || createEmptyTitle()}
+            style={activeDraft?.titleStyle || 'short'}
+            onChange={(newTitle) => {
+              if (activeDraft) {
+                updateDraft(activeDraft.id, { title: newTitle });
+              }
+            }}
+            onStyleChange={(newStyle) => {
+              if (activeDraft) {
+                updateDraft(activeDraft.id, { titleStyle: newStyle });
+              }
+            }}
+          />
 
           {/* 编辑器 */}
           {!activeDraft ? (
