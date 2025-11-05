@@ -10,88 +10,78 @@ interface ChapterNavProps {
 }
 
 /**
- * 状态指示器组件（圆形图标）
+ * 迷你状态指示器组件（小圆点，用于章节标题缩略图）
  */
-const StateIndicator: React.FC<{ state: ImageState; error?: string }> = ({ state, error }) => {
-  const config = useMemo(() => {
+const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
+  const color = useMemo(() => {
     switch (state) {
       case "pending":
-        return {
-          color: "#808080", // 灰色
-          label: "未上传",
-          icon: "○"
-        };
+        return "#808080"; // 灰色
       case "uploading":
-        return {
-          color: "#FFC107", // 黄色
-          label: "上传中...",
-          icon: "◐"
-        };
+        return "#FFC107"; // 黄色
       case "success":
-        return {
-          color: "#4CAF50", // 绿色
-          label: "已上传",
-          icon: "●"
-        };
+        return "#4CAF50"; // 绿色
       case "error":
-        return {
-          color: "#F44336", // 红色
-          label: error || "上传失败",
-          icon: "✕"
-        };
+        return "#F44336"; // 红色
       default:
-        return null;
+        return "#808080";
     }
-  }, [state, error]);
+  }, [state]);
 
-  if (!config) return null;
+  // 只在非成功状态下显示（成功状态不显示，因为章节标题图片默认都是已上传的）
+  if (state === "success") return null;
 
   return (
     <div
       style={{
         position: "absolute",
-        bottom: "4px",
-        right: "4px",
-        width: "20px",
-        height: "20px",
+        bottom: "2px",
+        right: "2px",
+        width: "8px",
+        height: "8px",
         borderRadius: "50%",
-        backgroundColor: config.color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: "12px",
-        fontWeight: "bold",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-        cursor: "help",
+        backgroundColor: color,
+        border: "1.5px solid rgba(0, 0, 0, 0.6)",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
         zIndex: 10
       }}
-      title={config.label}
-    >
-      {config.icon}
-    </div>
+    />
   );
 };
 
 /**
- * 章节标题图片组件
+ * 章节标题图片组件（缩略图）
+ * 用于章节目录导航，只显示图片，不显示文字
  */
 const ChapterTitleImage: React.FC<{
   previewId: string;
   fileName: string;
-  titleText: string;
-}> = ({ previewId, fileName, titleText }) => {
+  titleText?: string; // 可选，目前章节目录不显示文字
+}> = ({ previewId, fileName }) => {
   const imagePool = useSteamGuideImageStore((state) => state.items);
+  const [imageError, setImageError] = useState(false);
 
   // 从图片池查找图片信息
   const imageInfo = useMemo(() => {
     return imagePool.find((img) => img.previewId === previewId);
   }, [imagePool, previewId]);
 
-  // 构建图片URL
-  const imageUrl = useMemo(() => {
-    return `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}`;
-  }, [previewId]);
+  // 构建缩略图URL
+  // 优先使用图片池中的 thumbnailUrl，如果没有则构造默认URL
+  const thumbnailUrl = useMemo(() => {
+    const poolThumbnail = imageInfo?.thumbnailUrl;
+    const fallbackUrl = `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}/128fx128f`;
+
+    console.log('[ChapterTitleImage] Building thumbnail URL:', {
+      previewId,
+      fileName,
+      imageInfo,
+      poolThumbnail,
+      finalUrl: poolThumbnail || fallbackUrl
+    });
+
+    return poolThumbnail || fallbackUrl;
+  }, [previewId, fileName, imageInfo]);
 
   // 获取图片状态
   const imageState: ImageState = imageInfo?.state || "success";
@@ -99,53 +89,47 @@ const ChapterTitleImage: React.FC<{
   return (
     <div
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-        width: '100%'
+        display: 'inline-block',
+        position: 'relative',
+        width: '32px',
+        height: '32px',
+        flexShrink: 0,
+        backgroundColor: imageError ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
+        border: imageError ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
+        borderRadius: '3px',
+        overflow: 'hidden'
       }}
     >
-      {/* 图片预览 */}
-      <div
-        style={{
-          position: 'relative',
+      {!imageError ? (
+        <>
+          <img
+            src={thumbnailUrl}
+            alt={fileName}
+            style={{
+              width: '32px',
+              height: '32px',
+              display: 'block',
+              objectFit: 'cover'
+            }}
+            onError={() => {
+              setImageError(true);
+            }}
+          />
+          {/* 迷你状态指示器 */}
+          <MiniStateIndicator state={imageState} />
+        </>
+      ) : (
+        // 图片加载失败时显示占位符
+        <div style={{
           width: '100%',
-          maxWidth: '240px',
-          backgroundColor: 'rgba(14, 26, 40, 0.6)',
-          border: '1px solid rgba(102, 192, 244, 0.32)',
-          borderRadius: '4px',
-          overflow: 'hidden'
-        }}
-      >
-        <img
-          src={imageUrl}
-          alt={fileName}
-          style={{
-            width: '100%',
-            height: 'auto',
-            display: 'block',
-            objectFit: 'contain'
-          }}
-          onError={(e) => {
-            // 图片加载失败时的处理
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-          }}
-        />
-        {/* 状态指示器 */}
-        <StateIndicator state={imageState} error={imageInfo?.uploadError} />
-      </div>
-
-      {/* 标题文字 */}
-      {titleText && (
-        <div
-          style={{
-            fontSize: '0.85rem',
-            color: '#c5c5c5',
-            lineHeight: 1.4
-          }}
-        >
-          {titleText}
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          opacity: 0.3
+        }}>
+          🖼️
         </div>
       )}
     </div>
@@ -158,7 +142,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [expandedChapterId, setExpandedChapterId] = useState<string | null>(null);
 
   // 只在 guide 模式下显示章节导航
   if (mode !== 'guide' || !guideInfo) {
@@ -285,33 +268,33 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   };
 
   /**
-   * 渲染章节标题（用于章节预览目录）
-   * - 折叠状态：显示纯文本
-   * - 展开状态：显示图片预览（如果有）
+   * 渲染章节标题（用于章节目录导航）
+   * - 如果包含图片：只显示缩略图，不显示图片后的文字
+   * - 如果是纯文字：正常显示文字
    */
-  const renderChapterTitle = (chapter: { sectionId: string; title: string }) => {
-    const isExpanded = expandedChapterId === chapter.sectionId;
-    const imageInfo = parseChapterTitleImage(chapter.title);
-    const titleText = getChapterTitleText(chapter.title);
+  const renderChapterTitle = (title: string) => {
+    const imageInfo = parseChapterTitleImage(title);
 
-    // 如果没有图片，直接显示文本
-    if (!imageInfo) {
-      return titleText || chapter.title;
+    console.log('[renderChapterTitle]', {
+      title,
+      imageInfo,
+      rawTitle: title
+    });
+
+    // 如果包含图片，只显示图片缩略图
+    if (imageInfo) {
+      return (
+        <ChapterTitleImage
+          previewId={imageInfo.previewId}
+          fileName={imageInfo.fileName}
+          titleText="" // 不显示文字，只显示图片
+        />
+      );
     }
 
-    // 如果折叠，显示文本或图标占位符
-    if (!isExpanded) {
-      return titleText ? `📷 ${titleText}` : '📷 [图片标题]';
-    }
-
-    // 展开状态：显示图片预览
-    return (
-      <ChapterTitleImage
-        previewId={imageInfo.previewId}
-        fileName={imageInfo.fileName}
-        titleText={titleText}
-      />
-    );
+    // 没有图片时，显示纯文本（移除BBCode标签）
+    const titleText = getChapterTitleText(title);
+    return titleText || title;
   };
 
   return (
@@ -455,37 +438,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
                   }
                 }}
               >
-                {/* 展开/折叠按钮 */}
-                {parseChapterTitleImage(chapter.title) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedChapterId(
-                        expandedChapterId === chapter.sectionId ? null : chapter.sectionId
-                      );
-                    }}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      color: '#66c0f4',
-                      padding: '0.5rem 0.6rem',
-                      fontSize: '0.85rem',
-                      cursor: 'pointer',
-                      opacity: 0.7,
-                      transition: 'opacity 0.15s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '1';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '0.7';
-                    }}
-                    title={expandedChapterId === chapter.sectionId ? '折叠' : '展开'}
-                  >
-                    {expandedChapterId === chapter.sectionId ? '▼' : '▶'}
-                  </button>
-                )}
-
                 <button
                   onClick={() => handleChapterClick(chapter.sectionId)}
                   disabled={isLoading}
@@ -505,7 +457,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
                     overflow: 'hidden'
                   }}
                 >
-                  {isLoading ? `拉取中...` : renderChapterTitle(chapter)}
+                  {isLoading ? `拉取中...` : renderChapterTitle(chapter.title)}
                 </button>
                 <button
                   onClick={(e) => {
