@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
 import { titleHasImage } from '../utils/titleHelpers';
+import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
+import { processIncomingImages } from '../services/imageIntake';
 
 interface TitleEditorProps {
   value: JSONContent;
@@ -56,6 +58,76 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       setHasImage(titleHasImage(value));
     }
   }, [editor, value]);
+
+  // 处理拖拽/粘贴的图片
+  const handleIncomingFiles = useCallback(
+    async (files: File[], source: 'paste' | 'drop') => {
+      if (!editor || !files.length) return;
+      const cursorPosition = editor.state.selection.anchor;
+
+      try {
+        await processIncomingImages(editor, files, {
+          source,
+          cursorPosition
+        });
+      } catch (error) {
+        console.error('[NASGE TitleEditor] 处理图片失败:', error);
+      }
+    },
+    [editor]
+  );
+
+  // 添加粘贴和拖拽事件监听器
+  useEffect(() => {
+    if (!editor) return;
+
+    const dom = editor.view.dom;
+
+    const onPaste = (event: ClipboardEvent) => {
+      const files = extractFilesFromPaste(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      editor.commands.focus();
+      void handleIncomingFiles(files, 'paste');
+    };
+
+    const onDrop = (event: DragEvent) => {
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const coords = editor.view.posAtCoords({
+        left: event.clientX,
+        top: event.clientY
+      });
+
+      if (coords?.pos != null) {
+        editor.chain().focus().setTextSelection(coords.pos).run();
+      } else {
+        editor.commands.focus();
+      }
+
+      void handleIncomingFiles(files, 'drop');
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+    };
+
+    dom.addEventListener('paste', onPaste as EventListener);
+    dom.addEventListener('drop', onDrop as EventListener);
+    dom.addEventListener('dragover', onDragOver as EventListener);
+
+    return () => {
+      dom.removeEventListener('paste', onPaste as EventListener);
+      dom.removeEventListener('drop', onDrop as EventListener);
+      dom.removeEventListener('dragover', onDragOver as EventListener);
+    };
+  }, [editor, handleIncomingFiles]);
 
   if (!editor) {
     return null;

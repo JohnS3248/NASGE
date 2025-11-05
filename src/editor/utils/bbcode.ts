@@ -1,3 +1,5 @@
+import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
+
 const INLINE_MARKS: Record<string, { open: string; close: string }> = {
   strong: { open: "[b]", close: "[/b]" },
   b: { open: "[b]", close: "[/b]" },
@@ -8,6 +10,24 @@ const INLINE_MARKS: Record<string, { open: string; close: string }> = {
   strike: { open: "[strike]", close: "[/strike]" },
   "span.nasge-spoiler": { open: "[spoiler]", close: "[/spoiler]" }
 };
+
+/**
+ * 从图片池中查找 previewId 对应的透明背景 URL
+ * @param previewId Steam 短 ID
+ * @returns 完整的透明背景图片 URL，如果找不到则返回 null
+ */
+function getImageUrlFromPool(previewId: string): string | null {
+  const imagePool = useSteamGuideImageStore.getState().items;
+  const image = imagePool.find(img => img.previewId === previewId);
+
+  if (image?.originalUrl) {
+    console.log('[bbcodeToHtml] 从图片池找到透明图片:', { previewId, url: image.originalUrl });
+    return image.originalUrl;
+  }
+
+  console.warn('[bbcodeToHtml] 图片池中未找到 previewId:', previewId);
+  return null;
+}
 
 type SerializeContext = {
   isLastSibling: boolean;
@@ -268,13 +288,17 @@ export function bbcodeTitleToHtml(bbcode: string): string {
   if (hasImage) {
     // Steam 图片格式：[previewicon=id;size,align;filename.png][/previewicon]
     html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
-      const url = `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+      // 优先从图片池查找透明背景 URL
+      const poolUrl = getImageUrlFromPool(id);
+      const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
       return `<img src="${url}" alt="${filename}" class="nasge-chapter-preview-image" style="max-height: 40px; object-fit: contain;" />`;
     });
 
     // Steam 图片格式：[previewimg=id;size,align;filename.png][/previewimg]
     html = html.replace(/\[previewimg=(\d+);([^;]+);([^\]]+)]\[\/previewimg]/gi, (_, id, styleStr, filename) => {
-      const url = `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+      // 优先从图片池查找透明背景 URL
+      const poolUrl = getImageUrlFromPool(id);
+      const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
       return `<img src="${url}" alt="${filename}" class="nasge-chapter-preview-image" style="max-height: 40px; object-fit: contain;" />`;
     });
 

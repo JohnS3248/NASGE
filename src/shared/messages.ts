@@ -31,6 +31,7 @@ export type SteamGuideImage = {
   previewId: string;
   fileName: string;
   thumbnailUrl?: string;
+  originalUrl?: string;  // 完整的透明背景图片 URL
 };
 
 export type SteamFetchGuideImagesRequest = BridgeBase & {

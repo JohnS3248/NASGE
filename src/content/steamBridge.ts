@@ -521,7 +521,8 @@ function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
         images.set(item.previewid, {
           previewId: item.previewid,
           fileName: item.filename || `preview_${item.previewid}`,
-          thumbnailUrl: item.url
+          thumbnailUrl: item.url,
+          originalUrl: item.url  // 完整的透明背景 URL
         });
       }
     }

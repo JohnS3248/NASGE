@@ -67,8 +67,9 @@ const ChapterTitleImage: React.FC<{
   }, [imagePool, previewId]);
 
   // 构建图片URL
-  // 优先使用图片池中的 thumbnailUrl，如果没有则构造默认URL
+  // 优先使用图片池中的 originalUrl（透明背景），其次 thumbnailUrl，最后使用默认URL
   const imageUrl = useMemo(() => {
+    const poolOriginal = imageInfo?.originalUrl;
     const poolThumbnail = imageInfo?.thumbnailUrl;
     const fallbackUrl = `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}`;
 
@@ -76,11 +77,12 @@ const ChapterTitleImage: React.FC<{
       previewId,
       fileName,
       imageInfo,
+      poolOriginal,
       poolThumbnail,
-      finalUrl: poolThumbnail || fallbackUrl
+      finalUrl: poolOriginal || poolThumbnail || fallbackUrl
     });
 
-    return poolThumbnail || fallbackUrl;
+    return poolOriginal || poolThumbnail || fallbackUrl;
   }, [previewId, fileName, imageInfo]);
 
   // 获取图片状态
