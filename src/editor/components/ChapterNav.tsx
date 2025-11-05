@@ -102,7 +102,7 @@ const ChapterTitleImage: React.FC<{
         display: 'block',
         position: 'relative',
         width: '100%',
-        maxWidth: '240px',
+        maxWidth: '100%',
         backgroundColor: (imageError || !imageUrl) ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
         border: (imageError || !imageUrl) ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
         borderRadius: '3px',
@@ -115,8 +115,10 @@ const ChapterTitleImage: React.FC<{
             src={imageUrl}
             alt={fileName}
             style={{
-              width: '100%',
+              maxWidth: '100%',
+              maxHeight: '120px',
               height: 'auto',
+              width: 'auto',
               display: 'block',
               objectFit: 'contain'
             }}
@@ -309,7 +311,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   return (
     <aside
       style={{
-        width: '280px',
+        width: '320px',
         borderRadius: '0.5rem',
         background: 'rgba(23, 26, 33, 0.95)',
         border: '1px solid rgba(69, 75, 87, 0.6)',
