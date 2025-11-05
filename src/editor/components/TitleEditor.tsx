@@ -38,8 +38,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       attributes: {
         class: 'title-editor-content',
         style: hasImage
-          ? 'min-height: 40px; max-height: none;'
-          : 'min-height: 40px; max-height: 40px; overflow-y: auto;'
+          ? 'min-height: 30px; max-height: none;'
+          : 'min-height: 30px; max-height: 30px; overflow-y: auto;'
       }
     }
   });
@@ -63,41 +63,26 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 
   return (
     <div style={{
+      position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      gap: '0.5rem',
-      width: '100%'
+      background: 'rgba(9, 15, 25, 0.55)',
+      border: '1px solid rgba(102, 192, 244, 0.25)',
+      borderRadius: '1rem',
+      padding: '1.25rem',
+      boxShadow: '0 18px 30px rgba(7, 11, 19, 0.45)'
     }}>
-      {/* 标题编辑器 */}
+      {/* 标题编辑器内容区 */}
       <div
         style={{
           width: '100%',
-          border: editor.isFocused
-            ? '1px solid #66c0f4'
-            : '1px solid rgba(102, 192, 244, 0.3)',
-          background: 'rgba(13, 23, 36, 0.6)',
           color: '#d7e8ff',
           fontSize: '1.1rem',
           fontWeight: 600,
-          padding: '0.5rem 0.75rem',
-          borderRadius: '0.5rem',
-          outline: 'none',
-          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
-          boxShadow: editor.isFocused
-            ? '0 0 0 2px rgba(102, 192, 244, 0.2)'
-            : 'none'
+          outline: 'none'
         }}
       >
         <EditorContent editor={editor} />
-      </div>
-
-      {/* 提示信息 */}
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.75rem', color: '#8aa4c7' }}>
-          {hasImage
-            ? '已包含图片 • 高度自动调整'
-            : '1行高度 • 可拖拽/粘贴图片自动扩展'}
-        </span>
       </div>
 
       {/* 全局样式 */}
@@ -131,8 +116,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         }
 
         /* 单行模式下限制图片高度 */
-        .title-editor-content[style*="max-height: 40px"] img {
-          max-height: 30px;
+        .title-editor-content[style*="max-height: 30px"] img {
+          max-height: 24px;
           width: auto;
           display: inline-block;
           margin: 0 0.25rem;
