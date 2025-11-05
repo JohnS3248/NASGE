@@ -183,13 +183,11 @@ const App: React.FC = () => {
             }}
           >
             <TitleEditor
-              value={activeDraft ? extractTitleText(activeDraft.title) : ""}
+              value={activeDraft?.title || createEmptyTitle()}
               style={activeDraft?.titleStyle || 'short'}
               onChange={(newTitle) => {
                 if (activeDraft) {
-                  // 临时：将字符串转换为 JSONContent
-                  // TODO: 在阶段1中，TitleEditor 将改为完整的编辑器，直接返回 JSONContent
-                  updateDraft(activeDraft.id, { title: createTitleFromText(newTitle) });
+                  updateDraft(activeDraft.id, { title: newTitle });
                 }
               }}
               onStyleChange={(newStyle) => {
