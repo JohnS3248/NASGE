@@ -1,12 +1,13 @@
 {
   "name": "nasge",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "创建者友好的 Steam 指南编辑浏览器扩展",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "dev:extension": "vite build --watch --mode development",
-    "build": "npm run type-check && vite build",
+    "sync-version": "node scripts/sync-version.js",
+    "dev": "npm run sync-version && vite",
+    "dev:extension": "npm run sync-version && vite build --watch --mode development",
+    "build": "npm run sync-version && npm run type-check && vite build",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview"

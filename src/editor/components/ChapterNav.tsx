@@ -50,8 +50,8 @@ const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
 };
 
 /**
- * 章节标题图片组件（缩略图）
- * 用于章节目录导航，只显示图片，不显示文字
+ * 章节标题图片组件（原尺寸）
+ * 用于章节目录导航，显示原尺寸图片（模拟官方效果）
  */
 const ChapterTitleImage: React.FC<{
   previewId: string;
@@ -66,13 +66,13 @@ const ChapterTitleImage: React.FC<{
     return imagePool.find((img) => img.previewId === previewId);
   }, [imagePool, previewId]);
 
-  // 构建缩略图URL
+  // 构建图片URL
   // 优先使用图片池中的 thumbnailUrl，如果没有则构造默认URL
-  const thumbnailUrl = useMemo(() => {
+  const imageUrl = useMemo(() => {
     const poolThumbnail = imageInfo?.thumbnailUrl;
-    const fallbackUrl = `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}/128fx128f`;
+    const fallbackUrl = `https://steamcommunity-a.akamaihd.net/economy/image/UGC/${previewId}`;
 
-    console.log('[ChapterTitleImage] Building thumbnail URL:', {
+    console.log('[ChapterTitleImage] Building image URL:', {
       previewId,
       fileName,
       imageInfo,
@@ -89,11 +89,10 @@ const ChapterTitleImage: React.FC<{
   return (
     <div
       style={{
-        display: 'inline-block',
+        display: 'block',
         position: 'relative',
-        width: '32px',
-        height: '32px',
-        flexShrink: 0,
+        width: '100%',
+        maxWidth: '240px',
         backgroundColor: imageError ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
         border: imageError ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
         borderRadius: '3px',
@@ -103,13 +102,13 @@ const ChapterTitleImage: React.FC<{
       {!imageError ? (
         <>
           <img
-            src={thumbnailUrl}
+            src={imageUrl}
             alt={fileName}
             style={{
-              width: '32px',
-              height: '32px',
+              width: '100%',
+              height: 'auto',
               display: 'block',
-              objectFit: 'cover'
+              objectFit: 'contain'
             }}
             onError={() => {
               setImageError(true);
@@ -122,11 +121,11 @@ const ChapterTitleImage: React.FC<{
         // 图片加载失败时显示占位符
         <div style={{
           width: '100%',
-          height: '100%',
+          minHeight: '80px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '20px',
+          fontSize: '32px',
           opacity: 0.3
         }}>
           🖼️
@@ -144,7 +143,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [isSyncing, setIsSyncing] = useState(false);
 
   // 只在 guide 模式下显示章节导航
-  if (mode !== 'guide' || !guideInfo) {
+  if (mode !== 'guide' || !guideInfo || !guideInfo.chapters || !Array.isArray(guideInfo.chapters)) {
     return null;
   }
 
