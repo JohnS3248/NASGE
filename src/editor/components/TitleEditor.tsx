@@ -5,11 +5,50 @@ import { createEditorExtensions } from '../utils/editorExtensions';
 import { titleHasImage } from '../utils/titleHelpers';
 import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
 import { processIncomingImages } from '../services/imageIntake';
+import { uploadSingleImage } from '../services/imageUpload';
+import {
+  useEditorImageNodeStore,
+  type ImageAlignment,
+  type ImageDisplayPreset
+} from '../stores/useEditorImageNodeStore';
 
 interface TitleEditorProps {
   value: JSONContent;
   onChange: (newValue: JSONContent) => void;
 }
+
+type ImageContextPayload = {
+  imageNodeId: string;
+};
+
+type ContextMenuMode = "selection" | "empty" | "image";
+
+type ContextMenuState = {
+  visible: boolean;
+  x: number;
+  y: number;
+  mode: ContextMenuMode;
+  payload?: ImageContextPayload;
+};
+
+const INITIAL_CONTEXT_MENU: ContextMenuState = {
+  visible: false,
+  x: 0,
+  y: 0,
+  mode: "empty"
+};
+
+const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
+  { label: "原尺寸", value: "original" },
+  { label: "半宽", value: "half" },
+  { label: "全宽", value: "full" }
+];
+
+const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> = [
+  { label: "左对齐", value: "floatLeft" },
+  { label: "右对齐", value: "floatRight" },
+  { label: "内嵌", value: "inline" }
+];
 
 /**
  * 标题编辑器组件 - 使用完整的 TipTap 编辑器
@@ -26,6 +65,13 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 }) => {
   // 检测标题中是否包含图片
   const [hasImage, setHasImage] = useState(false);
+  // 右键菜单状态
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
+  // 图片节点存储
+  const updateImageDisplay = useEditorImageNodeStore((state) => state.updateDisplay);
+  const removeImageNode = useEditorImageNodeStore((state) => state.removeNode);
+  const imageNodes = useEditorImageNodeStore((state) => state.nodes);
+
   // 创建 TipTap 编辑器实例
   const editor = useEditor({
     extensions: createEditorExtensions(),
@@ -58,6 +104,55 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       setHasImage(titleHasImage(value));
     }
   }, [editor, value]);
+
+  // 关闭右键菜单
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(INITIAL_CONTEXT_MENU);
+  }, []);
+
+  // 获取当前右键菜单对应的图片节点
+  const contextMenuImageNode = contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
+    ? imageNodes[contextMenu.payload.imageNodeId]
+    : undefined;
+
+  // 应用图片尺寸预设
+  const applyImagePreset = useCallback((preset: ImageDisplayPreset) => {
+    if (!contextMenu.payload?.imageNodeId) return;
+    updateImageDisplay(contextMenu.payload.imageNodeId, { preset });
+  }, [contextMenu.payload?.imageNodeId, updateImageDisplay]);
+
+  // 应用图片对齐方式
+  const applyImageAlignment = useCallback((alignment: ImageAlignment) => {
+    if (!contextMenu.payload?.imageNodeId) return;
+    updateImageDisplay(contextMenu.payload.imageNodeId, { alignment });
+  }, [contextMenu.payload?.imageNodeId, updateImageDisplay]);
+
+  // 删除图片
+  const handleDeleteImage = useCallback(() => {
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+      return;
+    }
+
+    const nodeId = contextMenu.payload.imageNodeId;
+    editor.commands.focus();
+    editor.chain().focus().deleteSelection().run();
+    removeImageNode(nodeId);
+  }, [contextMenu, editor, removeImageNode]);
+
+  // 上传图片
+  const handleUploadImage = useCallback(async () => {
+    if (!contextMenu.payload?.imageNodeId) {
+      return;
+    }
+
+    try {
+      await uploadSingleImage(contextMenu.payload.imageNodeId);
+      console.log('[NASGE TitleEditor] 图片上传成功');
+    } catch (error) {
+      console.error('[NASGE TitleEditor] 图片上传失败:', error);
+      window.alert(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    }
+  }, [contextMenu.payload?.imageNodeId]);
 
   // 处理拖拽/粘贴的图片
   const handleIncomingFiles = useCallback(
@@ -129,6 +224,20 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     };
   }, [editor, handleIncomingFiles]);
 
+  // 点击外部关闭右键菜单
+  useEffect(() => {
+    if (!contextMenu.visible) return;
+
+    const handleClickOutside = () => {
+      closeContextMenu();
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [contextMenu.visible, closeContextMenu]);
+
   if (!editor) {
     return null;
   }
@@ -153,9 +262,100 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           fontWeight: 600,
           outline: 'none'
         }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          if (!editor) {
+            return;
+          }
+
+          const target = event.target as HTMLElement;
+          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
+          if (imageElement) {
+            const imageNodeId = imageElement.dataset.imageNodeId;
+            if (imageNodeId) {
+              const coords = editor.view.posAtCoords({
+                left: event.clientX,
+                top: event.clientY
+              });
+              if (coords?.pos != null) {
+                editor
+                  .chain()
+                  .focus()
+                  .setNodeSelection(coords.pos)
+                  .run();
+              } else {
+                editor.commands.focus();
+              }
+
+              setContextMenu({
+                visible: true,
+                x: event.clientX,
+                y: event.clientY,
+                mode: "image",
+                payload: { imageNodeId }
+              });
+              return;
+            }
+          }
+        }}
       >
         <EditorContent editor={editor} />
       </div>
+
+      {/* 右键菜单 */}
+      {contextMenu.visible && contextMenu.mode === "image" && contextMenuImageNode && (
+        <div
+          style={{
+            position: "fixed",
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: "rgba(13, 21, 34, 0.95)",
+            border: "1px solid rgba(102, 192, 244, 0.3)",
+            borderRadius: "0.75rem",
+            padding: "0.35rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.25rem",
+            minWidth: "160px",
+            zIndex: 9999,
+            boxShadow: "0 16px 38px rgba(6, 12, 20, 0.55)"
+          }}
+        >
+          <MenuSectionLabel label="尺寸" />
+          {IMAGE_SIZE_OPTIONS.map((option) => (
+            <MenuItem
+              key={option.value}
+              label={option.label}
+              active={contextMenuImageNode.display.preset === option.value}
+              onClick={() => applyImagePreset(option.value)}
+              onComplete={closeContextMenu}
+            />
+          ))}
+          <MenuDivider />
+          <MenuSectionLabel label="对齐" />
+          {IMAGE_ALIGNMENT_OPTIONS.map((option) => (
+            <MenuItem
+              key={option.value}
+              label={option.label}
+              active={contextMenuImageNode.display.alignment === option.value}
+              onClick={() => applyImageAlignment(option.value)}
+              onComplete={closeContextMenu}
+            />
+          ))}
+          <MenuDivider />
+          <MenuItem
+            label="上传图片"
+            onClick={handleUploadImage}
+            onComplete={closeContextMenu}
+          />
+          <MenuItem
+            label="删除图片"
+            danger
+            onClick={handleDeleteImage}
+            onComplete={closeContextMenu}
+          />
+        </div>
+      )}
 
       {/* 全局样式 */}
       <style>{`
@@ -215,5 +415,68 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     </div>
   );
 };
+
+// ===== 菜单组件 =====
+
+type MenuItemProps = {
+  label: string;
+  onClick: () => void;
+  onComplete: () => void;
+  active?: boolean;
+  danger?: boolean;
+  disabled?: boolean;
+};
+
+const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active, danger, disabled }) => (
+  <button
+    type="button"
+    disabled={disabled}
+    onClick={() => {
+      if (disabled) return;
+      onClick();
+      onComplete();
+    }}
+    style={{
+      border: "none",
+      background: active ? "rgba(102, 192, 244, 0.16)" : "transparent",
+      textAlign: "left",
+      padding: "0.55rem 0.75rem",
+      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "#e5f3ff" : "#cde2ff",
+      borderRadius: "0.6rem",
+      fontSize: "0.85rem",
+      cursor: disabled ? "not-allowed" : "pointer",
+      fontWeight: active ? 600 : 500
+    }}
+    onMouseDown={(event) => {
+      event.preventDefault();
+    }}
+  >
+    {label}
+  </button>
+);
+
+const MenuSectionLabel: React.FC<{ label: string }> = ({ label }) => (
+  <div
+    style={{
+      padding: "0.3rem 0.75rem 0.15rem",
+      fontSize: "0.72rem",
+      textTransform: "uppercase",
+      letterSpacing: "0.08em",
+      color: "rgba(173, 205, 244, 0.7)"
+    }}
+  >
+    {label}
+  </div>
+);
+
+const MenuDivider: React.FC = () => (
+  <div
+    style={{
+      height: "1px",
+      margin: "0.25rem 0.5rem",
+      background: "rgba(102, 192, 244, 0.18)"
+    }}
+  />
+);
 
 export default TitleEditor;
