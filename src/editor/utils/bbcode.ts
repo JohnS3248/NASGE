@@ -388,6 +388,21 @@ export function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\[td]/gi, "<td>").replace(/\[\/td]/gi, "</td>");
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
 
+  // Steam 特殊图片标签（用于章节标题等）
+  // [previewicon=id;size,align;filename.png][/previewicon]
+  html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
+    const poolUrl = getImageUrlFromPool(id);
+    const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+    return `<img src="${url}" alt="${filename}" class="nasge-steam-image" data-preview-id="${id}" data-filename="${filename}" />`;
+  });
+
+  // [previewimg=id;size,align;filename.png][/previewimg]
+  html = html.replace(/\[previewimg=(\d+);([^;]+);([^\]]+)]\[\/previewimg]/gi, (_, id, styleStr, filename) => {
+    const poolUrl = getImageUrlFromPool(id);
+    const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
+    return `<img src="${url}" alt="${filename}" class="nasge-steam-image" data-preview-id="${id}" data-filename="${filename}" />`;
+  });
+
   // 链接和图片
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
