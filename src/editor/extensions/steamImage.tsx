@@ -45,7 +45,18 @@ const SteamImage = Node.create({
     parseHTML() {
       return [
         {
-          tag: "figure[data-nasge-image]"
+          tag: "figure[data-nasge-image]",
+          getAttrs: (element) => {
+            if (typeof element === "string") return false;
+            const el = element as HTMLElement;
+            return {
+              previewId: el.getAttribute("data-preview-id") || null,
+              fileName: el.getAttribute("data-file-name") || null,
+              sizePreset: el.getAttribute("data-size-preset") || DEFAULT_IMAGE_PRESET,
+              alignment: el.getAttribute("data-alignment") || DEFAULT_IMAGE_ALIGNMENT,
+              imageNodeId: el.getAttribute("data-image-node-id") || null
+            };
+          }
         }
       ];
     },

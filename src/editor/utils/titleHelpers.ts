@@ -5,6 +5,8 @@
 import { JSONContent } from "@tiptap/core";
 import { generateJSON } from "@tiptap/html";
 import { createEditorExtensions } from "./editorExtensions";
+import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 
 /**
  * 创建空的标题 JSON
@@ -56,14 +58,93 @@ export function createTitleFromHtml(html: string): JSONContent {
   }
 
   try {
+    console.log('[titleHelpers] 输入的 HTML:', html);
     const extensions = createEditorExtensions();
-    return generateJSON(html, extensions);
+    const json = generateJSON(html, extensions);
+    console.log('[titleHelpers] 生成的 JSON:', JSON.stringify(json, null, 2));
+
+    // 遍历 JSON，查找所有 steamImage 节点并注册到 store
+    registerImagesFromTitleJson(json);
+
+    return json;
   } catch (error) {
     console.error("[titleHelpers] 从 HTML 创建标题失败", error);
     // 降级：作为纯文本处理
     const textContent = html.replace(/<[^>]*>/g, "");
     return createTitleFromText(textContent);
   }
+}
+
+/**
+ * 从标题 JSON 中提取图片节点并注册到 store
+ */
+function registerImagesFromTitleJson(titleJson: JSONContent): void {
+  const imageNodeStore = useEditorImageNodeStore.getState();
+  const steamImagePool = useSteamGuideImageStore.getState();
+
+  function traverse(node: JSONContent) {
+    if (node.type === "steamImage") {
+      const previewId = node.attrs?.previewId as string | null;
+      const fileName = node.attrs?.fileName as string | null;
+      const sizePreset = node.attrs?.sizePreset as string | undefined;
+      const alignment = node.attrs?.alignment as string | undefined;
+
+      // 如果节点已有 imageNodeId，说明已经注册过了
+      if (node.attrs?.imageNodeId) {
+        return;
+      }
+
+      // 从图片池查找对应的图片
+      const poolImage = previewId
+        ? steamImagePool.items.find(img => img.previewId === previewId)
+        : null;
+
+      if (previewId && poolImage && poolImage.originalUrl && poolImage.thumbnailUrl) {
+        // 注册已上传的图片节点
+        const registeredNode = imageNodeStore.registerFromSteamPool({
+          previewId,
+          fileName: fileName || poolImage.fileName || "image.png",
+          uploadId: null, // 标题图片不需要 uploadId
+          originalUrl: poolImage.originalUrl,
+          thumbnailUrl: poolImage.thumbnailUrl
+        });
+
+        // 更新节点属性以包含 imageNodeId
+        node.attrs = {
+          ...node.attrs,
+          imageNodeId: registeredNode.nodeId,
+          previewId,
+          fileName: fileName || poolImage.fileName,
+          sizePreset: sizePreset || "original",
+          alignment: alignment || "floatLeft"
+        };
+
+        // 设置显示属性
+        imageNodeStore.updateDisplay(registeredNode.nodeId, {
+          preset: (sizePreset as any) || "original",
+          alignment: (alignment as any) || "floatLeft"
+        });
+
+        console.log('[titleHelpers] 注册标题图片节点:', {
+          imageNodeId: registeredNode.nodeId,
+          previewId,
+          fileName: fileName || poolImage.fileName
+        });
+      } else {
+        console.warn('[titleHelpers] 无法注册标题图片：previewId 为空或图片池中未找到', {
+          previewId,
+          fileName
+        });
+      }
+    }
+
+    // 递归处理子节点
+    if (node.content && Array.isArray(node.content)) {
+      node.content.forEach(traverse);
+    }
+  }
+
+  traverse(titleJson);
 }
 
 /**

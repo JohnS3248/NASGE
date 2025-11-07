@@ -286,50 +286,64 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           const target = event.target as HTMLElement;
           console.log('[TitleEditor] onContextMenu triggered', {
             target: target.tagName,
-            targetClass: target.className,
-            hasDataAttr: target.hasAttribute('data-image-node-id')
+            targetClass: target.className
           });
 
-          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
-          console.log('[TitleEditor] imageElement found:', imageElement);
+          // 检查是否点击了图片容器
+          const imageContainer = target.classList.contains('nasge-image-node')
+            ? target
+            : target.closest<HTMLElement>('.nasge-image-node');
 
-          if (imageElement) {
-            const imageNodeId = imageElement.dataset.imageNodeId;
-            console.log('[TitleEditor] imageNodeId:', imageNodeId);
+          if (imageContainer) {
+            // 直接从 DOM 属性获取 imageNodeId
+            const imageNodeId = imageContainer.dataset.imageNodeId;
+            console.log('[TitleEditor] Found image container, imageNodeId from DOM:', imageNodeId);
 
             if (imageNodeId) {
+              // 获取点击坐标
               const coords = editor.view.posAtCoords({
                 left: event.clientX,
                 top: event.clientY
               });
-              if (coords?.pos != null) {
+
+              console.log('[TitleEditor] Click coords:', coords);
+
+              // 遍历文档查找匹配的 steamImage 节点
+              let foundPos: number | null = null;
+              editor.state.doc.descendants((node, pos) => {
+                if (node.type.name === 'steamImage' && node.attrs.imageNodeId === imageNodeId) {
+                  foundPos = pos;
+                  return false; // 停止遍历
+                }
+              });
+
+              if (foundPos !== null) {
+                console.log('[TitleEditor] Found steamImage node at position:', foundPos);
+
+                // 选中该节点
                 editor
                   .chain()
                   .focus()
-                  .setNodeSelection(coords.pos)
+                  .setNodeSelection(foundPos)
                   .run();
+
+                setContextMenu({
+                  visible: true,
+                  x: event.clientX,
+                  y: event.clientY,
+                  mode: "image",
+                  payload: { imageNodeId }
+                });
+                return;
               } else {
-                editor.commands.focus();
+                console.warn('[TitleEditor] steamImage node not found in document for imageNodeId:', imageNodeId);
               }
-
-              console.log('[TitleEditor] Setting context menu', {
-                x: event.clientX,
-                y: event.clientY,
-                imageNodeId
-              });
-
-              setContextMenu({
-                visible: true,
-                x: event.clientX,
-                y: event.clientY,
-                mode: "image",
-                payload: { imageNodeId }
-              });
-              return;
+            } else {
+              console.warn('[TitleEditor] Container found but no imageNodeId in dataset');
             }
-          } else {
-            console.log('[TitleEditor] No image element found, event target:', target);
           }
+
+          console.log('[TitleEditor] No valid image node found');
         }}
       >
         <EditorContent editor={editor} />

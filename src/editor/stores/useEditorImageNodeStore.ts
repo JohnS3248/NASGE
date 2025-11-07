@@ -71,9 +71,18 @@ type EditorImageNodePatch = Partial<
   display?: Partial<EditorImageNode["display"]>;
 };
 
+type RegisterFromSteamPoolOptions = {
+  previewId: string;
+  fileName: string;
+  uploadId: string | null;
+  originalUrl: string;
+  thumbnailUrl: string;
+};
+
 type EditorImageNodeState = {
   nodes: Record<string, EditorImageNode>;
   registerFromLocalFile: (options: RegisterNodeOptions) => EditorImageNode;
+  registerFromSteamPool: (options: RegisterFromSteamPoolOptions) => EditorImageNode;
   attachUploadRecord: (nodeId: string, record: ImageUploadRecord) => void;
   markUploading: (nodeId: string) => void;
   markUploaded: (nodeId: string, payload: MarkUploadedPayload) => void;
@@ -106,6 +115,37 @@ export const useEditorImageNodeStore = create<EditorImageNodeState>(
           cursorPosition: metadata.cursorPosition,
           insertedAt: now,
           previewDataUrl
+        }
+      };
+
+      set((state) => ({
+        nodes: {
+          ...state.nodes,
+          [nodeId]: node
+        }
+      }));
+
+      return node;
+    },
+    registerFromSteamPool: ({ previewId, fileName, uploadId, originalUrl, thumbnailUrl }) => {
+      const nodeId = createNodeId();
+      const now = Date.now();
+      const node: EditorImageNode = {
+        nodeId,
+        status: "ready",
+        previewId,
+        uploadId: uploadId || undefined,
+        fileName,
+        originalName: fileName,
+        fileSize: 0, // 未知
+        cdnUrl: originalUrl, // 使用 originalUrl 作为 cdnUrl
+        display: {
+          preset: DEFAULT_IMAGE_PRESET,
+          alignment: DEFAULT_IMAGE_ALIGNMENT
+        },
+        metadata: {
+          source: "paste", // 使用一个合法的 source 值
+          insertedAt: now
         }
       };
 

@@ -157,6 +157,30 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     return block(`[table]\n${body}[/table]`, context);
   }
 
+  if (tagName === "figure" && node.hasAttribute("data-nasge-image")) {
+    // 处理 SteamImage 节点：<figure data-nasge-image>
+    const previewId = node.getAttribute("data-preview-id") ?? "";
+    const fileName = node.getAttribute("data-file-name") ?? "image.png";
+    const sizePreset = node.getAttribute("data-size-preset") ?? "original";
+    const alignment = node.getAttribute("data-alignment") ?? "floatLeft";
+
+    // 将内部格式转换回 BBCode 格式
+    const sizeToken = sizePreset === "original" ? "sizeOriginal"
+      : sizePreset === "full" ? "sizeFull"
+      : sizePreset === "half" ? "sizeHalf"
+      : "sizeOriginal";
+
+    const alignToken = alignment === "floatLeft" ? "floatLeft"
+      : alignment === "floatRight" ? "floatRight"
+      : alignment === "inline" ? "inline"
+      : "floatLeft";
+
+    // 根据对齐方式选择标签类型
+    const tagType = alignment === "inline" ? "previewicon" : "previewimg";
+
+    return `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
+  }
+
   if (tagName === "img") {
     const src = node.getAttribute("src") ?? "";
     return src ? `[img]${src}[/img]` : "";
@@ -389,18 +413,29 @@ export function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
 
   // Steam 特殊图片标签（用于章节标题等）
+  // 转换为 SteamImage 节点可识别的 figure 标签
   // [previewicon=id;size,align;filename.png][/previewicon]
   html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
-    const poolUrl = getImageUrlFromPool(id);
-    const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
-    return `<img src="${url}" alt="${filename}" class="nasge-steam-image" data-preview-id="${id}" data-filename="${filename}" />`;
+    const [sizeToken, alignToken] = styleStr.split(',').map((s: string) => s.trim());
+    // 解析 size 和 alignment
+    const preset = parseSizeToken(sizeToken);
+    const alignment = parseAlignmentToken(alignToken);
+
+    const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
+    console.log('[bbcodeToHtml] previewicon 转换:', { id, styleStr, filename, preset, alignment, figureTag });
+    return figureTag;
   });
 
   // [previewimg=id;size,align;filename.png][/previewimg]
   html = html.replace(/\[previewimg=(\d+);([^;]+);([^\]]+)]\[\/previewimg]/gi, (_, id, styleStr, filename) => {
-    const poolUrl = getImageUrlFromPool(id);
-    const url = poolUrl || `https://steamuserimages-a.akamaihd.net/ugc/${id}/${filename}`;
-    return `<img src="${url}" alt="${filename}" class="nasge-steam-image" data-preview-id="${id}" data-filename="${filename}" />`;
+    const [sizeToken, alignToken] = styleStr.split(',').map((s: string) => s.trim());
+    // 解析 size 和 alignment
+    const preset = parseSizeToken(sizeToken);
+    const alignment = parseAlignmentToken(alignToken);
+
+    const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
+    console.log('[bbcodeToHtml] previewimg 转换:', { id, styleStr, filename, preset, alignment, figureTag });
+    return figureTag;
   });
 
   // 链接和图片
@@ -463,4 +498,26 @@ export function bbcodeToHtml(bbcode: string): string {
       return `<p>${paragraph.replace(/\n/g, "<br />")}</p>`;
     })
     .join("");
+}
+
+/**
+ * 解析 BBCode 中的尺寸标记为内部使用的枚举值
+ */
+function parseSizeToken(token: string): string {
+  const normalized = token.toLowerCase();
+  if (normalized === 'sizeoriginal') return 'original';
+  if (normalized === 'sizefull') return 'full';
+  if (normalized === 'sizehalf' || normalized === 'sizethumb') return 'half';
+  return 'original'; // 默认
+}
+
+/**
+ * 解析 BBCode 中的对齐标记为内部使用的枚举值
+ */
+function parseAlignmentToken(token: string): string {
+  const normalized = token.toLowerCase();
+  if (normalized === 'floatleft') return 'floatLeft';
+  if (normalized === 'floatright') return 'floatRight';
+  if (normalized === 'inline') return 'inline';
+  return 'floatLeft'; // 默认
 }
