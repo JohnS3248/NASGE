@@ -10,9 +10,35 @@ import {
 } from "../stores/useEditorImageNodeStore";
 import type { EditorImageNode } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
-// === 新 Store 双写支持 ===
+// === 新 Store ===
 import { useImageStore } from "../stores/useImageStore";
 import type { ImageEntity, ImageSource, ImageSizePreset, ImageAlignment } from "../types/image";
+
+/**
+ * 从新 Store 获取图片实体
+ * 优先通过 sourceNodeId 查找（本地上传的图片）
+ * 其次通过 steamPreviewId 查找（从 Steam 导入的图片）
+ */
+function useImageFromNewStore(
+  imageNodeId: string | null,
+  previewId: string | null
+): ImageEntity | undefined {
+  return useImageStore((state) => {
+    // 优先通过 sourceNodeId 查找（映射到旧的 imageNodeId）
+    if (imageNodeId) {
+      const byNodeId = state.getImageBySourceNodeId(imageNodeId);
+      if (byNodeId) return byNodeId;
+    }
+
+    // 其次通过 steamPreviewId 查找
+    if (previewId) {
+      const byPreviewId = state.getImageBySteamPreviewId(previewId);
+      if (byPreviewId) return byPreviewId;
+    }
+
+    return undefined;
+  });
+}
 
 /**
  * 将旧 Store 的 EditorImageNode 同步到新 Store
@@ -245,23 +271,33 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const imageNodeId = node.attrs.imageNodeId as string | null;
   const attrPreviewId = node.attrs.previewId as string | null;
 
+  // === 新 Store 读取（主要数据源）===
+  const imageEntity = useImageFromNewStore(imageNodeId, attrPreviewId);
+
+  // === 旧 Store 读取（用于双写同步和过渡期兼容）===
   const imageNode = useEditorImageNodeStore(
     (state) => (imageNodeId ? state.nodes[imageNodeId] : undefined)
   );
 
-  // 从 Steam 图片池中查找图片（用于从 BBCode 导入的图片）
+  // 从 Steam 图片池中查找图片（用于双写同步）
   const steamPoolImage = useSteamGuideImageStore(
     (state) => {
-      if (imageNode) return undefined; // 如果有 imageNode，不需要从图片池查找
+      if (imageNode) return undefined;
       if (!attrPreviewId) return undefined;
       return state.items.find((item) => item.previewId === attrPreviewId);
     }
   );
 
-  // === 双写模式：同步到新 Store ===
+  // === 双写模式：确保数据同步到新 Store ===
   const hasSyncedRef = useRef(false);
   useEffect(() => {
-    // 只同步一次，避免重复写入
+    // 如果新 Store 已有数据，跳过同步
+    if (imageEntity) {
+      hasSyncedRef.current = true;
+      return;
+    }
+
+    // 只同步一次
     if (hasSyncedRef.current) return;
 
     // 等待有数据可同步
@@ -269,7 +305,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
     hasSyncedRef.current = true;
     syncToNewStore(imageNode, steamPoolImage, attrPreviewId);
-  }, [imageNode, steamPoolImage, attrPreviewId]);
+  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId]);
   // === END 双写模式 ===
 
   useEffect(() => {
@@ -384,10 +420,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const src = useMemo(() => {
     const attrPreview = (node.attrs.previewDataUrl as string | null) ?? undefined;
 
-    // 情况1：有 imageNode（本地上传的图片）
-    if (imageNode) {
+    // === 优先使用新 Store 的 imageEntity ===
+    if (imageEntity) {
       // 获取本地预览 URL（fallback 选项）
-      const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
+      const localPreviewUrl = imageEntity.localPreviewUrl ?? attrPreview;
 
       // 如果 CDN URL 加载失败，回退到本地预览
       if (cdnUrlLoadFailed && localPreviewUrl) {
@@ -395,23 +431,33 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         return localPreviewUrl;
       }
 
-      // 优先使用 CDN URL（真实上传后的图片）
-      // 如果没有 CDN URL，则使用本地 blob URL（模拟上传或离线编辑）
+      // URL 优先级：Steam URLs > 本地预览
       return (
-        imageNode.cdnUrl ??
+        imageEntity.steamUrls?.originalUrl ??
+        imageEntity.steamUrls?.thumbnailUrl ??
         localPreviewUrl
       );
     }
 
+    // === 兼容模式：旧 Store 数据 ===
+    // 情况1：有 imageNode（本地上传的图片）
+    if (imageNode) {
+      const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
+      if (cdnUrlLoadFailed && localPreviewUrl) {
+        console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
+        return localPreviewUrl;
+      }
+      return imageNode.cdnUrl ?? localPreviewUrl;
+    }
+
     // 情况2：有 steamPoolImage（从 Steam BBCode 导入的图片）
     if (steamPoolImage) {
-      // 使用图片池中的真实 URL（优先使用 originalUrl，其次 thumbnailUrl）
       return steamPoolImage.originalUrl ?? steamPoolImage.thumbnailUrl;
     }
 
-    // 情况3：没有任何数据源，返回节点属性中的预览
+    // 情况3：没有任何数据源
     return attrPreview;
-  }, [imageNode, steamPoolImage, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
+  }, [imageEntity, imageNode, steamPoolImage, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
 
   // 处理图片加载失败
   const handleImageLoadError = useCallback(() => {
@@ -421,23 +467,44 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     }
   }, [imageNode?.cdnUrl, cdnUrlLoadFailed]);
 
-  const alt = imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? (node.attrs.fileName as string) ?? "NASGE 图片";
+  const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? (node.attrs.fileName as string) ?? "NASGE 图片";
 
   // 获取图片状态（用于状态指示器）
   const imageState = useMemo(() => {
-    // 从 Steam 导入的图片，显示已上传状态
+    // === 优先使用新 Store 的 imageEntity ===
+    if (imageEntity) {
+      switch (imageEntity.status) {
+        case "local":
+          return "pending";
+        case "uploading":
+          return "uploading";
+        case "uploaded":
+        case "synced":
+          return "success";
+        case "error":
+          return "error";
+        case "orphaned":
+          return "error"; // orphaned 视为错误状态
+        default:
+          return "pending";
+      }
+    }
+
+    // === 兼容模式：旧 Store 数据 ===
     if (steamPoolImage) return "success";
 
     if (!imageNode) return null;
 
-    // 根据 imageNode 的 status 映射到 ImageState
     if (imageNode.status === "uploading") return "uploading";
     if (imageNode.status === "error") return "error";
     if (imageNode.status === "intake") return "pending";
     if (imageNode.previewId) return "success";
 
     return "pending";
-  }, [imageNode, steamPoolImage]);
+  }, [imageEntity, imageNode, steamPoolImage]);
+
+  // 获取错误信息（用于状态指示器）
+  const imageError = imageEntity?.error ?? imageNode?.error;
 
   return (
     <NodeViewWrapper
@@ -464,7 +531,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       ) : null}
 
       {/* 状态指示器（圆形图标） */}
-      {imageState && <StateIndicator state={imageState} error={imageNode?.error} />}
+      {imageState && <StateIndicator state={imageState} error={imageError} />}
     </NodeViewWrapper>
   );
 };
