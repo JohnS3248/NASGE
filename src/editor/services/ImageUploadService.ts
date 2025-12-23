@@ -6,9 +6,10 @@
  * - 使用新的 useImageStore 作为主要状态管理
  * - 迁移期间保持与旧 Store 的双写兼容
  *
- * 替代：
- * - imageUpload.ts 中的上传逻辑
- * - imageIntake.ts 中的上传逻辑
+ * 数据流：
+ * - 新 Store (useImageStore): 本服务直接更新
+ * - 旧 Store (useImageUploadStore): 通过 imageUploadManager 更新
+ * - 编辑器节点 (useEditorImageNodeStore): 本服务双写更新
  */
 
 import { useImageStore } from "../stores/useImageStore";
