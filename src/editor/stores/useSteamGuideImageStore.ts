@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { SteamGuideImage } from "../../shared/messages";
 import { fetchSteamGuideImages } from "../services/steamBridge";
+import { useImageStore } from "./useImageStore";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -116,6 +117,11 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
                 items: [...itemsWithState, ...existingLocalImages],
                 status: "ready"
               });
+
+              // 验证 BBCode 导入的图片引用是否有效
+              // 将不在 Steam 图片池中的图片标记为 orphaned
+              useImageStore.getState().validateReferences(steamPreviewIds);
+
               return;
             } catch (error) {
               const isConnectionError = error instanceof Error &&

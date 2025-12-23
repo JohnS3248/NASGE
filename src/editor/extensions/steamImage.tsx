@@ -391,6 +391,39 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         };
       }
 
+      // 如果有 imageEntity（从新 Store），根据状态显示
+      if (imageEntity) {
+        // orphaned 状态：图片在 Steam 被删除
+        if (imageEntity.status === "orphaned") {
+          return {
+            containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+            imageStyle: placeholderImageStyle(),
+            placeholderStyle: orphanedPlaceholderStyle(),
+            statusStyle: statusOverlayStyle("#ff8080"),
+            statusLabel: `图片引用失效 (ID: ${imageEntity.steamPreviewId})`
+          };
+        }
+        // 其他状态（uploaded/synced）但没有 URL 时
+        return {
+          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+          imageStyle: placeholderImageStyle(),
+          placeholderStyle: placeholderImageStyle(),
+          statusStyle: undefined,
+          statusLabel: undefined
+        };
+      }
+
+      // 只有 previewId 但没有任何数据（等待验证）
+      if (attrPreviewId) {
+        return {
+          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+          imageStyle: placeholderImageStyle(),
+          placeholderStyle: orphanedPlaceholderStyle(),
+          statusStyle: statusOverlayStyle("#808080"),
+          statusLabel: `正在验证图片... (ID: ${attrPreviewId})`
+        };
+      }
+
       return {
         containerStyle: baseContainerStyle(DEFAULT_IMAGE_ALIGNMENT, undefined, "inline-auto"),
         imageStyle: placeholderImageStyle(),
@@ -414,7 +447,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       statusStyle: statusConfig?.style,
       statusLabel: statusConfig?.label
     };
-  }, [imageNode, steamPoolImage, node.attrs.alignment, node.attrs.sizePreset]);
+  }, [imageNode, imageEntity, steamPoolImage, attrPreviewId, node.attrs.alignment, node.attrs.sizePreset]);
 
   // 跟踪 CDN URL 是否加载失败，用于 fallback 到本地预览
   const [cdnUrlLoadFailed, setCdnUrlLoadFailed] = useState(false);
@@ -523,19 +556,44 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       style={containerStyle}
     >
       {src ? (
-        <img
-          src={src}
-          alt={alt}
-          style={imageStyle}
-          draggable={false}
-          onError={handleImageLoadError}
-        />
+        <>
+          <img
+            src={src}
+            alt={alt}
+            style={imageStyle}
+            draggable={false}
+            onError={handleImageLoadError}
+          />
+          {statusStyle && statusLabel ? (
+            <div style={statusStyle}>{statusLabel}</div>
+          ) : null}
+        </>
       ) : (
-        <div style={placeholderStyle} />
+        <div style={{
+          ...placeholderStyle,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column",
+          gap: "8px"
+        }}>
+          {statusLabel ? (
+            <>
+              <span style={{ fontSize: "24px" }}>🖼️</span>
+              <span style={{
+                color: imageEntity?.status === "orphaned" ? "#ff8080" : "#808080",
+                fontSize: "0.85rem",
+                textAlign: "center",
+                padding: "0 12px"
+              }}>
+                {statusLabel}
+              </span>
+            </>
+          ) : (
+            <span style={{ color: "#808080", fontSize: "0.85rem" }}>图片数据缺失</span>
+          )}
+        </div>
       )}
-      {statusStyle && statusLabel ? (
-        <div style={statusStyle}>{statusLabel}</div>
-      ) : null}
 
       {/* 状态指示器（圆形图标） */}
       {imageState && <StateIndicator state={imageState} error={imageError} />}
@@ -701,6 +759,21 @@ function placeholderImageStyle(widthPx?: number, heightPx?: number): React.CSSPr
     maxWidth: widthPx ? `${widthPx}px` : "320px",
     background: "rgba(14, 26, 40, 0.6)",
     border: "1px dashed rgba(102, 192, 244, 0.32)",
+    display: "block"
+  };
+}
+
+/**
+ * 失效图片引用的占位符样式（红色边框）
+ */
+function orphanedPlaceholderStyle(): React.CSSProperties {
+  return {
+    width: "100%",
+    height: "120px",
+    maxWidth: "320px",
+    background: "rgba(40, 14, 14, 0.6)",
+    border: "1px dashed rgba(255, 128, 128, 0.5)",
+    borderRadius: "8px",
     display: "block"
   };
 }
