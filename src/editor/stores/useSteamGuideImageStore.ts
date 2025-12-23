@@ -93,8 +93,24 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
                 state: "success" as ImageState
               }));
 
-              // 合并本地图片（保留 pending 状态的图片）
-              const existingLocalImages = get().items.filter(item => item.state === "pending");
+              // 创建 previewId 集合，用于检查哪些本地图片已经在 Steam 图片池中
+              const steamPreviewIds = new Set(list.map(item => item.previewId));
+
+              // 合并本地图片：
+              // - 保留 pending 和 uploading 状态的图片（尚未完成上传）
+              // - 如果图片的 previewId 已经在 Steam 图片池中，则不重复添加
+              const existingLocalImages = get().items.filter(item => {
+                // 如果是 pending 或 uploading 状态，保留
+                if (item.state === "pending" || item.state === "uploading") {
+                  return true;
+                }
+                // 如果是 success 状态但 previewId 不在 Steam 图片池中，也保留
+                // 这处理了刚上传成功但 gPreviewImages 还没更新的情况
+                if (item.state === "success" && item.previewId && !steamPreviewIds.has(item.previewId)) {
+                  return true;
+                }
+                return false;
+              });
 
               set({
                 items: [...itemsWithState, ...existingLocalImages],

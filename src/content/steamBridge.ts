@@ -525,11 +525,29 @@ function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
   let globalVar: any = null;
 
   try {
-    // 读取页面桥接脚本写入的数据
+    // 每次都强制刷新 DOM 属性，确保获取最新的 gPreviewImages 数据
+    // 这对于上传图片后刷新图片池特别重要
+    console.log('[NASGE Content Script] 强制刷新 gPreviewImages 桥接数据...');
+    const refreshBridgeScript = document.createElement('script');
+    refreshBridgeScript.textContent = `
+      (function() {
+        if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
+          document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
+          console.log('[NASGE 桥接刷新] ✅ gPreviewImages 已更新到 DOM，共', window.gPreviewImages.length, '张图片');
+        } else {
+          document.documentElement.setAttribute('data-nasge-gpreview-bridge', 'null');
+          console.warn('[NASGE 桥接刷新] ⚠️ gPreviewImages 不存在');
+        }
+      })();
+    `;
+    (document.head || document.documentElement).appendChild(refreshBridgeScript);
+    refreshBridgeScript.remove();
+
+    // 读取刷新后的数据
     const attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
     if (attr && attr !== 'null') {
       globalVar = JSON.parse(attr);
-      console.log('[NASGE Content Script] ✅ 从页面桥接读取 gPreviewImages，共', globalVar?.length, '张图片');
+      console.log('[NASGE Content Script] ✅ 读取到 gPreviewImages，共', globalVar?.length, '张图片');
 
       // 打印调试信息
       if (Array.isArray(globalVar)) {
@@ -544,29 +562,7 @@ function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
         });
       }
     } else {
-      console.warn('[NASGE Content Script] ❌ 页面桥接数据不存在，尝试手动触发');
-
-      // 手动触发一次（以防时序问题）
-      const script = document.createElement('script');
-      script.textContent = `
-        (function() {
-          if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
-            document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
-            console.log('[NASGE 手动桥接] ✅ gPreviewImages 已写入 DOM，共', window.gPreviewImages.length, '张图片');
-          } else {
-            console.warn('[NASGE 手动桥接] ⚠️ gPreviewImages 不存在');
-          }
-        })();
-      `;
-      (document.head || document.documentElement).appendChild(script);
-      script.remove();
-
-      // 再次尝试读取
-      const retryAttr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
-      if (retryAttr && retryAttr !== 'null') {
-        globalVar = JSON.parse(retryAttr);
-        console.log('[NASGE Content Script] ✅ 手动触发后成功读取，共', globalVar?.length, '张图片');
-      }
+      console.warn('[NASGE Content Script] ❌ gPreviewImages 不存在或为空');
     }
   } catch (error) {
     console.error('[NASGE] 读取页面桥接数据失败:', error);

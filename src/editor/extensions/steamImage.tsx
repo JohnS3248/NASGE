@@ -9,6 +9,7 @@ import {
   useEditorImageNodeStore
 } from "../stores/useEditorImageNodeStore";
 import type { EditorImageNode } from "../stores/useEditorImageNodeStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 
 const SteamImage = Node.create({
     name: "steamImage",
@@ -20,25 +21,52 @@ const SteamImage = Node.create({
     addAttributes() {
       return {
         imageNodeId: {
-          default: null
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-image-node-id": attributes.imageNodeId
+          }),
+          parseHTML: (element) => element.getAttribute("data-image-node-id")
         },
         uploadId: {
-          default: null
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-upload-id": attributes.uploadId
+          }),
+          parseHTML: (element) => element.getAttribute("data-upload-id")
         },
         previewId: {
-          default: null
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-preview-id": attributes.previewId
+          }),
+          parseHTML: (element) => element.getAttribute("data-preview-id")
         },
         sizePreset: {
-          default: DEFAULT_IMAGE_PRESET
+          default: DEFAULT_IMAGE_PRESET,
+          renderHTML: (attributes) => ({
+            "data-size-preset": attributes.sizePreset
+          }),
+          parseHTML: (element) => element.getAttribute("data-size-preset") || DEFAULT_IMAGE_PRESET
         },
         alignment: {
-          default: DEFAULT_IMAGE_ALIGNMENT
+          default: DEFAULT_IMAGE_ALIGNMENT,
+          renderHTML: (attributes) => ({
+            "data-alignment": attributes.alignment
+          }),
+          parseHTML: (element) => element.getAttribute("data-alignment") || DEFAULT_IMAGE_ALIGNMENT
         },
         fileName: {
-          default: null
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-file-name": attributes.fileName
+          }),
+          parseHTML: (element) => element.getAttribute("data-file-name")
         },
         previewDataUrl: {
-          default: null
+          default: null,
+          // previewDataUrl 不需要渲染到 HTML，只在编辑器内部使用
+          renderHTML: () => ({}),
+          parseHTML: () => null
         }
       };
     },
@@ -110,8 +138,19 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   updateAttributes
 }) => {
   const imageNodeId = node.attrs.imageNodeId as string | null;
+  const attrPreviewId = node.attrs.previewId as string | null;
+
   const imageNode = useEditorImageNodeStore(
     (state) => (imageNodeId ? state.nodes[imageNodeId] : undefined)
+  );
+
+  // 从 Steam 图片池中查找图片（用于从 BBCode 导入的图片）
+  const steamPoolImage = useSteamGuideImageStore(
+    (state) => {
+      if (imageNode) return undefined; // 如果有 imageNode，不需要从图片池查找
+      if (!attrPreviewId) return undefined;
+      return state.items.find((item) => item.previewId === attrPreviewId);
+    }
   );
 
   useEffect(() => {
@@ -119,13 +158,19 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       return;
     }
 
-    if (!node.attrs.previewDataUrl) {
+    // 如果有 previewId 且能从图片池找到，不需要警告
+    if (attrPreviewId && steamPoolImage) {
+      return;
+    }
+
+    if (!node.attrs.previewDataUrl && !attrPreviewId) {
       console.warn("[NASGE] steamImage 节点缺少关联数据", {
         imageNodeId,
+        attrPreviewId,
         nodes: useEditorImageNodeStore.getState().nodes
       });
     }
-  }, [imageNode, imageNodeId, node.attrs.previewDataUrl]);
+  }, [imageNode, imageNodeId, node.attrs.previewDataUrl, attrPreviewId, steamPoolImage]);
 
   // 移除自动清理逻辑：节点的删除应该由编辑器的 deleteSelection 命令触发
   // 不应该在组件卸载时自动删除 store 数据，因为 TipTap 会在内容更新时重新挂载组件
@@ -159,7 +204,31 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   }, [imageNode, node.attrs, updateAttributes]);
 
   const { containerStyle, imageStyle, placeholderStyle, statusStyle, statusLabel } = useMemo(() => {
+    // 获取节点属性中的对齐和尺寸设置
+    const attrAlignment = (node.attrs.alignment as string) || DEFAULT_IMAGE_ALIGNMENT;
+    const attrSizePreset = (node.attrs.sizePreset as string) || DEFAULT_IMAGE_PRESET;
+
     if (!imageNode) {
+      // 如果有 steamPoolImage，说明是从 Steam 导入的图片，应该正常显示
+      if (steamPoolImage) {
+        return {
+          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+          imageStyle: {
+            display: "block",
+            width: "100%",
+            height: "auto",
+            maxWidth: "100%",
+            userSelect: "none" as const,
+            pointerEvents: "none" as const,
+            objectFit: "contain" as const,
+            margin: "0 !important" as any
+          },
+          placeholderStyle: placeholderImageStyle(),
+          statusStyle: undefined,
+          statusLabel: undefined // 已上传的图片不需要状态标签
+        };
+      }
+
       return {
         containerStyle: baseContainerStyle(DEFAULT_IMAGE_ALIGNMENT, undefined, "inline-auto"),
         imageStyle: placeholderImageStyle(),
@@ -183,7 +252,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       statusStyle: statusConfig?.style,
       statusLabel: statusConfig?.label
     };
-  }, [imageNode]);
+  }, [imageNode, steamPoolImage, node.attrs.alignment, node.attrs.sizePreset]);
 
   // 跟踪 CDN URL 是否加载失败，用于 fallback 到本地预览
   const [cdnUrlLoadFailed, setCdnUrlLoadFailed] = useState(false);
@@ -195,26 +264,35 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
   const src = useMemo(() => {
     const attrPreview = (node.attrs.previewDataUrl as string | null) ?? undefined;
-    if (!imageNode) {
-      return attrPreview;
+
+    // 情况1：有 imageNode（本地上传的图片）
+    if (imageNode) {
+      // 获取本地预览 URL（fallback 选项）
+      const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
+
+      // 如果 CDN URL 加载失败，回退到本地预览
+      if (cdnUrlLoadFailed && localPreviewUrl) {
+        console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
+        return localPreviewUrl;
+      }
+
+      // 优先使用 CDN URL（真实上传后的图片）
+      // 如果没有 CDN URL，则使用本地 blob URL（模拟上传或离线编辑）
+      return (
+        imageNode.cdnUrl ??
+        localPreviewUrl
+      );
     }
 
-    // 获取本地预览 URL（fallback 选项）
-    const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
-
-    // 如果 CDN URL 加载失败，回退到本地预览
-    if (cdnUrlLoadFailed && localPreviewUrl) {
-      console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
-      return localPreviewUrl;
+    // 情况2：有 steamPoolImage（从 Steam BBCode 导入的图片）
+    if (steamPoolImage) {
+      // 使用图片池中的真实 URL（优先使用 originalUrl，其次 thumbnailUrl）
+      return steamPoolImage.originalUrl ?? steamPoolImage.thumbnailUrl;
     }
 
-    // 优先使用 CDN URL（真实上传后的图片）
-    // 如果没有 CDN URL，则使用本地 blob URL（模拟上传或离线编辑）
-    return (
-      imageNode.cdnUrl ??
-      localPreviewUrl
-    );
-  }, [imageNode, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
+    // 情况3：没有任何数据源，返回节点属性中的预览
+    return attrPreview;
+  }, [imageNode, steamPoolImage, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
 
   // 处理图片加载失败
   const handleImageLoadError = useCallback(() => {
@@ -224,10 +302,13 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     }
   }, [imageNode?.cdnUrl, cdnUrlLoadFailed]);
 
-  const alt = imageNode?.fileName ?? imageNode?.originalName ?? "NASGE 图片";
+  const alt = imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? (node.attrs.fileName as string) ?? "NASGE 图片";
 
   // 获取图片状态（用于状态指示器）
   const imageState = useMemo(() => {
+    // 从 Steam 导入的图片，显示已上传状态
+    if (steamPoolImage) return "success";
+
     if (!imageNode) return null;
 
     // 根据 imageNode 的 status 映射到 ImageState
@@ -237,7 +318,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (imageNode.previewId) return "success";
 
     return "pending";
-  }, [imageNode]);
+  }, [imageNode, steamPoolImage]);
 
   return (
     <NodeViewWrapper
