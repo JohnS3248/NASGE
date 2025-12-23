@@ -1,22 +1,24 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useImageUploadStore } from "../stores/useImageUploadStore";
-import type { ImageUploadRecord } from "../stores/useImageUploadStore";
+import { useImageStore } from "../stores/useImageStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import type { ImageEntity, ImageLifecycleStatus } from "../types/image";
 
 type SteamImagePoolProps = {
   onDelete?: (recordId: string) => void;
 };
 
-const statusLabelMap: Record<string, string> = {
+const statusLabelMap: Record<ImageLifecycleStatus, string> = {
+  local: "待上传",
   uploading: "上传中",
   uploaded: "已上传",
-  failed: "上传失败",
-  idle: "待上传"
+  synced: "已同步",
+  error: "上传失败",
+  orphaned: "引用失效"
 };
 
 const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
-  const items = useImageUploadStore((state) => state.items);
-  const order = useImageUploadStore((state) => state.order);
+  // 从新 Store 读取图片数据
+  const allImages = useImageStore((state) => state.images);
 
   const remoteItems = useSteamGuideImageStore((state) => state.items);
   const remoteStatus = useSteamGuideImageStore((state) => state.status);
@@ -29,22 +31,24 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
     [remoteItems]
   );
 
-  const records = useMemo(
+  // 上传队列：显示 local、uploading、error 状态的图片
+  // 已上传且在图片池中的图片不显示（避免重复）
+  const uploadQueueImages = useMemo(
     () =>
-      order
-        .map((id) => items[id])
-        .filter((item): item is NonNullable<typeof item> => Boolean(item))
-        // 只有当图片已经在 Steam 图片池中时才从队列移除
-        // 这解决了上传完成但 gPreviewImages 还没更新时图片消失的问题
-        .filter((item) => {
-          if (item.status !== "uploaded") {
-            return true; // 未完成上传的图片保留在队列
+      Object.values(allImages)
+        .filter((image): image is ImageEntity => {
+          // 显示本地、上传中、错误状态的图片
+          if (image.status === "local" || image.status === "uploading" || image.status === "error") {
+            return true;
           }
-          // 已上传的图片：如果 previewId 已在 Steam 图片池中，则移除（避免重复显示）
-          const previewId = item.previewIds[0];
-          return !previewId || !remotePreviewIds.has(previewId);
-        }),
-    [order, items, remotePreviewIds]
+          // 已上传但尚未出现在图片池中的图片也显示
+          if (image.status === "uploaded" && image.steamPreviewId) {
+            return !remotePreviewIds.has(image.steamPreviewId);
+          }
+          return false;
+        })
+        .sort((a, b) => b.createdAt - a.createdAt), // 按创建时间倒序
+    [allImages, remotePreviewIds]
   );
 
   useEffect(() => {
@@ -109,7 +113,7 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
         </div>
       ) : null}
 
-      {records.length > 0 && (
+      {uploadQueueImages.length > 0 && (
         <section
           style={{
             display: "flex",
@@ -118,10 +122,10 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
           }}
         >
           <SectionTitle>上传队列</SectionTitle>
-          {records.map((record) => (
+          {uploadQueueImages.map((image) => (
             <UploadQueueItem
-              key={record.id}
-              record={record}
+              key={image.id}
+              image={image}
               remoteItems={remoteItems}
             />
           ))}
@@ -214,36 +218,28 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
 
 /**
  * 上传队列项组件
- * 使用本地 blob URL 显示预览，解决 CDN URL 404 的问题
+ * 使用新 Store 的 ImageEntity 数据
  */
 const UploadQueueItem: React.FC<{
-  record: ImageUploadRecord;
+  image: ImageEntity;
   remoteItems: Array<{ previewId: string; originalUrl?: string; thumbnailUrl?: string }>;
-}> = ({ record, remoteItems }) => {
-  const statusLabel = statusLabelMap[record.status] ?? record.status;
-  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | undefined>(undefined);
-
-  // 创建本地预览 URL
-  useEffect(() => {
-    if (record.file) {
-      const url = URL.createObjectURL(record.file);
-      setLocalPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [record.file]);
+}> = ({ image, remoteItems }) => {
+  const statusLabel = statusLabelMap[image.status] ?? image.status;
 
   // 计算图片源：优先使用图片池中的真实 URL，其次使用本地预览
   const src = useMemo(() => {
-    const previewId = record.previewIds[0];
-    if (previewId) {
-      // 如果有 previewId，从图片池中查找真实 URL
-      const poolImage = remoteItems.find((item) => item.previewId === previewId);
+    if (image.steamPreviewId) {
+      // 如果有 steamPreviewId，从图片池中查找真实 URL
+      const poolImage = remoteItems.find((item) => item.previewId === image.steamPreviewId);
       if (poolImage?.originalUrl) return poolImage.originalUrl;
       if (poolImage?.thumbnailUrl) return poolImage.thumbnailUrl;
     }
+    // 使用 Steam URLs（如果有）
+    if (image.steamUrls?.originalUrl) return image.steamUrls.originalUrl;
+    if (image.steamUrls?.thumbnailUrl) return image.steamUrls.thumbnailUrl;
     // 使用本地预览
-    return localPreviewUrl;
-  }, [record.previewIds, remoteItems, localPreviewUrl]);
+    return image.localPreviewUrl;
+  }, [image.steamPreviewId, image.steamUrls, image.localPreviewUrl, remoteItems]);
 
   return (
     <div
@@ -273,15 +269,15 @@ const UploadQueueItem: React.FC<{
             lineHeight: 1.4
           }}
         >
-          {record.generatedName}
+          {image.fileName}
         </span>
         <span
           style={{
             fontSize: "0.75rem",
             color:
-              record.status === "failed"
+              image.status === "error"
                 ? "#ff8f8f"
-                : record.status === "uploaded"
+                : image.status === "uploaded" || image.status === "synced"
                   ? "#85ffba"
                   : "#9ac7ff"
           }}
@@ -292,7 +288,7 @@ const UploadQueueItem: React.FC<{
       {src ? (
         <img
           src={src}
-          alt={record.generatedName}
+          alt={image.fileName}
           style={{
             width: "100%",
             borderRadius: "0.6rem",
@@ -314,10 +310,10 @@ const UploadQueueItem: React.FC<{
             fontSize: "0.8rem"
           }}
         >
-          {record.status === "uploading" ? "正在上传…" : "等待上传"}
+          {image.status === "uploading" ? "正在上传…" : "等待上传"}
         </div>
       )}
-      {record.status === "failed" && record.error && (
+      {image.status === "error" && image.error && (
         <div
           style={{
             fontSize: "0.75rem",
@@ -327,7 +323,7 @@ const UploadQueueItem: React.FC<{
             borderRadius: "0.5rem"
           }}
         >
-          {record.error}
+          {image.error}
         </div>
       )}
     </div>
