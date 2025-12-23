@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
@@ -185,21 +185,44 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     };
   }, [imageNode]);
 
+  // 跟踪 CDN URL 是否加载失败，用于 fallback 到本地预览
+  const [cdnUrlLoadFailed, setCdnUrlLoadFailed] = useState(false);
+
+  // 当 imageNode 变化时重置 fallback 状态
+  useEffect(() => {
+    setCdnUrlLoadFailed(false);
+  }, [imageNode?.cdnUrl]);
+
   const src = useMemo(() => {
     const attrPreview = (node.attrs.previewDataUrl as string | null) ?? undefined;
     if (!imageNode) {
       return attrPreview;
     }
 
+    // 获取本地预览 URL（fallback 选项）
+    const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
+
+    // 如果 CDN URL 加载失败，回退到本地预览
+    if (cdnUrlLoadFailed && localPreviewUrl) {
+      console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
+      return localPreviewUrl;
+    }
+
     // 优先使用 CDN URL（真实上传后的图片）
     // 如果没有 CDN URL，则使用本地 blob URL（模拟上传或离线编辑）
-    // redirectUrl 是 Steam 社区页面链接，不是图片 URL，所以不应该用于预览
     return (
       imageNode.cdnUrl ??
-      imageNode.metadata.previewDataUrl ??
-      attrPreview
+      localPreviewUrl
     );
-  }, [imageNode, node.attrs.previewDataUrl]);
+  }, [imageNode, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
+
+  // 处理图片加载失败
+  const handleImageLoadError = useCallback(() => {
+    if (imageNode?.cdnUrl && !cdnUrlLoadFailed) {
+      console.warn('[NASGE] CDN URL 加载失败，尝试回退到本地预览:', imageNode.cdnUrl);
+      setCdnUrlLoadFailed(true);
+    }
+  }, [imageNode?.cdnUrl, cdnUrlLoadFailed]);
 
   const alt = imageNode?.fileName ?? imageNode?.originalName ?? "NASGE 图片";
 
@@ -231,6 +254,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
           alt={alt}
           style={imageStyle}
           draggable={false}
+          onError={handleImageLoadError}
         />
       ) : (
         <div style={placeholderStyle} />

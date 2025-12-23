@@ -171,24 +171,22 @@ export const useEditorImageNodeStore = create<EditorImageNodeState>(
     },
     markUploaded: (nodeId, payload) => {
       const { record, result } = payload;
-      const previewId = result.previewIds[0];
-      const cdnUrl = previewId ? buildPreviewImageUrl(previewId) : undefined;
+      const steamPreviewId = result.previewIds[0];
+      // 注意：buildPreviewImageUrl 生成的 economy CDN URL 可能返回 404
+      // 保留 previewDataUrl 作为 fallback，确保图片始终可显示
+      const economyCdnUrl = steamPreviewId ? buildPreviewImageUrl(steamPreviewId) : undefined;
 
-      const previous = get().nodes[nodeId];
-
-      // Only clear previewDataUrl if we have a valid CDN URL to replace it
-      // This preserves local blob URL for mock uploads without real preview IDs
+      // 不清除 previewDataUrl，保留本地预览作为 fallback
+      // 当 economy CDN URL 不可用时，图片组件可以回退到本地预览
       set((state) =>
         updateNode(state, nodeId, {
           status: "ready",
-          previewId,
+          previewId: steamPreviewId,
           redirectUrl: result.redirectUrl,
-          cdnUrl,
+          cdnUrl: economyCdnUrl,
           uploadId: record.id,
-          fileName: record.generatedName ?? record.originalName,
-          metadata: cdnUrl ? {
-            previewDataUrl: undefined
-          } : {}
+          fileName: record.generatedName ?? record.originalName
+          // 不再清除 metadata.previewDataUrl
         })
       );
     },

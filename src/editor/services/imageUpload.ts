@@ -5,6 +5,7 @@
 
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import { uploadImageViaSteam } from "./imageUploadManager";
 
 /**
  * 上传单张图片到 Steam
@@ -31,76 +32,60 @@ export async function uploadSingleImage(imageNodeId: string): Promise<string> {
   }
 
   try {
-    // TODO: 实现实际的上传逻辑
-    // 目前先模拟上传，返回一个模拟的预览码
-    console.log('[NASGE] 开始上传图片:', imageNode.fileName);
+    console.log('[NASGE] uploadSingleImage 开始上传图片:', imageNode.originalName);
 
-    // 模拟上传延迟
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // 1. 获取图片的 Data URL（本地预览数据）
+    const localPreviewDataUrl = imageNode.metadata.previewDataUrl;
+    if (!localPreviewDataUrl) {
+      throw new Error("图片预览数据不存在，无法上传。请重新添加图片后再试。");
+    }
 
-    // TODO: 调用实际的上传 API
-    // 目前使用模拟数据，未来需要集成 uploadImageViaSteam 函数
+    // 2. 将 Data URL 转换为 File 对象
+    const imageFileName = imageNode.fileName || imageNode.originalName;
+    const reconstructedFile = await convertDataUrlToFile(localPreviewDataUrl, imageFileName);
 
-    // 模拟生成预览码
-    const mockPreviewId = `${Date.now()}`;
-
-    // 创建符合类型的模拟上传结果
-    // 注意：previewIds 留空，避免设置无效的 cdnUrl，保持本地预览
-    const mockUploadResult = {
-      redirectUrl: `https://steamcommunity.com/sharedfiles/filedetails/?id=${mockPreviewId}`,
-      previewIds: [], // 空数组：不设置 cdnUrl，继续使用本地 blob URL 预览
-      status: 1
-    };
-
-    // 创建一个 File 对象（用于满足 ImageUploadRecord 类型）
-    const mockFile = new File([], imageNode.fileName || imageNode.originalName);
-
-    // 创建符合类型的模拟上传记录
-    const mockRecord = {
-      id: `upload_${mockPreviewId}`,
-      scope: "chapter-preview" as const,
-      originalName: imageNode.originalName,
-      generatedName: imageNode.fileName || imageNode.originalName,
-      file: mockFile,
-      status: "uploaded" as const,
-      previewIds: [], // 空数组
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    // 更新图片节点状态为已上传
-    // 由于 previewIds 为空，不会设置 cdnUrl，图片继续使用本地预览
-    useEditorImageNodeStore.getState().markUploaded(imageNodeId, {
-      record: mockRecord,
-      result: mockUploadResult
+    console.log('[NASGE] uploadSingleImage 已重建 File 对象:', {
+      name: reconstructedFile.name,
+      size: reconstructedFile.size,
+      type: reconstructedFile.type
     });
 
-    // 手动设置 previewId（用于 BBCode 导出）
-    // 注意：这里单独设置 previewId，但不影响 cdnUrl（因为上面的 markUploaded 没有设置）
-    const store = useEditorImageNodeStore.getState();
-    const nodes = store.nodes;
-    const updatedNode = nodes[imageNodeId];
-    if (updatedNode) {
-      // 直接更新节点，只添加 previewId，不清除 previewDataUrl
-      useEditorImageNodeStore.setState({
-        nodes: {
-          ...nodes,
-          [imageNodeId]: {
-            ...updatedNode,
-            previewId: mockPreviewId
-          }
+    // 3. 调用真实的 Steam 上传 API
+    const uploadResponse = await uploadImageViaSteam(
+      reconstructedFile,
+      "chapter-preview",
+      { source: imageNode.metadata.source },
+      {
+        onPrepared: (uploadRecord) => {
+          useEditorImageNodeStore.getState().attachUploadRecord(imageNodeId, uploadRecord);
+        },
+        onUploading: () => {
+          // 状态已在函数开始时设置为 uploading，这里可以做额外处理
+          console.log('[NASGE] uploadSingleImage Steam 正在处理上传...');
+        },
+        onUploaded: (uploadRecord, uploadResult) => {
+          useEditorImageNodeStore.getState().markUploaded(imageNodeId, {
+            record: uploadRecord,
+            result: uploadResult
+          });
+          // 刷新图片池
+          useSteamGuideImageStore.getState().refresh();
+        },
+        onFailed: (_, failureMessage) => {
+          useEditorImageNodeStore.getState().markFailed(imageNodeId, failureMessage);
         }
-      });
+      }
+    );
+
+    // 4. 提取真实的 previewId
+    const steamPreviewId = uploadResponse.result.previewIds[0];
+    if (!steamPreviewId) {
+      throw new Error("Steam 上传成功但未返回 previewId");
     }
 
-    // 更新图片池状态
-    if (imageNode.fileName) {
-      useSteamGuideImageStore.getState().setPreviewId(imageNode.fileName, mockPreviewId);
-    }
+    console.log('[NASGE] uploadSingleImage 上传成功，真实预览码:', steamPreviewId);
 
-    console.log('[NASGE] 图片上传成功，预览码:', mockPreviewId);
-
-    return mockPreviewId;
+    return steamPreviewId;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[NASGE] 图片上传失败:', errorMessage);
@@ -154,4 +139,24 @@ export async function uploadMultipleImages(imageNodeIds: string[]): Promise<{
   console.log(`[NASGE] 批量上传完成: 成功 ${success.length} 张，失败 ${failed.length} 张`);
 
   return { success, failed };
+}
+
+/**
+ * 将 Data URL 转换为 File 对象
+ * @param dataUrl - base64 编码的 data URL (如 "data:image/png;base64,...")
+ * @param originalFileName - 原始文件名，用于创建 File 对象
+ * @returns File 对象
+ */
+async function convertDataUrlToFile(dataUrl: string, originalFileName: string): Promise<File> {
+  const response = await fetch(dataUrl);
+  const blobData = await response.blob();
+
+  // 从 data URL 中提取 MIME 类型，如果失败则使用 blob 的类型
+  const mimeTypeMatch = dataUrl.match(/^data:([^;,]+)/);
+  const mimeType = mimeTypeMatch?.[1] || blobData.type || "image/png";
+
+  return new File([blobData], originalFileName, {
+    type: mimeType,
+    lastModified: Date.now()
+  });
 }
