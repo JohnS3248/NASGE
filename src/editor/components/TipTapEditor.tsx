@@ -4,7 +4,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { processIncomingImages } from "../services/imageIntake";
-import { uploadSingleImage } from "../services/imageUpload";
+import { uploadSingleImage } from "../services/ImageUploadService";
 import {
   useEditorImageNodeStore,
   type ImageAlignment,

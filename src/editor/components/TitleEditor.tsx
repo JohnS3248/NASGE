@@ -5,7 +5,7 @@ import { createEditorExtensions } from '../utils/editorExtensions';
 import { titleHasImage } from '../utils/titleHelpers';
 import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
 import { processIncomingImages } from '../services/imageIntake';
-import { uploadSingleImage } from '../services/imageUpload';
+import { uploadSingleImage } from '../services/ImageUploadService';
 import {
   useEditorImageNodeStore,
   type ImageAlignment,
