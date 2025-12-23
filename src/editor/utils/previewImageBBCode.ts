@@ -1,7 +1,10 @@
 import type {
   ImageAlignment,
-  ImageDisplayPreset
-} from "../stores/useEditorImageNodeStore";
+  ImageSizePreset
+} from "../types/image";
+
+// 类型别名，保持向后兼容
+type ImageDisplayPreset = ImageSizePreset;
 
 export type PreviewImageBBCode = {
   previewId: string;

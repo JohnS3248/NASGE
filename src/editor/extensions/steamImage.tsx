@@ -332,17 +332,24 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   // 这会导致节点被意外删除
 
   useEffect(() => {
-    if (!imageNode) {
+    // 优先从新 Store 读取 previewId，兼容旧 Store
+    const effectivePreviewId =
+      imageEntity?.steamPreviewId ?? imageNode?.previewId ?? null;
+
+    // 如果没有任何数据源，跳过
+    if (!imageNode && !imageEntity) {
       return;
     }
+
     const nextAttrs = {
-      imageNodeId: imageNode.nodeId,
-      uploadId: imageNode.uploadId ?? null,
-      previewId: imageNode.previewId ?? null,
-      sizePreset: imageNode.display.preset,
-      alignment: imageNode.display.alignment,
-      fileName: imageNode.fileName ?? imageNode.originalName,
-      previewDataUrl: imageNode.metadata.previewDataUrl ?? null
+      imageNodeId: imageNode?.nodeId ?? imageEntity?.sourceNodeId ?? null,
+      uploadId: imageNode?.uploadId ?? null,
+      // 新 Store 优先：确保上传成功后 previewId 能正确同步到 TipTap 节点
+      previewId: effectivePreviewId,
+      sizePreset: imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
+      alignment: imageEntity?.display.alignment ?? imageNode?.display.alignment ?? "inline",
+      fileName: imageNode?.fileName ?? imageNode?.originalName ?? imageEntity?.fileName ?? null,
+      previewDataUrl: imageNode?.metadata.previewDataUrl ?? imageEntity?.localPreviewUrl ?? null
     };
 
     let changed = false;
@@ -356,7 +363,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (changed) {
       updateAttributes(nextAttrs);
     }
-  }, [imageNode, node.attrs, updateAttributes]);
+  }, [imageNode, imageEntity, node.attrs, updateAttributes]);
 
   const { containerStyle, imageStyle, placeholderStyle, statusStyle, statusLabel } = useMemo(() => {
     // 获取节点属性中的对齐和尺寸设置
