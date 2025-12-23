@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { fetchChapterFromSteam, saveChapterToSteam, reorderChaptersOnSteam } from '../services/chapterSync';
+import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import { bbcodeToHtml, htmlToBBCode } from '../utils/bbcode';
 import { generateJSON, generateHTML } from '@tiptap/html';
 import { createEditorExtensions } from '../utils/editorExtensions';
@@ -72,6 +73,10 @@ export function useChapterSync() {
 
         setSyncStatus((prev) => ({ ...prev, [sectionId]: 'success' }));
         console.log('[NASGE] 章节拉取成功', { sectionId });
+
+        // 刷新图片池，确保章节中的图片能正确显示
+        // 这对于从 Steam 拉取包含图片的章节特别重要
+        void useSteamGuideImageStore.getState().refresh();
       } catch (error) {
         console.error('[NASGE] 章节拉取失败', error);
         const errorMsg = error instanceof Error ? error.message : '拉取失败';
