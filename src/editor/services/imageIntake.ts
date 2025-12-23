@@ -1,11 +1,7 @@
 import type { Editor } from "@tiptap/react";
-import type {
-  ImageUploadMetadata,
-  ImageUploadSource
-} from "../stores/useImageUploadStore";
-import { uploadImageViaSteam } from "./imageUploadManager";
+import type { ImageUploadSource } from "../stores/useImageUploadStore";
+import { ImageUploadService } from "./ImageUploadService";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
-import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 
 export type IncomingImageOptions = {
@@ -31,11 +27,6 @@ export async function processIncomingImages(
   } else {
     editor.commands.focus();
   }
-
-  const metadata: ImageUploadMetadata = {
-    source: options.source,
-    cursorPosition: options.cursorPosition
-  };
 
   console.info(
     "[NASGE] processIncomingImages -> 捕获到文件",
@@ -112,28 +103,15 @@ export async function processIncomingImages(
       continue;
     }
 
-    // 自动上传到 Steam
+    // 自动上传到 Steam（使用统一上传服务）
     try {
-      await uploadImageViaSteam(file, "chapter-preview", metadata, {
-        onPrepared: (record) => {
-          imageNodeStore.attachUploadRecord(node.nodeId, record);
-          imageNodeStore.markUploading(node.nodeId);
-        },
-        onUploading: () => {
-          imageNodeStore.markUploading(node.nodeId);
-        },
-        onUploaded: (record, result) => {
-          imageNodeStore.markUploaded(node.nodeId, { record, result });
-          const steamImageStore = useSteamGuideImageStore.getState();
-          void steamImageStore.refresh();
-        },
-        onFailed: (_record, message) => {
-          imageNodeStore.markFailed(node.nodeId, message);
-        }
-      });
+      const result = await ImageUploadService.uploadByNodeId(node.nodeId);
+      if (!result.success) {
+        console.error("[NASGE] 图片自动上传失败:", result.error);
+      }
     } catch (error) {
-      console.error("[NASGE] 图片上传失败:", error);
-      throw error;
+      console.error("[NASGE] 图片上传异常:", error);
+      // 不抛出错误，让其他图片继续处理
     }
   }
 }
