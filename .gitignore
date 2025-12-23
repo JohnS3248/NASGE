@@ -2,3 +2,7 @@
 node_modules/
 dist/
 *.tsbuildinfo
+
+# 测试和草稿文件夹
+tests/
+草稿md/
