@@ -5,8 +5,10 @@
 import { JSONContent } from "@tiptap/core";
 import { generateJSON } from "@tiptap/html";
 import { createEditorExtensions } from "./editorExtensions";
+import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import type { ImageSizePreset, ImageAlignment } from "../types/image";
 
 /**
  * 创建空的标题 JSON
@@ -79,6 +81,7 @@ export function createTitleFromHtml(html: string): JSONContent {
  * 从标题 JSON 中提取图片节点并注册到 store
  */
 function registerImagesFromTitleJson(titleJson: JSONContent): void {
+  const imageStore = useImageStore.getState();
   const imageNodeStore = useEditorImageNodeStore.getState();
   const steamImagePool = useSteamGuideImageStore.getState();
 
@@ -100,14 +103,31 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
         : null;
 
       if (previewId && poolImage && poolImage.originalUrl && poolImage.thumbnailUrl) {
-        // 注册已上传的图片节点
-        const registeredNode = imageNodeStore.registerFromSteamPool({
-          previewId,
+        // === 新 Store (主要) ===
+        const imageEntity = imageStore.importFromSteamPool({
+          steamPreviewId: previewId,
           fileName: fileName || poolImage.fileName || "image.png",
-          uploadId: null, // 标题图片不需要 uploadId
           originalUrl: poolImage.originalUrl,
           thumbnailUrl: poolImage.thumbnailUrl
         });
+
+        // 更新显示设置
+        imageStore.updateDisplay(imageEntity.id, {
+          preset: (sizePreset as ImageSizePreset) || "original",
+          alignment: (alignment as ImageAlignment) || "floatLeft"
+        });
+
+        // === 旧 Store (双写兼容) ===
+        const registeredNode = imageNodeStore.registerFromSteamPool({
+          previewId,
+          fileName: fileName || poolImage.fileName || "image.png",
+          uploadId: null,
+          originalUrl: poolImage.originalUrl,
+          thumbnailUrl: poolImage.thumbnailUrl
+        });
+
+        // 建立新旧 Store 关联
+        imageStore.updateSourceNodeId(imageEntity.id, registeredNode.nodeId);
 
         // 更新节点属性以包含 imageNodeId
         node.attrs = {
@@ -119,14 +139,15 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
           alignment: alignment || "floatLeft"
         };
 
-        // 设置显示属性
+        // 设置旧 Store 显示属性
         imageNodeStore.updateDisplay(registeredNode.nodeId, {
           preset: (sizePreset as any) || "original",
           alignment: (alignment as any) || "floatLeft"
         });
 
-        console.log('[titleHelpers] 注册标题图片节点:', {
-          imageNodeId: registeredNode.nodeId,
+        console.log('[titleHelpers] 注册标题图片节点 (双写):', {
+          newStoreId: imageEntity.id,
+          oldStoreNodeId: registeredNode.nodeId,
           previewId,
           fileName: fileName || poolImage.fileName
         });

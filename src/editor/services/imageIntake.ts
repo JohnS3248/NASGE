@@ -1,11 +1,12 @@
 import type { Editor } from "@tiptap/react";
-import type { ImageUploadSource } from "../stores/useImageUploadStore";
+import type { ImageSource } from "../types/image";
 import { ImageUploadService } from "./ImageUploadService";
+import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 
 export type IncomingImageOptions = {
-  source: ImageUploadSource;
+  source: "paste" | "drop";
   cursorPosition?: number;
 };
 
@@ -37,6 +38,7 @@ export async function processIncomingImages(
     }))
   );
 
+  const imageStore = useImageStore.getState();
   const imageNodeStore = useEditorImageNodeStore.getState();
 
   for (const file of files) {
@@ -56,6 +58,18 @@ export async function processIncomingImages(
       console.warn("[NASGE] 读取本地预览失败", error);
     }
 
+    // === 新 Store (主要) ===
+    const imageEntity = imageStore.addLocalImage({
+      fileName: file.name,
+      originalName: file.name,
+      fileSize: file.size,
+      mimeType: file.type,
+      source: options.source as ImageSource,
+      localPreviewUrl: previewDataUrl,
+      dimensions: intrinsicSize
+    });
+
+    // === 旧 Store (双写兼容) ===
     const node = imageNodeStore.registerFromLocalFile({
       file,
       metadata: {
@@ -66,11 +80,19 @@ export async function processIncomingImages(
       intrinsicSize
     });
 
+    // 建立新旧 Store 之间的关联
+    imageStore.updateSourceNodeId(imageEntity.id, node.nodeId);
+
+    console.log("[imageIntake] 双写完成", {
+      newStoreId: imageEntity.id,
+      oldStoreNodeId: node.nodeId
+    });
+
     const inserted = editor
       .chain()
       .focus()
       .insertSteamImage({
-        imageNodeId: node.nodeId,
+        imageNodeId: node.nodeId, // 继续使用旧 Store 的 nodeId（直到 UI 组件完全迁移）
         previewDataUrl
       })
       .run();
@@ -80,6 +102,8 @@ export async function processIncomingImages(
         "[NASGE] processIncomingImages -> 插入图片节点失败，撤销节点注册",
         node.nodeId
       );
+      // 清理两个 Store
+      imageStore.removeImage(imageEntity.id);
       imageNodeStore.removeNode(node.nodeId);
       continue;
     }

@@ -5,13 +5,14 @@ import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { processIncomingImages } from "../services/imageIntake";
 import { uploadSingleImage } from "../services/ImageUploadService";
-import {
-  useEditorImageNodeStore,
-  type ImageAlignment,
-  type ImageDisplayPreset
-} from "../stores/useEditorImageNodeStore";
+import { useImageStore } from "../stores/useImageStore";
+import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
+import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
+
+// 类型别名，保持向后兼容
+type ImageDisplayPreset = ImageSizePreset;
 
 const toolbarButton: React.CSSProperties = {
   border: "none",
@@ -103,7 +104,22 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     }
   });
 
-  const contextMenuImageNode = useEditorImageNodeStore(
+  // === 图片节点状态 (新 Store 优先，旧 Store 兜底) ===
+  const contextMenuImageEntity = useImageStore(
+    useCallback(
+      (state) => {
+        if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+          return undefined;
+        }
+        // 通过 sourceNodeId 查找新 Store 中的图片
+        return state.getImageBySourceNodeId(contextMenu.payload.imageNodeId);
+      },
+      [contextMenu]
+    )
+  );
+
+  // 旧 Store 兜底（迁移期间）
+  const contextMenuImageNodeLegacy = useEditorImageNodeStore(
     useCallback(
       (state) =>
         contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
@@ -112,8 +128,58 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       [contextMenu]
     )
   );
-  const updateImageDisplay = useEditorImageNodeStore((state) => state.updateDisplay);
-  const removeImageNode = useEditorImageNodeStore((state) => state.removeNode);
+
+  // 合并的图片节点数据（用于 UI 显示）
+  const contextMenuImageNode = useMemo(() => {
+    if (contextMenuImageEntity) {
+      // 新 Store 有数据，转换为旧格式以兼容 UI
+      return {
+        nodeId: contextMenuImageEntity.sourceNodeId ?? contextMenuImageEntity.id,
+        display: {
+          preset: contextMenuImageEntity.display.preset,
+          alignment: contextMenuImageEntity.display.alignment,
+          customWidthPx: contextMenuImageEntity.display.customWidthPx
+        }
+      };
+    }
+    // 回退到旧 Store
+    return contextMenuImageNodeLegacy;
+  }, [contextMenuImageEntity, contextMenuImageNodeLegacy]);
+
+  // 新 Store 更新方法
+  const updateImageDisplayNew = useImageStore((state) => state.updateDisplay);
+  // 旧 Store 更新方法（双写）
+  const updateImageDisplayLegacy = useEditorImageNodeStore((state) => state.updateDisplay);
+  const removeImageNodeLegacy = useEditorImageNodeStore((state) => state.removeNode);
+  const removeImageNew = useImageStore((state) => state.removeImage);
+
+  // 合并的更新方法
+  const updateImageDisplay = useCallback(
+    (nodeId: string, patch: Partial<{ preset: ImageDisplayPreset; alignment: ImageAlignment; customWidthPx?: number }>) => {
+      // 先尝试更新新 Store
+      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      if (imageEntity) {
+        updateImageDisplayNew(imageEntity.id, patch);
+      }
+      // 同时更新旧 Store（双写）
+      updateImageDisplayLegacy(nodeId, patch);
+    },
+    [updateImageDisplayNew, updateImageDisplayLegacy]
+  );
+
+  // 合并的删除方法
+  const removeImageNode = useCallback(
+    (nodeId: string) => {
+      // 先尝试删除新 Store
+      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      if (imageEntity) {
+        removeImageNew(imageEntity.id);
+      }
+      // 同时删除旧 Store（双写）
+      removeImageNodeLegacy(nodeId);
+    },
+    [removeImageNew, removeImageNodeLegacy]
+  );
 
   const toggleLink = useCallback(() => {
     if (!editor) return;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
@@ -6,13 +6,14 @@ import { titleHasImage } from '../utils/titleHelpers';
 import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
 import { processIncomingImages } from '../services/imageIntake';
 import { uploadSingleImage } from '../services/ImageUploadService';
-import {
-  useEditorImageNodeStore,
-  type ImageAlignment,
-  type ImageDisplayPreset
-} from '../stores/useEditorImageNodeStore';
+import { useImageStore } from '../stores/useImageStore';
+import { useEditorImageNodeStore } from '../stores/useEditorImageNodeStore';
+import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
 import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
+
+// 类型别名，保持向后兼容
+type ImageDisplayPreset = ImageSizePreset;
 
 interface TitleEditorProps {
   value: JSONContent;
@@ -77,10 +78,42 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     warning: false,
     limit: TITLE_CHARACTER_LIMIT
   }));
-  // 图片节点存储
-  const updateImageDisplay = useEditorImageNodeStore((state) => state.updateDisplay);
-  const removeImageNode = useEditorImageNodeStore((state) => state.removeNode);
-  const imageNodes = useEditorImageNodeStore((state) => state.nodes);
+  // === 图片节点存储 (新 Store 优先，旧 Store 兜底) ===
+  // 新 Store 方法
+  const updateImageDisplayNew = useImageStore((state) => state.updateDisplay);
+  const removeImageNew = useImageStore((state) => state.removeImage);
+  // 旧 Store 方法（双写）
+  const updateImageDisplayLegacy = useEditorImageNodeStore((state) => state.updateDisplay);
+  const removeImageNodeLegacy = useEditorImageNodeStore((state) => state.removeNode);
+  const imageNodesLegacy = useEditorImageNodeStore((state) => state.nodes);
+  const imageEntities = useImageStore((state) => state.images);
+
+  // 合并的更新方法
+  const updateImageDisplay = useCallback(
+    (nodeId: string, patch: Partial<{ preset: ImageDisplayPreset; alignment: ImageAlignment; customWidthPx?: number }>) => {
+      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      if (imageEntity) {
+        updateImageDisplayNew(imageEntity.id, patch);
+      }
+      updateImageDisplayLegacy(nodeId, patch);
+    },
+    [updateImageDisplayNew, updateImageDisplayLegacy]
+  );
+
+  // 合并的删除方法
+  const removeImageNode = useCallback(
+    (nodeId: string) => {
+      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      if (imageEntity) {
+        removeImageNew(imageEntity.id);
+      }
+      removeImageNodeLegacy(nodeId);
+    },
+    [removeImageNew, removeImageNodeLegacy]
+  );
+
+  // 合并的 imageNodes（兼容旧代码）
+  const imageNodes = imageNodesLegacy;
 
   // 创建 TipTap 编辑器实例
   const editor = useEditor({
