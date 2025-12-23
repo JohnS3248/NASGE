@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { mergeAttributes, Node } from "@tiptap/core";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
@@ -10,6 +10,111 @@ import {
 } from "../stores/useEditorImageNodeStore";
 import type { EditorImageNode } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+// === 新 Store 双写支持 ===
+import { useImageStore } from "../stores/useImageStore";
+import type { ImageEntity, ImageSource, ImageSizePreset, ImageAlignment } from "../types/image";
+
+/**
+ * 将旧 Store 的 EditorImageNode 同步到新 Store
+ * 用于双写模式下的数据迁移验证
+ */
+function syncToNewStore(
+  imageNode: EditorImageNode | undefined,
+  steamPoolImage: { previewId: string; fileName: string; thumbnailUrl?: string; originalUrl?: string } | undefined,
+  attrPreviewId: string | null
+): void {
+  const newStore = useImageStore.getState();
+
+  // 情况 1: 有 imageNode（本地上传的图片）
+  if (imageNode) {
+    // 检查新 Store 是否已有此图片（通过 sourceNodeId 去重）
+    const existing = newStore.getImageBySourceNodeId(imageNode.nodeId);
+
+    if (!existing) {
+      // 映射 source（metadata.source 可能是 "paste" | "drop" | "clipboard" 等）
+      const sourceMap: Record<string, ImageSource> = {
+        paste: "paste",
+        drop: "drop",
+        clipboard: "paste",
+        "file-input": "file-input",
+        import: "steam-pool"
+      };
+      const metadataSource = imageNode.metadata.source ?? "paste";
+
+      // 创建新图片实体
+      const newImage = newStore.addLocalImage({
+        fileName: imageNode.fileName ?? imageNode.originalName ?? "unknown",
+        originalName: imageNode.originalName ?? "unknown",
+        fileSize: imageNode.fileSize ?? 0,
+        mimeType: "image/unknown", // EditorImageNode 不存储 mimeType
+        source: sourceMap[metadataSource] ?? "paste",
+        localPreviewUrl: imageNode.metadata.previewDataUrl,
+        dimensions: imageNode.originalSize,
+        display: {
+          preset: imageNode.display.preset as ImageSizePreset,
+          alignment: imageNode.display.alignment as ImageAlignment,
+          customWidthPx: imageNode.display.customWidthPx
+        }
+      });
+
+      // 设置 sourceNodeId 用于去重
+      newStore.updateSourceNodeId(newImage.id, imageNode.nodeId);
+
+      // 如果已有 previewId，更新状态
+      if (imageNode.previewId) {
+        newStore.markUploaded(newImage.id, imageNode.previewId, {
+          thumbnailUrl: imageNode.cdnUrl,
+          originalUrl: imageNode.cdnUrl
+        });
+      } else if (imageNode.status === "uploading") {
+        newStore.markUploading(newImage.id);
+      } else if (imageNode.status === "error") {
+        newStore.markError(newImage.id, imageNode.error ?? "Unknown error");
+      }
+
+      console.log("[SteamImage] 同步到新 Store (from imageNode)", {
+        oldNodeId: imageNode.nodeId,
+        newImageId: newImage.id,
+        status: newImage.status
+      });
+    }
+    return;
+  }
+
+  // 情况 2: 有 steamPoolImage（从 Steam 导入的图片）
+  if (steamPoolImage) {
+    const existing = newStore.getImageBySteamPreviewId(steamPoolImage.previewId);
+    if (!existing) {
+      const newImage = newStore.importFromSteamPool({
+        steamPreviewId: steamPoolImage.previewId,
+        fileName: steamPoolImage.fileName,
+        thumbnailUrl: steamPoolImage.thumbnailUrl,
+        originalUrl: steamPoolImage.originalUrl
+      });
+      console.log("[SteamImage] 同步到新 Store (from steamPool)", {
+        previewId: steamPoolImage.previewId,
+        newImageId: newImage.id
+      });
+    }
+    return;
+  }
+
+  // 情况 3: 只有 previewId（从 BBCode 导入但图片池中不存在）
+  if (attrPreviewId) {
+    const existing = newStore.getImageBySteamPreviewId(attrPreviewId);
+    if (!existing) {
+      const newImage = newStore.importFromBBCode({
+        steamPreviewId: attrPreviewId,
+        fileName: `image-${attrPreviewId}`
+      });
+      console.log("[SteamImage] 同步到新 Store (from BBCode, orphaned)", {
+        previewId: attrPreviewId,
+        newImageId: newImage.id,
+        status: "uploaded (待验证)"
+      });
+    }
+  }
+}
 
 const SteamImage = Node.create({
     name: "steamImage",
@@ -152,6 +257,20 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       return state.items.find((item) => item.previewId === attrPreviewId);
     }
   );
+
+  // === 双写模式：同步到新 Store ===
+  const hasSyncedRef = useRef(false);
+  useEffect(() => {
+    // 只同步一次，避免重复写入
+    if (hasSyncedRef.current) return;
+
+    // 等待有数据可同步
+    if (!imageNode && !steamPoolImage && !attrPreviewId) return;
+
+    hasSyncedRef.current = true;
+    syncToNewStore(imageNode, steamPoolImage, attrPreviewId);
+  }, [imageNode, steamPoolImage, attrPreviewId]);
+  // === END 双写模式 ===
 
   useEffect(() => {
     if (!imageNodeId || imageNode) {
