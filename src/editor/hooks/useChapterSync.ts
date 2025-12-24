@@ -6,6 +6,7 @@ import { bbcodeToHtml, htmlToBBCode } from '../utils/bbcode';
 import { generateJSON, generateHTML } from '@tiptap/html';
 import { createEditorExtensions } from '../utils/editorExtensions';
 import { createTitleFromHtml, extractTitleText } from '../utils/titleHelpers';
+import { loggers } from '../../shared/logger';
 
 export type ChapterSyncStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -22,7 +23,7 @@ export function useChapterSync() {
   const pullChapter = useCallback(
     async (sectionId: string) => {
       if (!guideInfo) {
-        console.error('[NASGE] 无法拉取章节：未加载指南信息');
+        loggers.sync.error('无法拉取章节：未加载指南信息');
         return;
       }
 
@@ -31,7 +32,7 @@ export function useChapterSync() {
 
       try {
         // 1. 从 Steam 拉取章节内容
-        console.log('[NASGE] 拉取章节', { guideId: guideInfo.id, sectionId });
+        loggers.sync.info('拉取章节', { guideId: guideInfo.id, sectionId });
         const chapterContent = await fetchChapterFromSteam(guideInfo.id, sectionId);
 
         // 2. 将 BBCode 转换为 JSON
@@ -48,7 +49,7 @@ export function useChapterSync() {
 
         if (existingDraft) {
           // 更新现有草稿
-          console.log('[NASGE] 更新现有草稿', { draftId: existingDraft.id, sectionId });
+          loggers.sync.info('更新现有草稿', { draftId: existingDraft.id, sectionId });
           updateDraft(existingDraft.id, {
             title: titleJson,
             content: contentJson,
@@ -57,7 +58,7 @@ export function useChapterSync() {
           selectDraft(existingDraft.id);
         } else {
           // 创建新草稿
-          console.log('[NASGE] 创建新草稿', { sectionId });
+          loggers.sync.info('创建新草稿', { sectionId });
           // addDraft 接受字符串参数，但会自动转换为 JSON
           const titleText = extractTitleText(titleJson);
           const newDraft = addDraft(titleText);
@@ -72,13 +73,13 @@ export function useChapterSync() {
         }
 
         setSyncStatus((prev) => ({ ...prev, [sectionId]: 'success' }));
-        console.log('[NASGE] 章节拉取成功', { sectionId });
+        loggers.sync.info('章节拉取成功', { sectionId });
 
         // 刷新图片池，确保章节中的图片能正确显示
         // 这对于从 Steam 拉取包含图片的章节特别重要
         void useSteamGuideImageStore.getState().refresh();
       } catch (error) {
-        console.error('[NASGE] 章节拉取失败', error);
+        loggers.sync.error('章节拉取失败', error);
         const errorMsg = error instanceof Error ? error.message : '拉取失败';
         setSyncError((prev) => ({ ...prev, [sectionId]: errorMsg }));
         setSyncStatus((prev) => ({ ...prev, [sectionId]: 'error' }));
@@ -137,7 +138,7 @@ export function useChapterSync() {
 
       try {
         // 1. 将标题 JSON 转换为 HTML 再转换为 BBCode
-        console.log('[NASGE] 上传草稿到 Steam', { draftId, sectionId });
+        loggers.sync.info('上传草稿到 Steam', { draftId, sectionId });
         const extensions = createEditorExtensions();
         const titleHtml = generateHTML(draft.title, extensions);
         const titleBBCode = htmlToBBCode(titleHtml);
@@ -162,9 +163,9 @@ export function useChapterSync() {
         });
 
         setSyncStatus((prev) => ({ ...prev, [sectionId]: 'success' }));
-        console.log('[NASGE] 草稿上传成功', { draftId, sectionId });
+        loggers.sync.info('草稿上传成功', { draftId, sectionId });
       } catch (error) {
-        console.error('[NASGE] 草稿上传失败', error);
+        loggers.sync.error('草稿上传失败', error);
         const errorMsg = error instanceof Error ? error.message : '上传失败';
         setSyncError((prev) => ({ ...prev, [sectionId]: errorMsg }));
         setSyncStatus((prev) => ({ ...prev, [sectionId]: 'error' }));
@@ -183,13 +184,13 @@ export function useChapterSync() {
         throw new Error('未加载指南信息');
       }
 
-      console.log('[NASGE] 同步章节排序到 Steam', { orderedSectionIds });
+      loggers.sync.info('同步章节排序到 Steam', { orderedSectionIds });
 
       try {
         await reorderChaptersOnSteam(guideInfo.id, orderedSectionIds);
-        console.log('[NASGE] 章节排序同步成功');
+        loggers.sync.info('章节排序同步成功');
       } catch (error) {
-        console.error('[NASGE] 章节排序同步失败', error);
+        loggers.sync.error('章节排序同步失败', error);
         throw error;
       }
     },

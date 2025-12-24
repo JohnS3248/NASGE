@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { extractTitleText } from '../utils/titleHelpers';
 import type { ChapterInfo } from '../stores/useGuideStore';
+import { loggers } from '../../shared/logger';
 
 const DraftPanel: React.FC = () => {
   const {
@@ -55,13 +56,13 @@ const DraftPanel: React.FC = () => {
 
   // 鼠标按下开始计时（长按检测）
   const handleMouseDown = (draftId: string) => {
-    console.log('[NASGE] mouseDown:', draftId);
+    loggers.editor.verbose('mouseDown:', draftId);
 
     const timer = setTimeout(() => {
       // 长按 500ms 后启用拖拽
       setIsDraggable({ [draftId]: true });
       // 添加视觉反馈
-      console.log('[NASGE] 长按触发，启用拖拽模式');
+      loggers.editor.verbose('长按触发，启用拖拽模式');
     }, 500);
 
     setLongPressTimer(timer);
@@ -69,7 +70,7 @@ const DraftPanel: React.FC = () => {
 
   // 鼠标抬起时清除计时器
   const handleMouseUp = () => {
-    console.log('[NASGE] mouseUp');
+    loggers.editor.verbose('mouseUp');
 
     if (longPressTimer) {
       clearTimeout(longPressTimer);
@@ -79,30 +80,30 @@ const DraftPanel: React.FC = () => {
 
   // 点击事件（只在未拖拽时触发）
   const handleClick = (draftId: string) => {
-    console.log('[NASGE] click:', draftId, 'isDraggable:', isDraggable[draftId]);
+    loggers.editor.verbose('click:', draftId, 'isDraggable:', isDraggable[draftId]);
 
     // 如果当前是拖拽模式，不触发点击
     if (isDraggable[draftId]) {
-      console.log('[NASGE] 忽略点击（拖拽模式）');
+      loggers.editor.verbose('忽略点击（拖拽模式）');
       setIsDraggable({});
       return;
     }
 
-    console.log('[NASGE] 切换草稿');
+    loggers.editor.verbose('切换草稿');
     selectDraft(draftId);
   };
 
   const handleDragStart = (e: React.DragEvent, draftId: string) => {
-    console.log('[NASGE] dragStart 触发', { draftId, isDraggable: isDraggable[draftId] });
+    loggers.editor.verbose('dragStart 触发', { draftId, isDraggable: isDraggable[draftId] });
 
     // 只有在启用拖拽模式时才允许拖拽
     if (!isDraggable[draftId]) {
-      console.log('[NASGE] 阻止拖拽：未启用拖拽模式');
+      loggers.editor.verbose('阻止拖拽：未启用拖拽模式');
       e.preventDefault();
       return;
     }
 
-    console.log('[NASGE] 开始拖拽');
+    loggers.editor.verbose('开始拖拽');
     setDraggedId(draftId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', draftId);
@@ -139,7 +140,7 @@ const DraftPanel: React.FC = () => {
   };
 
   const handleDragEnd = () => {
-    console.log('[NASGE] 拖拽结束');
+    loggers.editor.verbose('拖拽结束');
     setDraggedId(null);
     setDragOverId(null);
     // 延迟重置拖拽状态，避免影响 click 事件

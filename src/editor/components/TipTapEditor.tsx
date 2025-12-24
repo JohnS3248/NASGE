@@ -10,6 +10,7 @@ import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
+import { loggers } from "../../shared/logger";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -289,15 +290,15 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     const nodeId = contextMenu.payload.imageNodeId;
 
     try {
-      console.log('[NASGE] 开始上传图片:', nodeId);
+      loggers.image.info('TipTapEditor 开始上传图片:', nodeId);
       const previewId = await uploadSingleImage(nodeId);
-      console.log('[NASGE] 图片上传成功，预览码:', previewId);
+      loggers.image.info('TipTapEditor 图片上传成功，预览码:', previewId);
 
       // 可选：显示成功提示
       // window.alert(`图片上传成功！预览码：${previewId}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('[NASGE] 图片上传失败:', errorMessage);
+      loggers.image.error('TipTapEditor 图片上传失败:', errorMessage);
       window.alert(`图片上传失败：${errorMessage}`);
     }
   }, [contextMenu, editor]);
@@ -367,7 +368,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           cursorPosition
         });
       } catch (error) {
-        console.error("[NASGE] 处理图片失败:", error);
+        loggers.image.error("TipTapEditor 处理图片失败:", error);
       }
     },
     [editor]

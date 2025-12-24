@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { SteamGuideImage } from "../../shared/messages";
 import { fetchSteamGuideImages } from "../services/steamBridge";
 import { useImageStore } from "./useImageStore";
+import { loggers } from "../../shared/logger";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
 
@@ -69,11 +70,11 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           for (let i = 0; i < retries; i++) {
             try {
               const list = await fetchSteamGuideImages("chapter-preview");
-              console.log('[NASGE] 图片池加载成功', { count: list.length, attempt: i + 1 });
+              loggers.image.info('图片池加载成功', { count: list.length, attempt: i + 1 });
 
               // 检查是否所有图片都有 originalUrl（透明背景 URL）
               const hasTransparentUrls = list.every(item => item.originalUrl);
-              console.log('[NASGE] 图片池透明 URL 检查', {
+              loggers.image.verbose('图片池透明 URL 检查', {
                 total: list.length,
                 hasTransparent: hasTransparentUrls,
                 urls: list.map(item => ({ id: item.previewId, hasOriginal: !!item.originalUrl }))
@@ -82,7 +83,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
               // 如果获取到的图片没有 originalUrl，可能是桥接脚本还没执行完成
               // 继续重试（除非是最后一次）
               if (list.length > 0 && !hasTransparentUrls && i < retries - 1) {
-                console.warn(`[NASGE] 图片池数据不完整（缺少透明 URL），${delay}ms 后重试 (${i + 1}/${retries})`);
+                loggers.image.warn(`图片池数据不完整（缺少透明 URL），${delay}ms 后重试 (${i + 1}/${retries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 1.5;
                 continue;
@@ -130,13 +131,13 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
 
               if (isConnectionError && i < retries - 1) {
                 // 静默重试
-                console.info(`[NASGE] 连接图片池中，${delay}ms 后重试 (${i + 1}/${retries})`);
+                loggers.image.info(`连接图片池中，${delay}ms 后重试 (${i + 1}/${retries})`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 delay *= 1.5;
               } else {
                 // 最终失败
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                console.error('[NASGE] 图片池加载失败:', errorMessage);
+                loggers.image.error('图片池加载失败:', errorMessage);
                 set({
                   status: "error",
                   error: isConnectionError
@@ -222,7 +223,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           items: [...state.items, newImage]
         }));
 
-        console.log('[NASGE] 添加本地图片到图片池', { fileName: file.name });
+        loggers.image.info('添加本地图片到图片池', { fileName: file.name });
 
         return newImage;
       }

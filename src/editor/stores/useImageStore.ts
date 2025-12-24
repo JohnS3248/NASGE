@@ -29,6 +29,7 @@ import {
   generateImageId,
   DEFAULT_DISPLAY_SETTINGS
 } from "../types/image";
+import { loggers } from "../../shared/logger";
 
 // ============================================================================
 // Store State Type
@@ -226,7 +227,7 @@ export const useImageStore = create<ImageStoreState>()(
           }
         }));
 
-        console.log("[ImageStore] 添加本地图片", { id, fileName: params.fileName });
+        loggers.image.info("添加本地图片", { id, fileName: params.fileName });
         return image;
       },
 
@@ -234,7 +235,7 @@ export const useImageStore = create<ImageStoreState>()(
         // 检查是否已存在相同 steamPreviewId 的图片
         const existing = get().getImageBySteamPreviewId(params.steamPreviewId);
         if (existing) {
-          console.log("[ImageStore] Steam 图片已存在", { steamPreviewId: params.steamPreviewId });
+          loggers.image.verbose("Steam 图片已存在", { steamPreviewId: params.steamPreviewId });
           return existing;
         }
 
@@ -265,7 +266,7 @@ export const useImageStore = create<ImageStoreState>()(
           }
         }));
 
-        console.log("[ImageStore] 从 Steam 图片池导入", { id, steamPreviewId: params.steamPreviewId });
+        loggers.image.info("从 Steam 图片池导入", { id, steamPreviewId: params.steamPreviewId });
         return image;
       },
 
@@ -311,7 +312,7 @@ export const useImageStore = create<ImageStoreState>()(
           }
         }));
 
-        console.log("[ImageStore] 从 BBCode 导入", { id, steamPreviewId: params.steamPreviewId });
+        loggers.image.info("从 BBCode 导入", { id, steamPreviewId: params.steamPreviewId });
         return image;
       },
 
@@ -333,7 +334,7 @@ export const useImageStore = create<ImageStoreState>()(
             }
           };
         });
-        console.log("[ImageStore] 标记上传中", { imageId });
+        loggers.image.verbose("标记上传中", { imageId });
       },
 
       markUploaded: (imageId, steamPreviewId, steamUrls) => {
@@ -355,7 +356,7 @@ export const useImageStore = create<ImageStoreState>()(
             }
           };
         });
-        console.log("[ImageStore] 标记已上传", { imageId, steamPreviewId });
+        loggers.image.info("标记已上传", { imageId, steamPreviewId });
       },
 
       markSynced: (imageId) => {
@@ -391,7 +392,7 @@ export const useImageStore = create<ImageStoreState>()(
             }
           };
         });
-        console.error("[ImageStore] 标记错误", { imageId, error });
+        loggers.image.error("标记错误", { imageId, error });
       },
 
       markOrphaned: (imageId) => {
@@ -409,7 +410,7 @@ export const useImageStore = create<ImageStoreState>()(
             }
           };
         });
-        console.warn("[ImageStore] 标记引用失效", { imageId });
+        loggers.image.warn("标记引用失效", { imageId });
       },
 
       // === 更新操作 ===
@@ -478,7 +479,7 @@ export const useImageStore = create<ImageStoreState>()(
           const { [imageId]: removed, ...rest } = state.images;
           return { images: rest };
         });
-        console.log("[ImageStore] 删除图片", { imageId });
+        loggers.image.info("删除图片", { imageId });
       },
 
       clearLocalImages: () => {
@@ -598,7 +599,7 @@ export const useImageStore = create<ImageStoreState>()(
           };
         });
 
-        console.log("[ImageStore] Steam 图片池同步完成", {
+        loggers.image.info("Steam 图片池同步完成", {
           steamImageCount: steamImages.length,
           totalImages: Object.keys(get().images).length
         });
@@ -632,7 +633,7 @@ export const useImageStore = create<ImageStoreState>()(
           }
 
           if (orphanedCount > 0) {
-            console.warn("[ImageStore] 发现失效引用", { orphanedCount });
+            loggers.image.warn("发现失效引用", { orphanedCount });
           }
 
           return { images: updatedImages };

@@ -11,6 +11,7 @@ import { useEditorImageNodeStore } from '../stores/useEditorImageNodeStore';
 import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
 import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
+import { loggers } from '../../shared/logger';
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -194,9 +195,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 
     try {
       await uploadSingleImage(contextMenu.payload.imageNodeId);
-      console.log('[NASGE TitleEditor] 图片上传成功');
+      loggers.image.info('TitleEditor 图片上传成功');
     } catch (error) {
-      console.error('[NASGE TitleEditor] 图片上传失败:', error);
+      loggers.image.error('TitleEditor 图片上传失败:', error);
       window.alert(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }, [contextMenu.payload?.imageNodeId]);
@@ -213,7 +214,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           cursorPosition
         });
       } catch (error) {
-        console.error('[NASGE TitleEditor] 处理图片失败:', error);
+        loggers.image.error('TitleEditor 处理图片失败:', error);
       }
     },
     [editor]
@@ -312,12 +313,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         onContextMenu={(event) => {
           event.preventDefault();
           if (!editor) {
-            console.log('[TitleEditor] onContextMenu: editor not ready');
+            loggers.editor.verbose('TitleEditor onContextMenu: editor not ready');
             return;
           }
 
           const target = event.target as HTMLElement;
-          console.log('[TitleEditor] onContextMenu triggered', {
+          loggers.editor.verbose('TitleEditor onContextMenu triggered', {
             target: target.tagName,
             targetClass: target.className
           });
@@ -330,7 +331,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           if (imageContainer) {
             // 直接从 DOM 属性获取 imageNodeId
             const imageNodeId = imageContainer.dataset.imageNodeId;
-            console.log('[TitleEditor] Found image container, imageNodeId from DOM:', imageNodeId);
+            loggers.editor.verbose('TitleEditor Found image container, imageNodeId from DOM:', imageNodeId);
 
             if (imageNodeId) {
               // 获取点击坐标
@@ -339,7 +340,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
                 top: event.clientY
               });
 
-              console.log('[TitleEditor] Click coords:', coords);
+              loggers.editor.verbose('TitleEditor Click coords:', coords);
 
               // 遍历文档查找匹配的 steamImage 节点
               let foundPos: number | null = null;
@@ -351,7 +352,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
               });
 
               if (foundPos !== null) {
-                console.log('[TitleEditor] Found steamImage node at position:', foundPos);
+                loggers.editor.verbose('TitleEditor Found steamImage node at position:', foundPos);
 
                 // 选中该节点
                 editor
@@ -369,14 +370,14 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
                 });
                 return;
               } else {
-                console.warn('[TitleEditor] steamImage node not found in document for imageNodeId:', imageNodeId);
+                loggers.editor.warn('TitleEditor steamImage node not found in document for imageNodeId:', imageNodeId);
               }
             } else {
-              console.warn('[TitleEditor] Container found but no imageNodeId in dataset');
+              loggers.editor.warn('TitleEditor Container found but no imageNodeId in dataset');
             }
           }
 
-          console.log('[TitleEditor] No valid image node found');
+          loggers.editor.verbose('TitleEditor No valid image node found');
         }}
       >
         <EditorContent editor={editor} />

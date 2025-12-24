@@ -4,6 +4,7 @@ import { useChapterSync } from '../hooks/useChapterSync';
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import type { ImageState } from '../stores/useSteamGuideImageStore';
 import { createChapterOnSteam } from '../services/chapterSync';
+import { loggers } from '../../shared/logger';
 
 interface ChapterNavProps {
   onRefresh?: () => Promise<void>;
@@ -75,7 +76,7 @@ const ChapterTitleImage: React.FC<{
     const poolOriginal = imageInfo?.originalUrl;
     const poolThumbnail = imageInfo?.thumbnailUrl;
 
-    console.log('[ChapterTitleImage] Building image URL:', {
+    loggers.editor.verbose('ChapterTitleImage building URL:', {
       previewId,
       fileName,
       imageInfo,
@@ -430,9 +431,9 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     setIsSyncing(true);
     try {
       await syncChapterOrder(orderedSectionIds);
-      console.log('[ChapterNav] 章节排序已同步到 Steam');
+      loggers.sync.info('章节排序已同步到 Steam');
     } catch (error) {
-      console.error('[ChapterNav] 章节排序同步失败', error);
+      loggers.sync.error('章节排序同步失败', error);
       window.alert('章节排序同步到 Steam 失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsSyncing(false);
@@ -451,7 +452,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       await onRefresh();
       window.alert('章节列表已刷新');
     } catch (error) {
-      console.error('[ChapterNav] 刷新失败', error);
+      loggers.editor.error('章节列表刷新失败', error);
       window.alert('章节列表刷新失败：' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
@@ -463,7 +464,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     setIsCreatingChapter(true);
     try {
       const newSectionId = await createChapterOnSteam(guideInfo.id);
-      console.log('[ChapterNav] 新章节创建成功', { sectionId: newSectionId });
+      loggers.editor.info('新章节创建成功', { sectionId: newSectionId });
 
       // 刷新章节列表
       if (onRefresh) {
@@ -472,7 +473,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
       window.alert('新章节创建成功！');
     } catch (error) {
-      console.error('[ChapterNav] 创建章节失败', error);
+      loggers.editor.error('创建章节失败', error);
       window.alert('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsCreatingChapter(false);
@@ -527,7 +528,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const renderChapterTitle = (title: string) => {
     const imageInfo = parseChapterTitleImage(title);
 
-    console.log('[renderChapterTitle]', {
+    loggers.editor.verbose('renderChapterTitle', {
       title,
       imageInfo,
       rawTitle: title

@@ -4,6 +4,7 @@ import { ImageUploadService } from "./ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
+import { loggers } from "../../shared/logger";
 
 export type IncomingImageOptions = {
   source: "paste" | "drop";
@@ -29,8 +30,8 @@ export async function processIncomingImages(
     editor.commands.focus();
   }
 
-  console.info(
-    "[NASGE] processIncomingImages -> 捕获到文件",
+  loggers.image.info(
+    "processIncomingImages 捕获到文件",
     files.map((file) => ({
       name: file.name,
       size: file.size,
@@ -55,7 +56,7 @@ export async function processIncomingImages(
         intrinsicSize = await measureImageSize(previewDataUrl);
       }
     } catch (error) {
-      console.warn("[NASGE] 读取本地预览失败", error);
+      loggers.image.warn("读取本地预览失败", error);
     }
 
     // === 新 Store (主要) ===
@@ -83,7 +84,7 @@ export async function processIncomingImages(
     // 建立新旧 Store 之间的关联
     imageStore.updateSourceNodeId(imageEntity.id, node.nodeId);
 
-    console.log("[imageIntake] 双写完成", {
+    loggers.image.verbose("imageIntake 双写完成", {
       newStoreId: imageEntity.id,
       oldStoreNodeId: node.nodeId
     });
@@ -98,8 +99,8 @@ export async function processIncomingImages(
       .run();
 
     if (!inserted) {
-      console.warn(
-        "[NASGE] processIncomingImages -> 插入图片节点失败，撤销节点注册",
+      loggers.image.warn(
+        "processIncomingImages 插入图片节点失败，撤销节点注册",
         node.nodeId
       );
       // 清理两个 Store
@@ -115,8 +116,8 @@ export async function processIncomingImages(
       (options.source === "drop" && config.autoUploadOnDrop);
 
     if (!shouldAutoUpload) {
-      console.info(
-        "[NASGE] 自动上传已禁用，图片保持本地预览状态",
+      loggers.image.info(
+        "自动上传已禁用，图片保持本地预览状态",
         {
           source: options.source,
           fileName: file.name,
@@ -131,10 +132,10 @@ export async function processIncomingImages(
     try {
       const result = await ImageUploadService.uploadByNodeId(node.nodeId);
       if (!result.success) {
-        console.error("[NASGE] 图片自动上传失败:", result.error);
+        loggers.image.error("图片自动上传失败:", result.error);
       }
     } catch (error) {
-      console.error("[NASGE] 图片上传异常:", error);
+      loggers.image.error("图片上传异常:", error);
       // 不抛出错误，让其他图片继续处理
     }
   }

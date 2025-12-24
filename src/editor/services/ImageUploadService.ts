@@ -18,6 +18,7 @@ import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { uploadImageViaSteam } from "./imageUploadManager";
 import type { SteamImageUrls, ImageSource } from "../types/image";
 import type { ImageUploadSource } from "../stores/useImageUploadStore";
+import { loggers } from "../../shared/logger";
 
 // ============================================================================
 // Types
@@ -99,7 +100,7 @@ class ImageUploadServiceImpl {
 
     // 如果已经有 steamPreviewId，直接返回
     if (image.steamPreviewId) {
-      console.log("[ImageUploadService] 图片已上传", {
+      loggers.image.verbose("ImageUploadService 图片已上传", {
         imageId,
         steamPreviewId: image.steamPreviewId
       });
@@ -146,7 +147,7 @@ class ImageUploadServiceImpl {
       // 重建 File 对象
       const file = await convertDataUrlToFile(previewDataUrl, image.fileName);
 
-      console.log("[ImageUploadService] 开始上传", {
+      loggers.image.info("ImageUploadService 开始上传", {
         imageId,
         fileName: file.name,
         fileSize: file.size
@@ -174,7 +175,7 @@ class ImageUploadServiceImpl {
             }
           },
           onUploading: () => {
-            console.log("[ImageUploadService] Steam 正在处理上传...");
+            loggers.image.verbose("ImageUploadService Steam 正在处理上传...");
           },
           onUploaded: (uploadRecord, uploadResult) => {
             const steamPreviewId = uploadResult.previewIds[0];
@@ -212,7 +213,7 @@ class ImageUploadServiceImpl {
         throw new Error("Steam 上传成功但未返回 previewId");
       }
 
-      console.log("[ImageUploadService] 上传成功", {
+      loggers.image.info("ImageUploadService 上传成功", {
         imageId,
         steamPreviewId
       });
@@ -224,7 +225,7 @@ class ImageUploadServiceImpl {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error("[ImageUploadService] 上传失败", { imageId, error: errorMessage });
+      loggers.image.error("ImageUploadService 上传失败", { imageId, error: errorMessage });
 
       // 确保状态已更新（可能在 onFailed 回调中已处理）
       const currentImage = store.getImageById(imageId);
@@ -287,7 +288,7 @@ class ImageUploadServiceImpl {
 
       // 如果旧节点已有 previewId，直接返回
       if (legacyNode.previewId) {
-        console.log("[ImageUploadService] 旧节点已有 previewId", {
+        loggers.image.verbose("ImageUploadService 旧节点已有 previewId", {
           nodeId,
           previewId: legacyNode.previewId
         });
@@ -317,7 +318,7 @@ class ImageUploadServiceImpl {
       store.updateSourceNodeId(newImage.id, nodeId);
       image = newImage;
 
-      console.log("[ImageUploadService] 从旧 Store 同步图片", {
+      loggers.image.info("ImageUploadService 从旧 Store 同步图片", {
         nodeId,
         newImageId: newImage.id
       });
@@ -351,7 +352,7 @@ class ImageUploadServiceImpl {
     const success: Array<{ imageId: string; steamPreviewId: string }> = [];
     const failed: Array<{ imageId: string; error: string }> = [];
 
-    console.log(`[ImageUploadService] 开始批量上传 ${imageIds.length} 张图片`);
+    loggers.image.info(`ImageUploadService 开始批量上传 ${imageIds.length} 张图片`);
 
     // 分块并发上传
     const chunks: string[][] = [];
@@ -375,7 +376,7 @@ class ImageUploadServiceImpl {
       await Promise.all(promises);
     }
 
-    console.log(`[ImageUploadService] 批量上传完成`, {
+    loggers.image.info(`ImageUploadService 批量上传完成`, {
       success: success.length,
       failed: failed.length
     });
@@ -396,7 +397,7 @@ class ImageUploadServiceImpl {
     const imageIds = pending.map((img) => img.id);
 
     if (imageIds.length === 0) {
-      console.log("[ImageUploadService] 没有待上传的图片");
+      loggers.image.verbose("ImageUploadService 没有待上传的图片");
       return { success: [], failed: [] };
     }
 

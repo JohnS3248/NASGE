@@ -9,6 +9,7 @@ import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
+import { loggers } from "../../shared/logger";
 
 /**
  * 创建空的标题 JSON
@@ -60,17 +61,17 @@ export function createTitleFromHtml(html: string): JSONContent {
   }
 
   try {
-    console.log('[titleHelpers] 输入的 HTML:', html);
+    loggers.editor.verbose('titleHelpers 输入的 HTML:', html);
     const extensions = createEditorExtensions();
     const json = generateJSON(html, extensions);
-    console.log('[titleHelpers] 生成的 JSON:', JSON.stringify(json, null, 2));
+    loggers.editor.verbose('titleHelpers 生成的 JSON:', JSON.stringify(json, null, 2));
 
     // 遍历 JSON，查找所有 steamImage 节点并注册到 store
     registerImagesFromTitleJson(json);
 
     return json;
   } catch (error) {
-    console.error("[titleHelpers] 从 HTML 创建标题失败", error);
+    loggers.editor.error("titleHelpers 从 HTML 创建标题失败", error);
     // 降级：作为纯文本处理
     const textContent = html.replace(/<[^>]*>/g, "");
     return createTitleFromText(textContent);
@@ -145,14 +146,14 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
           alignment: (alignment as any) || "floatLeft"
         });
 
-        console.log('[titleHelpers] 注册标题图片节点 (双写):', {
+        loggers.editor.verbose('titleHelpers 注册标题图片节点 (双写):', {
           newStoreId: imageEntity.id,
           oldStoreNodeId: registeredNode.nodeId,
           previewId,
           fileName: fileName || poolImage.fileName
         });
       } else {
-        console.warn('[titleHelpers] 无法注册标题图片：previewId 为空或图片池中未找到', {
+        loggers.editor.warn('titleHelpers 无法注册标题图片：previewId 为空或图片池中未找到', {
           previewId,
           fileName
         });

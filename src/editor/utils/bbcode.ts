@@ -1,4 +1,5 @@
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
+import { loggers } from '../../shared/logger';
 
 const INLINE_MARKS: Record<string, { open: string; close: string }> = {
   strong: { open: "[b]", close: "[/b]" },
@@ -19,7 +20,7 @@ const INLINE_MARKS: Record<string, { open: string; close: string }> = {
 function getImageUrlFromPool(previewId: string): string | null {
   const imagePool = useSteamGuideImageStore.getState().items;
 
-  console.log('[bbcodeToHtml DEBUG] 查找图片:', {
+  loggers.editor.verbose('bbcodeToHtml 查找图片:', {
     previewId,
     imagePoolSize: imagePool.length,
     imagePoolPreviewIds: imagePool.map(img => img.previewId)
@@ -27,7 +28,7 @@ function getImageUrlFromPool(previewId: string): string | null {
 
   const image = imagePool.find(img => img.previewId === previewId);
 
-  console.log('[bbcodeToHtml DEBUG] 查找结果:', {
+  loggers.editor.verbose('bbcodeToHtml 查找结果:', {
     previewId,
     found: !!image,
     imageData: image ? {
@@ -41,11 +42,11 @@ function getImageUrlFromPool(previewId: string): string | null {
   });
 
   if (image?.originalUrl) {
-    console.log('[bbcodeToHtml] ✅ 从图片池找到透明图片:', { previewId, url: image.originalUrl });
+    loggers.editor.verbose('bbcodeToHtml 从图片池找到透明图片:', { previewId, url: image.originalUrl });
     return image.originalUrl;
   }
 
-  console.warn('[bbcodeToHtml] ❌ 图片池中未找到 previewId:', previewId, '或 originalUrl 为空');
+  loggers.editor.warn('bbcodeToHtml 图片池中未找到 previewId:', previewId, '或 originalUrl 为空');
   return null;
 }
 
@@ -320,7 +321,7 @@ function wrapTextInParagraphs(html: string): string {
 export function bbcodeTitleToHtml(bbcode: string): string {
   // 类型保护：确保输入是字符串
   if (typeof bbcode !== 'string') {
-    console.warn('[bbcodeTitleToHtml] 收到非字符串输入', { bbcode, type: typeof bbcode });
+    loggers.editor.warn('bbcodeTitleToHtml 收到非字符串输入', { bbcode, type: typeof bbcode });
     return String(bbcode || '');
   }
 
@@ -422,7 +423,7 @@ export function bbcodeToHtml(bbcode: string): string {
     const alignment = parseAlignmentToken(alignToken);
 
     const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
-    console.log('[bbcodeToHtml] previewicon 转换:', { id, styleStr, filename, preset, alignment, figureTag });
+    loggers.editor.verbose('bbcodeToHtml previewicon 转换:', { id, styleStr, filename, preset, alignment, figureTag });
     return figureTag;
   });
 
@@ -434,7 +435,7 @@ export function bbcodeToHtml(bbcode: string): string {
     const alignment = parseAlignmentToken(alignToken);
 
     const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
-    console.log('[bbcodeToHtml] previewimg 转换:', { id, styleStr, filename, preset, alignment, figureTag });
+    loggers.editor.verbose('bbcodeToHtml previewimg 转换:', { id, styleStr, filename, preset, alignment, figureTag });
     return figureTag;
   });
 

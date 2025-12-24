@@ -16,6 +16,7 @@ import ChapterNav from "./components/ChapterNav";
 import DraftPanel from "./components/DraftPanel";
 import TitleEditor from "./components/TitleEditor";
 import { extractTitleText, createTitleFromText, createEmptyTitle } from "./utils/titleHelpers";
+import { loggers } from "../shared/logger";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
@@ -71,7 +72,7 @@ const App: React.FC = () => {
     try {
       doc = generateJSON(html, htmlExtensions);
     } catch (error) {
-      console.error("导入 BBCode 失败", error);
+      loggers.editor.error("导入 BBCode 失败", error);
       window.alert("BBCode 内容无法识别，请检查格式后再试。");
       return;
     }
@@ -103,7 +104,7 @@ const App: React.FC = () => {
       await pushDraft(activeDraft.id);
       window.alert("上传成功！");
     } catch (error) {
-      console.error("[NASGE] 上传失败", error);
+      loggers.sync.error("上传失败", error);
       const message = error instanceof Error ? error.message : "上传失败，未知错误";
       window.alert(`上传失败：${message}`);
     } finally {
@@ -112,7 +113,7 @@ const App: React.FC = () => {
   }, [activeDraft, pushDraft]);
 
   const handleDeleteUploadedRecord = useCallback(async (previewId: string) => {
-    console.info("[NASGE] 请求删除 Steam 预览记录", previewId);
+    loggers.image.info("请求删除 Steam 预览记录", previewId);
 
     if (!window.confirm("确定要删除这张图片吗？删除后无法恢复。")) {
       return;
@@ -126,7 +127,7 @@ const App: React.FC = () => {
 
       window.alert("图片已成功删除。");
     } catch (error) {
-      console.error("[NASGE] 删除图片失败", error);
+      loggers.image.error("删除图片失败", error);
       const message = error instanceof Error ? error.message : "删除失败，未知错误";
       window.alert(`删除图片失败：${message}`);
     }

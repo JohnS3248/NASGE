@@ -7,6 +7,7 @@ import { JSONContent } from "@tiptap/core";
 import { createEditorExtensions, createEmptyDoc } from "../utils/editorExtensions";
 import { generateJSON } from "@tiptap/html";
 import { createTitleFromText, createEmptyTitle } from "../utils/titleHelpers";
+import { loggers } from "../../shared/logger";
 
 /**
  * 编辑器模式
@@ -132,7 +133,7 @@ let deletedCache: Draft | null = null;
 export const useGuideStore = create<GuideState>()(
   persist(
     (set, get) => {
-      console.log('[NASGE] Store 初始化开始');
+      loggers.store.verbose('Store 初始化开始');
 
       return {
         // 初始状态（persist 会覆盖这些值）
@@ -307,16 +308,16 @@ export const useGuideStore = create<GuideState>()(
         const state = get();
         // 只有在指南模式且有活动草稿时才能进入绑定模式
         if (state.mode !== 'guide' || !state.activeDraftId) {
-          console.warn('[NASGE] 无法进入绑定模式：需要在指南模式下且有活动草稿');
+          loggers.store.warn('无法进入绑定模式：需要在指南模式下且有活动草稿');
           return;
         }
         set({ isBindingMode: true });
-        console.log('[NASGE] 进入绑定模式');
+        loggers.store.info('进入绑定模式');
       },
 
       exitBindingMode: () => {
         set({ isBindingMode: false });
-        console.log('[NASGE] 退出绑定模式');
+        loggers.store.info('退出绑定模式');
       },
 
       bindDraftToChapter: (chapterId) => {
@@ -325,7 +326,7 @@ export const useGuideStore = create<GuideState>()(
         const guideId = state.guideInfo?.id;
 
         if (!activeDraftId || !guideId) {
-          console.warn('[NASGE] 绑定失败：没有活动草稿或指南信息');
+          loggers.store.warn('绑定失败：没有活动草稿或指南信息');
           return { success: false };
         }
 
@@ -355,7 +356,7 @@ export const useGuideStore = create<GuideState>()(
           currentChapterId: chapterId
         }));
 
-        console.log('[NASGE] 绑定成功', { draftId: activeDraftId, chapterId });
+        loggers.store.info('绑定成功', { draftId: activeDraftId, chapterId });
         return { success: true };
       },
 
@@ -374,7 +375,7 @@ export const useGuideStore = create<GuideState>()(
           ),
           currentChapterId: null
         }));
-        console.log('[NASGE] 解除绑定', { draftId });
+        loggers.store.info('解除绑定', { draftId });
       },
 
       getDraftByChapterId: (chapterId) => {
@@ -418,7 +419,7 @@ export const useGuideStore = create<GuideState>()(
           currentChapterId: chapterId
         }));
 
-        console.log('[NASGE] 强制绑定成功', { draftId: activeDraftId, chapterId });
+        loggers.store.info('强制绑定成功', { draftId: activeDraftId, chapterId });
         return { success: true };
       },
 
@@ -458,7 +459,7 @@ export const useGuideStore = create<GuideState>()(
               const valueStr = typeof pendingValue.value === 'string'
                 ? pendingValue.value
                 : JSON.stringify(pendingValue.value);
-              console.log('[NASGE Persist] setItem (debounced)', {
+              loggers.persist.verbose('setItem (debounced)', {
                 name: pendingValue.name,
                 length: valueStr.length
               });
@@ -472,24 +473,24 @@ export const useGuideStore = create<GuideState>()(
         return {
           getItem: (name: string) => {
             const str = localStorage.getItem(name);
-            console.log('[NASGE Persist] getItem', { name, exists: !!str, length: str?.length });
+            loggers.persist.verbose('getItem', { name, exists: !!str, length: str?.length });
             if (!str) return null;
             try {
               const parsed = JSON.parse(str);
-              console.log('[NASGE Persist] getItem parsed', {
+              loggers.persist.verbose('getItem parsed', {
                 version: parsed.version,
                 hasState: !!parsed.state,
                 stateDraftsCount: parsed.state?.drafts?.length
               });
               return parsed;
             } catch (e) {
-              console.error('[NASGE Persist] getItem parse error', e);
+              loggers.persist.error('getItem parse error', e);
               return null;
             }
           },
           setItem: debouncedSetItem,
           removeItem: (name: string) => {
-            console.log('[NASGE Persist] removeItem', { name });
+            loggers.persist.verbose('removeItem', { name });
             localStorage.removeItem(name);
           }
         };
@@ -498,7 +499,7 @@ export const useGuideStore = create<GuideState>()(
       // 但保留 currentState 中的函数引用（函数不会被序列化）
       merge: (persistedState: any, currentState: GuideState) => {
         try {
-          console.log('[NASGE Persist] merge 调用', {
+          loggers.persist.verbose('merge 调用', {
             persistedStateKeys: Object.keys(persistedState || {}),
             persistedDraftsCount: persistedState?.drafts?.length,
             currentDraftsCount: currentState.drafts?.length,
@@ -508,7 +509,7 @@ export const useGuideStore = create<GuideState>()(
           // Zustand persist 会自动从 { state: {...}, version } 中提取 state
           // 所以这里收到的 persistedState 就是之前保存的 state 对象
           if (persistedState && persistedState.drafts && Array.isArray(persistedState.drafts)) {
-            console.log('[NASGE Persist] merge 成功恢复草稿', {
+            loggers.persist.verbose('merge 成功恢复草稿', {
               draftsCount: persistedState.drafts.length,
               draftTitles: persistedState.drafts.map((d: any) => d.title)
             });
@@ -516,7 +517,7 @@ export const useGuideStore = create<GuideState>()(
             // 验证 guideInfo 的完整性
             let safeGuideInfo = persistedState.guideInfo;
             if (safeGuideInfo && !safeGuideInfo.chapters) {
-              console.warn('[NASGE Persist] guideInfo 缺少 chapters，设为 null');
+              loggers.persist.warn('guideInfo 缺少 chapters，设为 null');
               safeGuideInfo = null;
             }
 
@@ -570,20 +571,20 @@ export const useGuideStore = create<GuideState>()(
             return mergedState as GuideState;
           }
 
-          console.warn('[NASGE Persist] merge 未找到草稿数据，使用初始状态');
+          loggers.persist.warn('merge 未找到草稿数据，使用初始状态');
           return currentState;
         } catch (error) {
-          console.error('[NASGE Persist] merge 发生错误，使用初始状态', error);
+          loggers.persist.error('merge 发生错误，使用初始状态', error);
           return currentState;
         }
       },
       onRehydrateStorage: () => {
-        console.log('[NASGE Persist] 开始 rehydration');
+        loggers.persist.verbose('开始 rehydration');
         return (state, error) => {
           if (error) {
-            console.error('[NASGE Persist] rehydration 失败', error);
+            loggers.persist.error('rehydration 失败', error);
           } else {
-            console.log('[NASGE Persist] rehydration 完成', {
+            loggers.persist.verbose('rehydration 完成', {
               draftsCount: state?.drafts?.length,
               activeDraftId: state?.activeDraftId,
               mode: state?.mode
@@ -592,7 +593,7 @@ export const useGuideStore = create<GuideState>()(
         };
       },
       migrate: (persistedState: any, version) => {
-        console.log('[NASGE] 数据迁移开始', {
+        loggers.persist.verbose('数据迁移开始', {
           version,
           hasPersistedState: !!persistedState,
           persistedDraftsCount: persistedState?.drafts?.length,
@@ -600,7 +601,7 @@ export const useGuideStore = create<GuideState>()(
         });
 
         if (!persistedState) {
-          console.log('[NASGE] 无持久化数据，创建默认草稿');
+          loggers.persist.verbose('无持久化数据，创建默认草稿');
           // 没有持久化数据，返回一个包含默认草稿的初始状态
           const defaultDraft = {
             id: crypto.randomUUID(),
@@ -621,13 +622,13 @@ export const useGuideStore = create<GuideState>()(
 
         // v5 -> v6: 分离 draftName 和 title
         if (version >= 4 && version < 6) {
-          console.log('[NASGE] v5 -> v6 迁移：分离 draftName 和 title', {
+          loggers.persist.verbose('v5 -> v6 迁移：分离 draftName 和 title', {
             draftsCount: persistedState.drafts?.length
           });
 
           // 确保 drafts 数组存在且有效
           if (!persistedState.drafts || !Array.isArray(persistedState.drafts)) {
-            console.warn('[NASGE] 检测到无效的 drafts 数据，创建默认草稿');
+            loggers.persist.warn('检测到无效的 drafts 数据，创建默认草稿');
             const defaultDraft = {
               id: crypto.randomUUID(),
               draftName: "草稿 1",
@@ -638,7 +639,7 @@ export const useGuideStore = create<GuideState>()(
             persistedState.drafts = [defaultDraft];
             persistedState.activeDraftId = defaultDraft.id;
           } else if (persistedState.drafts.length === 0) {
-            console.warn('[NASGE] drafts 为空数组，创建默认草稿');
+            loggers.persist.warn('drafts 为空数组，创建默认草稿');
             const defaultDraft = {
               id: crypto.randomUUID(),
               draftName: "草稿 1",
@@ -662,7 +663,7 @@ export const useGuideStore = create<GuideState>()(
 
         // v6 -> v7: title 从 string 改为 JSONContent
         if (version >= 6 && version < 7) {
-          console.log('[NASGE] v6 -> v7 迁移：title 从 string 改为 JSONContent', {
+          loggers.persist.verbose('v6 -> v7 迁移：title 从 string 改为 JSONContent', {
             draftsCount: persistedState.drafts?.length
           });
 
@@ -687,7 +688,7 @@ export const useGuideStore = create<GuideState>()(
 
               // 将字符串标题转换为 JSONContent
               const titleStr = typeof draft.title === 'string' ? draft.title : '';
-              console.log(`[NASGE] 迁移草稿 ${index + 1} 标题: "${titleStr}"`);
+              loggers.persist.verbose(`迁移草稿 ${index + 1} 标题: "${titleStr}"`);
 
               return {
                 ...draft,
@@ -720,7 +721,7 @@ export const useGuideStore = create<GuideState>()(
 
         // v1 -> v2: BBCode 转 HTML
         if (version < 2 && persistedState.chapters) {
-          console.log('[NASGE] 执行 v1 -> v2 迁移：BBCode 转 HTML');
+          loggers.persist.verbose('执行 v1 -> v2 迁移：BBCode 转 HTML');
           persistedState.chapters = persistedState.chapters.map((chapter: any) => {
             const bbcode = typeof chapter.bbcode === "string" ? chapter.bbcode : "";
             const html = bbcode ? bbcodeToHtml(bbcode) : "";
@@ -733,7 +734,7 @@ export const useGuideStore = create<GuideState>()(
 
         // v2 -> v3: HTML 转 JSONContent
         if (version < 3 && persistedState.chapters) {
-          console.log('[NASGE] 执行 v2 -> v3 迁移：HTML 转 JSONContent');
+          loggers.persist.verbose('执行 v2 -> v3 迁移：HTML 转 JSONContent');
           persistedState.chapters = persistedState.chapters.map((chapter: any) => {
             if (chapter && typeof chapter.content === "object" && chapter.content !== null && "type" in chapter.content) {
               return chapter;
@@ -749,7 +750,7 @@ export const useGuideStore = create<GuideState>()(
 
         // v3 -> v4: 重命名 chapters 为 drafts，添加新字段
         if (version < 4) {
-          console.log('[NASGE] 执行 v3 -> v4 迁移：chapters 改为 drafts');
+          loggers.persist.verbose('执行 v3 -> v4 迁移：chapters 改为 drafts');
           const oldChapters = persistedState.chapters || [];
           const oldActiveId = persistedState.activeId || null;
 
@@ -785,13 +786,13 @@ export const useGuideStore = create<GuideState>()(
           delete persistedState.chapters;
           delete persistedState.activeId;
 
-          console.log('[NASGE] v3 -> v4 迁移完成', {
+          loggers.persist.verbose('v3 -> v4 迁移完成', {
             draftsCount: persistedState.drafts.length,
             activeDraftId: persistedState.activeDraftId
           });
         }
 
-        console.log('[NASGE] 数据迁移完成', persistedState);
+        loggers.persist.verbose('数据迁移完成', persistedState);
         return persistedState;
       }
     }
@@ -800,7 +801,7 @@ export const useGuideStore = create<GuideState>()(
 
 // 立即订阅 store 以触发持久化初始化
 useGuideStore.subscribe((state) => {
-  console.log('[NASGE] Store 状态更新', {
+  loggers.store.verbose('Store 状态更新', {
     draftsCount: state.drafts.length,
     activeDraftId: state.activeDraftId,
     mode: state.mode,
@@ -812,21 +813,21 @@ useGuideStore.subscribe((state) => {
     const stored = localStorage.getItem('nasge-guide-drafts');
     if (stored) {
       const parsed = JSON.parse(stored);
-      console.log('[NASGE] LocalStorage 实际保存的数据', {
+      loggers.store.verbose('LocalStorage 实际保存的数据', {
         version: parsed.version,
         draftsCount: parsed.state?.drafts?.length,
         draftTitles: parsed.state?.drafts?.map((d: any) => d.title)
       });
     }
   } catch (e) {
-    console.error('[NASGE] 读取 localStorage 失败', e);
+    loggers.store.error('读取 localStorage 失败', e);
   }
 });
 
 // 触发一次获取以确保持久化初始化
 setTimeout(() => {
   const state = useGuideStore.getState();
-  console.log('[NASGE] Store 初始状态', {
+  loggers.store.verbose('Store 初始状态', {
     draftsCount: state.drafts.length,
     mode: state.mode,
     hasGuideInfo: !!state.guideInfo
@@ -834,14 +835,14 @@ setTimeout(() => {
 
   // 手动触发一次状态更新以强制持久化
   if (state.drafts.length > 0 && !state.activeDraftId) {
-    console.log('[NASGE] 设置默认激活草稿');
+    loggers.store.verbose('设置默认激活草稿');
     useGuideStore.setState({ activeDraftId: state.drafts[0].id });
   }
 
   // 验证持久化
   setTimeout(() => {
     const persisted = localStorage.getItem('nasge-guide-drafts');
-    console.log('[NASGE] 持久化验证', {
+    loggers.store.verbose('持久化验证', {
       hasPersisted: !!persisted,
       persistedData: persisted ? JSON.parse(persisted) : null
     });

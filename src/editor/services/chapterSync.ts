@@ -4,6 +4,7 @@
  */
 
 import type { ChapterContent } from "../../content/chapterSync";
+import { loggers } from "../../shared/logger";
 
 /**
  * 从 Steam 拉取章节内容
@@ -12,7 +13,7 @@ export async function fetchChapterFromSteam(
   guideId: string,
   sectionId: string
 ): Promise<ChapterContent> {
-  console.log('[NASGE Editor] 请求拉取章节内容', { guideId, sectionId });
+  loggers.sync.info('请求拉取章节内容', { guideId, sectionId });
 
   const response = await chrome.runtime.sendMessage({
     channel: 'nasge:steam',
@@ -25,7 +26,7 @@ export async function fetchChapterFromSteam(
     throw new Error(response.error || "拉取章节失败");
   }
 
-  console.log('[NASGE Editor] 章节内容拉取成功', response.data);
+  loggers.sync.info('章节内容拉取成功', response.data);
 
   return response.data;
 }
@@ -62,7 +63,7 @@ async function getSessionId(): Promise<string> {
     throw new Error("无法获取 sessionid，请确保已登录 Steam");
   }
 
-  console.log('[NASGE Editor] 成功获取 sessionId');
+  loggers.sync.verbose('成功获取 sessionId');
   return sessionId;
 }
 
@@ -75,7 +76,7 @@ export async function saveChapterToSteam(
   title: string,
   description: string
 ): Promise<string> {
-  console.log('[NASGE Editor] 请求保存章节内容', { guideId, sectionId, title });
+  loggers.sync.info('请求保存章节内容', { guideId, sectionId, title });
 
   // 先获取 sessionId
   const sessionId = await getSessionId();
@@ -94,7 +95,7 @@ export async function saveChapterToSteam(
     throw new Error(response.error || "保存章节失败");
   }
 
-  console.log('[NASGE Editor] 章节内容保存成功', response.data);
+  loggers.sync.info('章节内容保存成功', response.data);
 
   return response.data.sectionId;
 }
@@ -107,7 +108,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
   title: string;
   order: number;
 }>> {
-  console.log('[NASGE Editor] 请求拉取章节列表', { guideId });
+  loggers.sync.info('请求拉取章节列表', { guideId });
 
   const response = await chrome.runtime.sendMessage({
     channel: 'nasge:steam',
@@ -119,7 +120,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
     throw new Error(response.error || "拉取章节列表失败");
   }
 
-  console.log('[NASGE Editor] 章节列表拉取成功', response.data);
+  loggers.sync.info('章节列表拉取成功', response.data);
 
   return response.data.chapters;
 }
@@ -130,7 +131,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
  * @returns 新章节的 sectionId
  */
 export async function createChapterOnSteam(guideId: string): Promise<string> {
-  console.log('[NASGE Editor] 请求创建新章节', { guideId });
+  loggers.sync.info('请求创建新章节', { guideId });
 
   // 获取 sessionId
   const sessionId = await getSessionId();
@@ -195,7 +196,7 @@ export async function createChapterOnSteam(guideId: string): Promise<string> {
     throw new Error('创建章节失败');
   }
 
-  console.log('[NASGE Editor] 新章节创建成功', {
+  loggers.sync.info('新章节创建成功', {
     sectionId: response.sectionid,
     timeSaved: response.timeSaved
   });
@@ -212,7 +213,7 @@ export async function reorderChaptersOnSteam(
   guideId: string,
   orderedSectionIds: string[]
 ): Promise<void> {
-  console.log('[NASGE Editor] 请求更新章节排序', { guideId, orderedSectionIds });
+  loggers.sync.info('请求更新章节排序', { guideId, orderedSectionIds });
 
   // 获取 sessionId
   const sessionId = await getSessionId();
@@ -227,7 +228,7 @@ export async function reorderChaptersOnSteam(
     formData.append(`sub_sections[${sectionId}][sort_order]`, index.toString());
   });
 
-  console.log('[NASGE Editor] 发送排序请求', formData.toString());
+  loggers.sync.verbose('发送排序请求', formData.toString());
 
   // 发送请求到 Steam
   const tabs = await chrome.tabs.query({
@@ -284,5 +285,5 @@ export async function reorderChaptersOnSteam(
     throw new Error('章节排序保存失败');
   }
 
-  console.log('[NASGE Editor] 章节排序保存成功');
+  loggers.sync.info('章节排序保存成功');
 }

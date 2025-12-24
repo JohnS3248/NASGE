@@ -16,11 +16,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const autoUploadOnDrop = useEditorConfigStore(
     (state) => state.autoUploadOnDrop
   );
+  const debugMode = useEditorConfigStore(
+    (state) => state.debugMode
+  );
   const setAutoUploadOnPaste = useEditorConfigStore(
     (state) => state.setAutoUploadOnPaste
   );
   const setAutoUploadOnDrop = useEditorConfigStore(
     (state) => state.setAutoUploadOnDrop
+  );
+  const setDebugMode = useEditorConfigStore(
+    (state) => state.setDebugMode
   );
 
   if (!visible) return null;
@@ -137,6 +143,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               💡 <strong>提示：</strong>关闭自动上传后，图片仍会插入编辑器并显示本地预览。
               未来版本将支持手动选择上传图片。
             </div>
+
+            {/* 分隔线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(102, 192, 244, 0.15)",
+                margin: "0.5rem 0"
+              }}
+            />
+
+            {/* 开发者选项分组 */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "rgba(173, 205, 244, 0.8)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "-0.5rem"
+              }}
+            >
+              开发者选项
+            </div>
+
+            {/* 调试模式 */}
+            <ToggleOption
+              label="调试模式"
+              description="开启后在控制台显示详细日志，便于排查问题"
+              checked={debugMode}
+              onChange={setDebugMode}
+            />
           </div>
         </div>
       </div>

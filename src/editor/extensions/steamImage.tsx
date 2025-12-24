@@ -13,6 +13,7 @@ import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 // === 新 Store ===
 import { useImageStore } from "../stores/useImageStore";
 import type { ImageEntity, ImageSource, ImageSizePreset, ImageAlignment } from "../types/image";
+import { loggers } from "../../shared/logger";
 
 /**
  * 从新 Store 获取图片实体
@@ -98,7 +99,7 @@ function syncToNewStore(
         newStore.markError(newImage.id, imageNode.error ?? "Unknown error");
       }
 
-      console.log("[SteamImage] 同步到新 Store (from imageNode)", {
+      loggers.image.verbose("SteamImage 同步到新 Store (from imageNode)", {
         oldNodeId: imageNode.nodeId,
         newImageId: newImage.id,
         status: newImage.status
@@ -117,7 +118,7 @@ function syncToNewStore(
         thumbnailUrl: steamPoolImage.thumbnailUrl,
         originalUrl: steamPoolImage.originalUrl
       });
-      console.log("[SteamImage] 同步到新 Store (from steamPool)", {
+      loggers.image.verbose("SteamImage 同步到新 Store (from steamPool)", {
         previewId: steamPoolImage.previewId,
         newImageId: newImage.id
       });
@@ -133,7 +134,7 @@ function syncToNewStore(
         steamPreviewId: attrPreviewId,
         fileName: `image-${attrPreviewId}`
       });
-      console.log("[SteamImage] 同步到新 Store (from BBCode, orphaned)", {
+      loggers.image.verbose("SteamImage 同步到新 Store (from BBCode, orphaned)", {
         previewId: attrPreviewId,
         newImageId: newImage.id,
         status: "uploaded (待验证)"
@@ -319,7 +320,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     }
 
     if (!node.attrs.previewDataUrl && !attrPreviewId) {
-      console.warn("[NASGE] steamImage 节点缺少关联数据", {
+      loggers.image.warn("steamImage 节点缺少关联数据", {
         imageNodeId,
         attrPreviewId,
         nodes: useEditorImageNodeStore.getState().nodes
@@ -467,7 +468,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
       // 如果 CDN URL 加载失败，回退到本地预览
       if (cdnUrlLoadFailed && localPreviewUrl) {
-        console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
+        loggers.image.verbose('CDN URL 加载失败，回退到本地预览');
         return localPreviewUrl;
       }
 
@@ -484,7 +485,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (imageNode) {
       const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
       if (cdnUrlLoadFailed && localPreviewUrl) {
-        console.log('[NASGE] CDN URL 加载失败，回退到本地预览');
+        loggers.image.verbose('CDN URL 加载失败，回退到本地预览');
         return localPreviewUrl;
       }
       return imageNode.cdnUrl ?? localPreviewUrl;
@@ -502,7 +503,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   // 处理图片加载失败
   const handleImageLoadError = useCallback(() => {
     if (imageNode?.cdnUrl && !cdnUrlLoadFailed) {
-      console.warn('[NASGE] CDN URL 加载失败，尝试回退到本地预览:', imageNode.cdnUrl);
+      loggers.image.warn('CDN URL 加载失败，尝试回退到本地预览:', imageNode.cdnUrl);
       setCdnUrlLoadFailed(true);
     }
   }, [imageNode?.cdnUrl, cdnUrlLoadFailed]);
