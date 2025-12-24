@@ -17,6 +17,7 @@ import DraftPanel from "./components/DraftPanel";
 import TitleEditor from "./components/TitleEditor";
 import { extractTitleText, createTitleFromText, createEmptyTitle } from "./utils/titleHelpers";
 import { loggers } from "../shared/logger";
+import { ImageFloatingPanel } from "./components/ImageFloatingPanel";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
@@ -369,6 +370,9 @@ const App: React.FC = () => {
       </div>
 
       <UploadStatusHUD />
+
+      {/* 图片悬浮窗 */}
+      <ImageFloatingPanel />
     </div>
   );
 };
