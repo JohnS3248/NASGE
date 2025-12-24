@@ -6,3 +6,7 @@ dist/
 # 测试和草稿文件夹
 tests/
 草稿md/
+
+# Claude 和 HTML 测试文件夹
+.claude/
+html/
