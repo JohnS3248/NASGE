@@ -3,6 +3,7 @@ import { useGuideStore } from '../stores/useGuideStore';
 import { useChapterSync } from '../hooks/useChapterSync';
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import type { ImageState } from '../stores/useSteamGuideImageStore';
+import { createChapterOnSteam } from '../services/chapterSync';
 
 interface ChapterNavProps {
   onRefresh?: () => Promise<void>;
@@ -334,6 +335,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isCreatingChapter, setIsCreatingChapter] = useState(false);
 
   // 只在 guide 模式下显示章节导航
   if (mode !== 'guide' || !guideInfo || !guideInfo.chapters || !Array.isArray(guideInfo.chapters)) {
@@ -451,6 +453,29 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     } catch (error) {
       console.error('[ChapterNav] 刷新失败', error);
       window.alert('章节列表刷新失败：' + (error instanceof Error ? error.message : '未知错误'));
+    }
+  };
+
+  // 创建新章节
+  const handleCreateChapter = async () => {
+    if (isCreatingChapter || !guideInfo?.id) return;
+
+    setIsCreatingChapter(true);
+    try {
+      const newSectionId = await createChapterOnSteam(guideInfo.id);
+      console.log('[ChapterNav] 新章节创建成功', { sectionId: newSectionId });
+
+      // 刷新章节列表
+      if (onRefresh) {
+        await onRefresh();
+      }
+
+      window.alert('新章节创建成功！');
+    } catch (error) {
+      console.error('[ChapterNav] 创建章节失败', error);
+      window.alert('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
+    } finally {
+      setIsCreatingChapter(false);
     }
   };
 
@@ -661,6 +686,48 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             );
           })
         )}
+
+        {/* 新建章节按钮 */}
+        <button
+          onClick={handleCreateChapter}
+          disabled={isCreatingChapter || isBindingMode}
+          style={{
+            margin: '0.8rem',
+            padding: '0.7rem 1rem',
+            borderRadius: '0.4rem',
+            border: '1px dashed rgba(102, 192, 244, 0.5)',
+            background: isCreatingChapter
+              ? 'rgba(102, 192, 244, 0.1)'
+              : 'transparent',
+            color: isBindingMode ? '#6b7f9a' : '#66c0f4',
+            fontSize: '0.85rem',
+            cursor: isCreatingChapter || isBindingMode ? 'not-allowed' : 'pointer',
+            opacity: isBindingMode ? 0.5 : 1,
+            transition: 'all 0.15s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.4rem'
+          }}
+          onMouseEnter={(e) => {
+            if (!isCreatingChapter && !isBindingMode) {
+              e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
+              e.currentTarget.style.borderStyle = 'solid';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isCreatingChapter) {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderStyle = 'dashed';
+            }
+          }}
+        >
+          {isCreatingChapter ? (
+            <>创建中...</>
+          ) : (
+            <>+ 新建章节</>
+          )}
+        </button>
       </div>
     </aside>
   );

@@ -125,6 +125,85 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
 }
 
 /**
+ * 在 Steam 创建新章节
+ * @param guideId 指南 ID
+ * @returns 新章节的 sectionId
+ */
+export async function createChapterOnSteam(guideId: string): Promise<string> {
+  console.log('[NASGE Editor] 请求创建新章节', { guideId });
+
+  // 获取 sessionId
+  const sessionId = await getSessionId();
+
+  // 查询指南管理页面的标签页
+  const tabs = await chrome.tabs.query({
+    url: "https://steamcommunity.com/sharedfiles/manageguide/*"
+  });
+
+  if (tabs.length === 0) {
+    throw new Error("未找到指南管理页面");
+  }
+
+  const tab = tabs[0];
+  if (!tab.id) {
+    throw new Error("无法获取标签页 ID");
+  }
+
+  // 构造请求参数（创建空章节只需要 id 和 sessionid）
+  const params = new URLSearchParams();
+  params.set('id', guideId);
+  params.set('sessionid', sessionId);
+
+  // 通过注入脚本发送请求
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: (url: string, data: string) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-Prototype-Version', '1.7');
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (e) {
+              reject(new Error('解析响应失败'));
+            }
+          } else {
+            reject(new Error(`请求失败: ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = function() {
+          reject(new Error('网络错误'));
+        };
+
+        xhr.send(data);
+      });
+    },
+    args: ['https://steamcommunity.com/sharedfiles/setguidesubsection', params.toString()]
+  });
+
+  const response = results[0]?.result as any;
+
+  if (!response || response.success !== 1) {
+    throw new Error('创建章节失败');
+  }
+
+  console.log('[NASGE Editor] 新章节创建成功', {
+    sectionId: response.sectionid,
+    timeSaved: response.timeSaved
+  });
+
+  return response.sectionid;
+}
+
+/**
  * 保存章节排序到 Steam
  * @param guideId 指南ID
  * @param orderedSectionIds 按新顺序排列的章节ID数组
