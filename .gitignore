@@ -7,6 +7,7 @@ dist/
 tests/
 草稿md/
 
-# Claude 和 HTML 测试文件夹
+# 私有文件夹（不公开）
 .claude/
 html/
+notes/
