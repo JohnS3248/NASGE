@@ -7,3 +7,7 @@ export { default as MinimizedPanel } from "./MinimizedPanel";
 export { default as ImageGrid } from "./ImageGrid";
 export { default as ImageCard } from "./ImageCard";
 export * from "./styles";
+
+// 拖拽相关类型导出
+export type { ImageDragData } from "./ImageCard";
+export { NASGE_IMAGE_MIME_TYPE } from "./ImageCard";

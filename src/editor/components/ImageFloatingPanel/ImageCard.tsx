@@ -1,11 +1,29 @@
 /**
  * 图片卡片组件
  * 显示单个图片的缩略图、文件名和状态
+ * 支持拖拽到编辑器插入
  */
 import React, { useState, useCallback } from "react";
 import { ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { COLORS, SIZES } from "./styles";
+import { loggers } from "../../../shared/logger";
+
+/** 拖拽数据格式 */
+export interface ImageDragData {
+  type: "steam-image";
+  images: Array<{
+    imageId: string;
+    previewId: string;
+    fileName: string;
+    thumbnailUrl?: string;
+    originalUrl?: string;
+    localUrl?: string;
+  }>;
+}
+
+/** MIME 类型常量 */
+export const NASGE_IMAGE_MIME_TYPE = "application/x-nasge-image";
 
 interface ImageCardProps {
   image: ImageWithState;
@@ -13,6 +31,8 @@ interface ImageCardProps {
   isFocused: boolean;
   onSelect: (id: string, mode: "single" | "toggle" | "add") => void;
   onDoubleClick: (image: ImageWithState) => void;
+  /** 获取当前选中的所有图片（用于批量拖拽） */
+  getSelectedImages?: () => ImageWithState[];
 }
 
 const ImageCard: React.FC<ImageCardProps> = ({
@@ -20,12 +40,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
   isSelected,
   isFocused,
   onSelect,
-  onDoubleClick
+  onDoubleClick,
+  getSelectedImages
 }) => {
   const { showFileName, showStatusIndicator, getThumbnailSizePixels } = useImagePanelStore();
   const thumbnailSize = getThumbnailSizePixels();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   // 获取显示的 URL
   const displayUrl = image.localUrl || image.thumbnailUrl || image.originalUrl;
@@ -65,11 +87,56 @@ const ImageCard: React.FC<ImageCardProps> = ({
     onDoubleClick(image);
   }, [image, onDoubleClick]);
 
+  // 拖拽开始处理
+  const handleDragStart = useCallback((e: React.DragEvent) => {
+    setIsDragging(true);
+
+    // 如果当前图片被选中且有多个选中项，则批量拖拽所有选中的图片
+    let imagesToDrag: ImageWithState[] = [image];
+    if (isSelected && getSelectedImages) {
+      const selectedImages = getSelectedImages();
+      if (selectedImages.length > 1) {
+        imagesToDrag = selectedImages;
+      }
+    }
+
+    // 构造拖拽数据
+    const dragData: ImageDragData = {
+      type: "steam-image",
+      images: imagesToDrag.map(img => ({
+        imageId: img.previewId || img.fileName,
+        previewId: img.previewId || "",
+        fileName: img.fileName,
+        thumbnailUrl: img.thumbnailUrl,
+        originalUrl: img.originalUrl,
+        localUrl: img.localUrl
+      }))
+    };
+
+    // 设置拖拽数据（只使用自定义 MIME 类型，不设置 text/plain 避免编辑器误插入文件名）
+    e.dataTransfer.setData(NASGE_IMAGE_MIME_TYPE, JSON.stringify(dragData));
+    e.dataTransfer.effectAllowed = "copy";
+
+    loggers.image.verbose("开始拖拽图片", {
+      count: imagesToDrag.length,
+      fileNames: imagesToDrag.map(img => img.fileName)
+    });
+  }, [image, isSelected, getSelectedImages]);
+
+  // 拖拽结束处理
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    loggers.image.verbose("结束拖拽图片");
+  }, []);
+
   // 计算卡片总高度
   const cardHeight = thumbnailSize + (showFileName || showStatusIndicator ? 32 : 0);
 
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       style={{
         width: thumbnailSize,
         height: cardHeight,
@@ -77,7 +144,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
         flexDirection: "column",
         borderRadius: SIZES.borderRadiusSmall,
         overflow: "hidden",
-        cursor: "pointer",
+        cursor: isDragging ? "grabbing" : "grab",
         background: isSelected
           ? "rgba(102, 192, 244, 0.2)"
           : isHovered
@@ -89,13 +156,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
             ? `2px solid ${COLORS.borderHover}`
             : "2px solid transparent",
         transition: "all 0.15s ease",
-        boxSizing: "border-box"
+        boxSizing: "border-box",
+        opacity: isDragging ? 0.5 : 1
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      title={`${image.fileName}\n状态: ${statusText[image.state]}`}
+      title={`${image.fileName}\n状态: ${statusText[image.state]}\n拖拽到编辑器插入`}
     >
       {/* 缩略图区域 */}
       <div

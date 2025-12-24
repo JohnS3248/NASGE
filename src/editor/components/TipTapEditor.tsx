@@ -7,10 +7,12 @@ import { processIncomingImages } from "../services/imageIntake";
 import { uploadSingleImage } from "../services/ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
+import { useImagePanelStore } from "../stores/useImagePanelStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 import { loggers } from "../../shared/logger";
+import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -374,6 +376,71 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     [editor]
   );
 
+  // 获取悬浮窗插入设置
+  const { defaultInsertSize, defaultInsertAlignment, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
+
+  // 处理从图片悬浮窗拖入的图片
+  const handleNasgeImageDrop = useCallback(
+    (dragData: ImageDragData, dropPosition?: number) => {
+      if (!editor) return;
+
+      loggers.image.info("从悬浮窗拖入图片", {
+        imageCount: dragData.images.length,
+        dropPosition
+      });
+
+      // 设置光标位置
+      if (dropPosition !== undefined) {
+        editor.chain().focus().setTextSelection(dropPosition).run();
+      } else {
+        editor.commands.focus();
+      }
+
+      // 映射尺寸设置到编辑器的 preset
+      const sizePresetMap: Record<string, ImageSizePreset> = {
+        original: "original",
+        medium: "half",
+        small: "thumb"
+      };
+      const sizePreset = sizePresetMap[defaultInsertSize] || "original";
+
+      // 映射对齐设置
+      const alignmentMap: Record<string, ImageAlignment> = {
+        floatLeft: "floatLeft",
+        floatRight: "floatRight",
+        center: "inline", // 暂无 center，使用 inline
+        inline: "inline"
+      };
+      const alignment = alignmentMap[defaultInsertAlignment] || "inline";
+
+      // 插入每张图片
+      for (const image of dragData.images) {
+        editor.commands.insertSteamImage({
+          previewId: image.previewId || null,
+          fileName: image.fileName,
+          previewDataUrl: image.localUrl || image.thumbnailUrl || null,
+          sizePreset,
+          alignment
+        });
+
+        loggers.image.verbose("插入图片节点", {
+          fileName: image.fileName,
+          previewId: image.previewId,
+          sizePreset,
+          alignment
+        });
+      }
+
+      // 执行插入后动作
+      if (afterInsertAction === "close") {
+        closeImagePanel();
+      } else if (afterInsertAction === "minimize") {
+        minimizeImagePanel();
+      }
+    },
+    [editor, defaultInsertSize, defaultInsertAlignment, afterInsertAction, closeImagePanel, minimizeImagePanel]
+  );
+
   useEffect(() => {
     if (!editor) return;
 
@@ -389,6 +456,30 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     };
 
     const onDrop = (event: DragEvent) => {
+      // 优先检查是否为 NASGE 图片拖放
+      const nasgeData = event.dataTransfer?.getData(NASGE_IMAGE_MIME_TYPE);
+      if (nasgeData) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+          const dragData = JSON.parse(nasgeData) as ImageDragData;
+          if (dragData.type === "steam-image" && dragData.images?.length > 0) {
+            // 获取拖放位置
+            const coords = editor.view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY
+            });
+
+            handleNasgeImageDrop(dragData, coords?.pos);
+            return;
+          }
+        } catch (e) {
+          loggers.image.warn("解析 NASGE 拖放数据失败:", e);
+        }
+      }
+
+      // 处理普通文件拖放
       const files = extractFilesFromDrop(event);
       if (!files.length) return;
       event.preventDefault();
@@ -409,6 +500,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     };
 
     const onDragOver = (event: DragEvent) => {
+      // 检查是否为 NASGE 图片拖放
+      if (event.dataTransfer?.types.includes(NASGE_IMAGE_MIME_TYPE)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        return;
+      }
+
+      // 检查是否为文件拖放
       const files = extractFilesFromDrop(event);
       if (!files.length) return;
       event.preventDefault();
@@ -423,7 +522,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       dom.removeEventListener("drop", onDrop as EventListener);
       dom.removeEventListener("dragover", onDragOver as EventListener);
     };
-  }, [editor, handleIncomingFiles]);
+  }, [editor, handleIncomingFiles, handleNasgeImageDrop]);
 
   useEffect(() => {
     if (!editor || externalDoc === undefined) return;
