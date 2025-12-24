@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { extractTitleText } from '../utils/titleHelpers';
+import type { ChapterInfo } from '../stores/useGuideStore';
 
 const DraftPanel: React.FC = () => {
-  const { drafts, activeDraftId, selectDraft, addDraft, updateDraft, deleteDraft, duplicateDraft, reorderDrafts } = useGuideStore();
+  const {
+    drafts,
+    activeDraftId,
+    selectDraft,
+    addDraft,
+    updateDraft,
+    deleteDraft,
+    duplicateDraft,
+    reorderDrafts,
+    // 绑定相关
+    mode,
+    guideInfo,
+    isBindingMode,
+    enterBindingMode,
+    exitBindingMode,
+    unbindDraft
+  } = useGuideStore();
   const [isOpen, setIsOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -11,6 +28,30 @@ const DraftPanel: React.FC = () => {
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
+
+  // 获取当前草稿绑定的章节信息
+  const boundChapter = useMemo<ChapterInfo | undefined>(() => {
+    if (!activeDraft?.linkedChapterId || !guideInfo?.chapters) return undefined;
+    return guideInfo.chapters.find((c) => c.sectionId === activeDraft.linkedChapterId);
+  }, [activeDraft?.linkedChapterId, guideInfo?.chapters]);
+
+  // 是否可以绑定（指南模式且有活动草稿）
+  const canBind = mode === 'guide' && !!activeDraft;
+
+  /**
+   * 获取草稿显示标题
+   * - 有内容的标题：显示标题内容
+   * - 从Steam拉取的章节（有lastSyncedAt）但标题为空：显示 "未命名章节"
+   * - 本地草稿（无lastSyncedAt）标题为空：显示 "本地未命名章节"
+   */
+  const getDraftDisplayTitle = (draft: typeof activeDraft) => {
+    if (!draft) return '';
+    const titleText = extractTitleText(draft.title);
+    if (titleText) return titleText;
+    // 没有标题时，根据是否是从Steam拉取的来区分显示
+    // lastSyncedAt 表示曾从Steam同步过，即为拉取的章节
+    return draft.lastSyncedAt ? '未命名章节' : '本地未命名章节';
+  };
 
   // 鼠标按下开始计时（长按检测）
   const handleMouseDown = (draftId: string) => {
@@ -144,9 +185,24 @@ const DraftPanel: React.FC = () => {
               gap: '0.15rem',
               fontSize: '0.8rem'
             }}>
-              <span style={{ color: '#d7e8ff', fontWeight: 500 }}>
-                {extractTitleText(activeDraft.title) || '未命名章节'}
-              </span>
+              {/* 第一行：标题 + 绑定信息 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ color: '#d7e8ff', fontWeight: 500 }}>
+                  {getDraftDisplayTitle(activeDraft)}
+                </span>
+                {boundChapter && (
+                  <span style={{
+                    fontSize: '0.75rem',
+                    color: '#66c0f4',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem'
+                  }}>
+                    🔗 {boundChapter.title}
+                  </span>
+                )}
+              </div>
+              {/* 第二行：备注名 */}
               <span style={{ fontSize: '0.75rem', color: '#8aa4c7', opacity: 0.85 }}>
                 {activeDraft.draftName}
               </span>
@@ -156,6 +212,89 @@ const DraftPanel: React.FC = () => {
             <span style={{ fontSize: '0.85rem', color: '#8aa4c7' }}>
               当前: 未选择
             </span>
+          )}
+
+          {/* 绑定操作按钮 - 放在右侧 */}
+          {canBind && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: 'auto', marginRight: '0.8rem' }}>
+              {isBindingMode ? (
+                // 绑定模式：显示提示和取消按钮
+                <>
+                  <span style={{
+                    fontSize: '0.8rem',
+                    color: '#66c0f4',
+                    fontWeight: 500,
+                    animation: 'pulse 1.5s infinite'
+                  }}>
+                    ⚡ 请在右侧章节列表中选择
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      exitBindingMode();
+                    }}
+                    style={{
+                      padding: '0.3rem 0.7rem',
+                      borderRadius: '0.4rem',
+                      border: '1px solid rgba(255, 128, 128, 0.5)',
+                      background: 'rgba(255, 128, 128, 0.15)',
+                      color: '#ff8080',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      fontSize: '0.75rem'
+                    }}
+                  >
+                    取消
+                  </button>
+                </>
+              ) : boundChapter ? (
+                // 已绑定：只显示解绑按钮（绑定信息已移到左侧）
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('确定要解除绑定吗？解除后需要重新绑定才能上传到 Steam。')) {
+                      unbindDraft(activeDraft.id);
+                    }
+                  }}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    borderRadius: '0.4rem',
+                    border: '1px solid rgba(255, 128, 128, 0.4)',
+                    background: 'transparent',
+                    color: '#ff8080',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontSize: '0.7rem',
+                    opacity: 0.8
+                  }}
+                >
+                  解绑
+                </button>
+              ) : (
+                // 未绑定：显示绑定按钮
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    enterBindingMode();
+                  }}
+                  style={{
+                    padding: '0.35rem 0.8rem',
+                    borderRadius: '0.4rem',
+                    border: '1px solid rgba(102, 192, 244, 0.5)',
+                    background: 'rgba(102, 192, 244, 0.15)',
+                    color: '#66c0f4',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  绑定章节
+                </button>
+              )}
+            </div>
           )}
         </div>
         <button
@@ -270,7 +409,7 @@ const DraftPanel: React.FC = () => {
                       color: '#d7e8ff',
                       lineHeight: 1.3
                     }}>
-                      {extractTitleText(draft.title) || '未命名章节'}
+                      {getDraftDisplayTitle(draft)}
                     </span>
 
                     {/* 第二行：草稿名（中号灰色） */}

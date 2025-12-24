@@ -73,6 +73,10 @@ type GuideState = {
   // 是否有未保存的更改
   isDirty: boolean;
 
+  // === 绑定模式 ===
+  // 是否处于绑定模式（等待用户选择章节）
+  isBindingMode: boolean;
+
   // === 模式管理 ===
   setMode: (mode: EditorMode) => void;
 
@@ -97,6 +101,14 @@ type GuideState = {
   setDirty: (dirty: boolean) => void;
   markDirty: () => void;
   markClean: () => void;
+
+  // === 绑定模式管理 ===
+  enterBindingMode: () => void;
+  exitBindingMode: () => void;
+  bindDraftToChapter: (chapterId: string) => { success: boolean; conflictDraft?: Draft };
+  forceBindDraftToChapter: (chapterId: string) => { success: boolean };
+  unbindDraft: (draftId: string) => void;
+  getDraftByChapterId: (chapterId: string) => Draft | undefined;
 
   // === 向后兼容的别名（将在未来版本移除）===
   /** @deprecated 使用 drafts 替代 */
@@ -130,6 +142,7 @@ export const useGuideStore = create<GuideState>()(
         activeDraftId: null,
         currentChapterId: null,
         isDirty: false,
+        isBindingMode: false,
 
       // === 模式管理 ===
       setMode: (mode) => {
@@ -196,17 +209,15 @@ export const useGuideStore = create<GuideState>()(
           const removed = state.drafts.find((draft: Draft) => draft.id === id) ?? null;
           deletedCache = removed;
 
-          // 如果没有草稿了，保留最后一个
-          if (remaining.length === 0) {
-            return state;
-          }
-
+          // 允许删除最后一个草稿，回到初始状态
           return {
             drafts: remaining,
             activeDraftId:
-              state.activeDraftId === id
-                ? remaining[remaining.length - 1].id
-                : state.activeDraftId,
+              remaining.length === 0
+                ? null
+                : state.activeDraftId === id
+                  ? remaining[remaining.length - 1].id
+                  : state.activeDraftId,
             isDirty: false
           };
         });
@@ -289,6 +300,126 @@ export const useGuideStore = create<GuideState>()(
 
       markClean: () => {
         set({ isDirty: false });
+      },
+
+      // === 绑定模式管理 ===
+      enterBindingMode: () => {
+        const state = get();
+        // 只有在指南模式且有活动草稿时才能进入绑定模式
+        if (state.mode !== 'guide' || !state.activeDraftId) {
+          console.warn('[NASGE] 无法进入绑定模式：需要在指南模式下且有活动草稿');
+          return;
+        }
+        set({ isBindingMode: true });
+        console.log('[NASGE] 进入绑定模式');
+      },
+
+      exitBindingMode: () => {
+        set({ isBindingMode: false });
+        console.log('[NASGE] 退出绑定模式');
+      },
+
+      bindDraftToChapter: (chapterId) => {
+        const state = get();
+        const activeDraftId = state.activeDraftId;
+        const guideId = state.guideInfo?.id;
+
+        if (!activeDraftId || !guideId) {
+          console.warn('[NASGE] 绑定失败：没有活动草稿或指南信息');
+          return { success: false };
+        }
+
+        // 检查是否有其他草稿已绑定到此章节
+        const conflictDraft = state.drafts.find(
+          (d) => d.linkedChapterId === chapterId && d.id !== activeDraftId
+        );
+
+        if (conflictDraft) {
+          // 返回冲突信息，让 UI 层决定是否继续
+          return { success: false, conflictDraft };
+        }
+
+        // 执行绑定
+        set((state) => ({
+          drafts: state.drafts.map((draft) =>
+            draft.id === activeDraftId
+              ? {
+                  ...draft,
+                  linkedChapterId: chapterId,
+                  linkedGuideId: guideId,
+                  updatedAt: Date.now()
+                }
+              : draft
+          ),
+          isBindingMode: false,
+          currentChapterId: chapterId
+        }));
+
+        console.log('[NASGE] 绑定成功', { draftId: activeDraftId, chapterId });
+        return { success: true };
+      },
+
+      unbindDraft: (draftId) => {
+        set((state) => ({
+          drafts: state.drafts.map((draft) =>
+            draft.id === draftId
+              ? {
+                  ...draft,
+                  linkedChapterId: undefined,
+                  linkedGuideId: undefined,
+                  lastSyncedAt: undefined,
+                  updatedAt: Date.now()
+                }
+              : draft
+          ),
+          currentChapterId: null
+        }));
+        console.log('[NASGE] 解除绑定', { draftId });
+      },
+
+      getDraftByChapterId: (chapterId) => {
+        return get().drafts.find((d) => d.linkedChapterId === chapterId);
+      },
+
+      // 强制绑定（解除旧绑定并绑定新草稿）
+      forceBindDraftToChapter: (chapterId: string) => {
+        const state = get();
+        const activeDraftId = state.activeDraftId;
+        const guideId = state.guideInfo?.id;
+
+        if (!activeDraftId || !guideId) {
+          return { success: false };
+        }
+
+        set((state) => ({
+          drafts: state.drafts.map((draft) => {
+            // 解除旧绑定
+            if (draft.linkedChapterId === chapterId && draft.id !== activeDraftId) {
+              return {
+                ...draft,
+                linkedChapterId: undefined,
+                linkedGuideId: undefined,
+                lastSyncedAt: undefined,
+                updatedAt: Date.now()
+              };
+            }
+            // 绑定当前草稿
+            if (draft.id === activeDraftId) {
+              return {
+                ...draft,
+                linkedChapterId: chapterId,
+                linkedGuideId: guideId,
+                updatedAt: Date.now()
+              };
+            }
+            return draft;
+          }),
+          isBindingMode: false,
+          currentChapterId: chapterId
+        }));
+
+        console.log('[NASGE] 强制绑定成功', { draftId: activeDraftId, chapterId });
+        return { success: true };
       },
 
       // === 向后兼容的别名 ===
