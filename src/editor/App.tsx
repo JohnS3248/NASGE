@@ -6,9 +6,6 @@ import { JSONContent } from "@tiptap/core";
 import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
 import UploadStatusHUD from "./components/UploadStatusHUD";
-import SteamImagePool from "./components/SteamImagePool";
-import { deleteSteamImage } from "./services/steamBridge";
-import { useSteamGuideImageStore } from "./stores/useSteamGuideImageStore";
 import { useEditorMode } from "./hooks/useEditorMode";
 import { useChapterSync } from "./hooks/useChapterSync";
 import EditorHeader from "./components/EditorHeader";
@@ -112,27 +109,6 @@ const App: React.FC = () => {
       setIsUploading(false);
     }
   }, [activeDraft, pushDraft]);
-
-  const handleDeleteUploadedRecord = useCallback(async (previewId: string) => {
-    loggers.image.info("请求删除 Steam 预览记录", previewId);
-
-    if (!window.confirm("确定要删除这张图片吗？删除后无法恢复。")) {
-      return;
-    }
-
-    try {
-      await deleteSteamImage(previewId, "chapter-preview");
-
-      const steamImageStore = useSteamGuideImageStore.getState();
-      steamImageStore.removeItem(previewId);
-
-      window.alert("图片已成功删除。");
-    } catch (error) {
-      loggers.image.error("删除图片失败", error);
-      const message = error instanceof Error ? error.message : "删除失败，未知错误";
-      window.alert(`删除图片失败：${message}`);
-    }
-  }, []);
 
   return (
     <div
@@ -357,9 +333,6 @@ const App: React.FC = () => {
               }}
             />
           )}
-
-          {/* 图片池 */}
-          <SteamImagePool onDelete={handleDeleteUploadedRecord} />
         </main>
 
         {/* 右侧章节导航 */}

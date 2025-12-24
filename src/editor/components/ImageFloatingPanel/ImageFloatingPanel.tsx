@@ -2,11 +2,12 @@
  * 图片悬浮窗主组件
  * 支持拖拽移动、尺寸调整、折叠、最小化
  */
-import React, { useCallback, useRef, useEffect, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useImagePanelStore";
-import { useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
+import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
+import ImageGrid from "./ImageGrid";
 import {
   panelContainerStyle,
   contentStyle,
@@ -18,6 +19,8 @@ import {
 import { loggers } from "../../../shared/logger";
 
 const ImageFloatingPanel: React.FC = () => {
+  // ============ 所有 Hooks 必须在 early return 之前 ============
+
   // Store 状态
   const {
     isOpen,
@@ -27,6 +30,7 @@ const ImageFloatingPanel: React.FC = () => {
     size,
     setPosition,
     setSize,
+    open,
     close,
     minimize,
     restore,
@@ -34,7 +38,7 @@ const ImageFloatingPanel: React.FC = () => {
     expand
   } = useImagePanelStore();
 
-  const { items: images } = useSteamGuideImageStore();
+  const { items: images, status: imagePoolStatus, refresh: refreshImagePool } = useSteamGuideImageStore();
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
@@ -48,18 +52,15 @@ const ImageFloatingPanel: React.FC = () => {
     height: number;
   } | null>(null);
 
-  // 如果未打开，不渲染
-  if (!isOpen) {
-    return null;
-  }
-
-  // 如果最小化，显示最小化面板
-  if (isMinimized) {
-    return <MinimizedPanel imageCount={images.length} onRestore={restore} />;
-  }
+  // ============ 图片双击（插入到编辑器） ============
+  const handleImageDoubleClick = useCallback((image: ImageWithState) => {
+    loggers.image.info("双击图片", { fileName: image.fileName, previewId: image.previewId });
+    // TODO: Phase 2 实现插入到编辑器
+    window.alert(`双击图片: ${image.fileName}\n(插入功能将在 Phase 2 实现)`);
+  }, []);
 
   // ============ 拖拽移动 ============
-  const handleDragStart = (e: React.MouseEvent) => {
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return; // 只处理左键
     e.preventDefault();
 
@@ -73,10 +74,10 @@ const ImageFloatingPanel: React.FC = () => {
     };
     setIsDragging(true);
     loggers.image.verbose("开始拖拽悬浮窗");
-  };
+  }, [position, size]);
 
   // ============ 尺寸调整 ============
-  const handleResizeStart = (e: React.MouseEvent, direction: string) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent, direction: string) => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
@@ -91,16 +92,82 @@ const ImageFloatingPanel: React.FC = () => {
     };
     setIsResizing(direction);
     loggers.image.verbose("开始调整尺寸", direction);
-  };
+  }, [position, size]);
 
   // ============ 折叠切换 ============
-  const handleCollapseToggle = () => {
+  const handleCollapseToggle = useCallback(() => {
     if (isCollapsed) {
       expand();
     } else {
       collapse();
     }
-  };
+  }, [isCollapsed, expand, collapse]);
+
+  // ============ 拖拽结束 ============
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(null);
+  }, []);
+
+  // ============ 图片池初始化加载 ============
+  useEffect(() => {
+    if (imagePoolStatus === "idle") {
+      void refreshImagePool();
+    }
+  }, [imagePoolStatus, refreshImagePool]);
+
+  // ============ Early Returns（在所有 hooks 之后） ============
+
+  // 如果未打开，显示触发按钮（固定在左下角）
+  if (!isOpen) {
+    return (
+      <button
+        type="button"
+        onClick={open}
+        style={{
+          position: "fixed",
+          left: 16,
+          bottom: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 16px",
+          background: COLORS.panelBg,
+          border: `1px solid ${COLORS.border}`,
+          borderRadius: SIZES.borderRadius,
+          boxShadow: `0 4px 16px ${COLORS.shadow}`,
+          cursor: "pointer",
+          zIndex: Z_INDEX.minimized,
+          fontSize: 13,
+          fontWeight: 600,
+          color: COLORS.textPrimary,
+          transition: "all 0.15s ease"
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = COLORS.borderHover;
+          e.currentTarget.style.background = COLORS.panelBgHover;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = COLORS.border;
+          e.currentTarget.style.background = COLORS.panelBg;
+        }}
+      >
+        <span style={{ fontSize: 16 }}>📷</span>
+        <span>图片池</span>
+        <span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400 }}>
+          ({images.length})
+        </span>
+      </button>
+    );
+  }
+
+  // 如果最小化，显示最小化面板（可拖动的小窗口）
+  if (isMinimized) {
+    return <MinimizedPanel imageCount={images.length} onRestore={restore} />;
+  }
 
   // 计算当前高度
   const currentHeight = isCollapsed ? SIZES.headerHeight : size.height;
@@ -130,24 +197,10 @@ const ImageFloatingPanel: React.FC = () => {
         {/* 内容区（折叠时隐藏） */}
         {!isCollapsed && (
           <div style={contentStyle}>
-            {/* TODO: 工具栏 */}
-            {/* TODO: 图片网格 */}
-            {/* TODO: 分页 */}
-            <div style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              color: COLORS.textMuted,
-              fontSize: 14
-            }}>
-              <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }}>📷</div>
-              <div>图片网格区域</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>
-                共 {images.length} 张图片
-              </div>
-            </div>
+            <ImageGrid
+              images={images}
+              onImageDoubleClick={handleImageDoubleClick}
+            />
           </div>
         )}
 
@@ -165,7 +218,6 @@ const ImageFloatingPanel: React.FC = () => {
             <div
               style={{
                 ...resizeHandleStyle("corner"),
-                // 角落手柄添加视觉指示
                 background: "transparent"
               }}
               onMouseDown={(e) => handleResizeStart(e, "corner")}
@@ -199,12 +251,10 @@ const ImageFloatingPanel: React.FC = () => {
         isDragging={isDragging}
         isResizing={isResizing}
         dragStartRef={dragStartRef}
-        position={position}
-        size={size}
         setPosition={setPosition}
         setSize={setSize}
-        onDragEnd={() => setIsDragging(false)}
-        onResizeEnd={() => setIsResizing(null)}
+        onDragEnd={handleDragEnd}
+        onResizeEnd={handleResizeEnd}
       />
     </>
   );
@@ -222,8 +272,6 @@ interface DragResizeHandlerProps {
     width: number;
     height: number;
   } | null>;
-  position: PanelPosition;
-  size: PanelSize;
   setPosition: (pos: PanelPosition) => void;
   setSize: (size: PanelSize) => void;
   onDragEnd: () => void;
@@ -239,7 +287,8 @@ const DragResizeHandler: React.FC<DragResizeHandlerProps> = ({
   onDragEnd,
   onResizeEnd
 }) => {
-  useEffect(() => {
+  // 使用 useEffect 监听全局鼠标事件
+  React.useEffect(() => {
     if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {

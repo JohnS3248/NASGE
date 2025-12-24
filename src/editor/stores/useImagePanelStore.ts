@@ -153,7 +153,7 @@ const DEFAULT_SETTINGS: ImagePanelSettings = {
   itemsPerPage: 8,
   showFileName: true,
   showStatusIndicator: true,
-  autoOpenOnStart: true,
+  autoOpenOnStart: false, // 默认不自动打开，显示为左下角按钮
   rememberPosition: true,
   defaultInsertSize: "original",
   defaultInsertAlignment: "inline",
