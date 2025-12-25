@@ -2,12 +2,12 @@
  * 图片网格组件
  * 显示图片列表，支持分页和选择
  * 支持外部文件拖入
- * 支持双击上传待上传图片
+ * 支持双击上传待上传图片（通过队列）
  */
 import React, { useMemo, useCallback, useState } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
-import { uploadSteamImage } from "../../services/steamBridge";
+import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
 import ImageCard from "./ImageCard";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
@@ -34,7 +34,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   } = useImagePanelStore();
 
   const thumbnailSize = getThumbnailSizePixels();
-  const { setImageState, setPreviewId, setUploadProgress } = useSteamGuideImageStore();
+  const { setImageState, removeItem } = useSteamGuideImageStore();
+
+  // 订阅上传队列状态
+  const queueState = useUploadQueueState();
 
   // 计算分页
   const totalPages = useMemo(() => {
@@ -76,62 +79,60 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const { addLocalImage } = useSteamGuideImageStore();
 
-  // 上传单张图片到 Steam
-  const uploadImageToSteam = useCallback(async (image: ImageWithState): Promise<boolean> => {
-    if (!image.localUrl || image.state !== "pending") {
-      return false;
-    }
-
-    const imageId = image.fileName;
-
-    try {
-      setImageState(imageId, "uploading");
-      setUploadProgress(imageId, 0);
-
-      loggers.image.info("开始上传图片到 Steam", { fileName: image.fileName });
-
-      // 从 localUrl 获取 Blob
-      const response = await fetch(image.localUrl);
-      const blob = await response.blob();
-      const file = new File([blob], image.fileName, { type: blob.type || "image/png" });
-
-      setUploadProgress(imageId, 30);
-
-      // 上传到 Steam
-      const result = await uploadSteamImage("chapter-preview", file, image.fileName);
-
-      setUploadProgress(imageId, 100);
-
-      // uploadSteamImage 返回的是 previewIds 数组
-      const previewId = result.previewIds?.[0];
-      if (previewId) {
-        setPreviewId(imageId, previewId);
-        loggers.image.info("图片上传成功", {
-          fileName: image.fileName,
-          previewId
-        });
-        return true;
-      } else {
-        throw new Error("上传成功但未返回 previewId");
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      loggers.image.error("图片上传失败", { fileName: image.fileName, error: errorMessage });
-      setImageState(imageId, "error", errorMessage);
-      return false;
-    }
-  }, [setImageState, setPreviewId, setUploadProgress]);
-
-  // 处理双击事件 - 如果是待上传图片则触发上传
+  // 处理双击事件 - 待上传或失败的图片加入上传队列
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {
     if (image.state === "pending") {
-      // 待上传图片：触发上传
-      void uploadImageToSteam(image);
+      // 待上传图片：加入上传队列
+      loggers.image.info("双击加入上传队列", { fileName: image.fileName });
+      queueImageUpload(image);
+    } else if (image.state === "error") {
+      // 失败图片：重置状态后加入上传队列重试
+      loggers.image.info("双击重试上传", { fileName: image.fileName });
+      setImageState(image.fileName, "pending");
+      queueImageUpload({ ...image, state: "pending", uploadError: undefined });
     } else {
-      // 其他状态：使用原有的双击行为
+      // 其他状态（success, uploading）：使用原有的双击行为
       onImageDoubleClick(image);
     }
-  }, [uploadImageToSteam, onImageDoubleClick]);
+  }, [setImageState, onImageDoubleClick]);
+
+  // 获取图片在队列中的位置
+  const getQueuePosition = useCallback((imageId: string): number => {
+    // 检查是否正在上传
+    if (queueState.currentItem?.id === imageId) {
+      return 0;
+    }
+    // 检查是否在等待队列中
+    const index = queueState.queue.findIndex(item => item.id === imageId);
+    return index >= 0 ? index + 1 : -1;
+  }, [queueState]);
+
+  // 队列总长度（包括正在上传的）
+  const queueLength = queueState.queue.length + (queueState.currentItem ? 1 : 0);
+
+  // 删除图片处理
+  const handleDeleteImage = useCallback((image: ImageWithState) => {
+    const imageId = image.previewId || image.fileName;
+    loggers.image.info("删除图片", { fileName: image.fileName, imageId });
+
+    // 先从上传队列中移除（避免队列尝试上传已删除的图片）
+    uploadQueue.dequeue(image.fileName);
+
+    // 从图片池中移除
+    if (image.previewId) {
+      removeItem(image.previewId);
+    } else {
+      // 本地图片使用 fileName 作为标识，需要手动从 items 中移除
+      useSteamGuideImageStore.setState((state) => ({
+        items: state.items.filter(item => item.fileName !== image.fileName)
+      }));
+    }
+
+    // 释放本地 URL
+    if (image.localUrl) {
+      URL.revokeObjectURL(image.localUrl);
+    }
+  }, [removeItem]);
 
   // 检查是否有图片文件
   const hasImageFiles = useCallback((event: React.DragEvent) => {
@@ -214,15 +215,12 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       addedImages.push(image);
     }
 
-    // 如果启用了自动上传，则自动上传添加的图片
+    // 如果启用了自动上传，则将图片加入上传队列
     if (autoUploadOnDrop && addedImages.length > 0) {
-      loggers.image.info("自动上传拖入的图片", { count: addedImages.length });
-      for (const image of addedImages) {
-        // 串行上传避免并发问题
-        await uploadImageToSteam(image);
-      }
+      loggers.image.info("自动加入上传队列", { count: addedImages.length });
+      queueBatchUpload(addedImages);
     }
-  }, [addLocalImage, autoUploadOnDrop, uploadImageToSteam]);
+  }, [addLocalImage, autoUploadOnDrop]);
 
   // 空状态（也支持拖入）
   if (images.length === 0) {
@@ -290,6 +288,9 @@ const ImageGrid: React.FC<ImageGridProps> = ({
               onSelect={handleSelect}
               onDoubleClick={handleImageDoubleClick}
               getSelectedImages={getSelectedImages}
+              onDelete={handleDeleteImage}
+              queuePosition={getQueuePosition(image.fileName)}
+              queueLength={queueLength}
             />
           );
         })}

@@ -33,6 +33,12 @@ interface ImageCardProps {
   onDoubleClick: (image: ImageWithState) => void;
   /** 获取当前选中的所有图片（用于批量拖拽） */
   getSelectedImages?: () => ImageWithState[];
+  /** 删除图片回调 */
+  onDelete?: (image: ImageWithState) => void;
+  /** 队列位置：-1=不在队列, 0=正在上传, 1+=等待中的位置 */
+  queuePosition?: number;
+  /** 队列总长度 */
+  queueLength?: number;
 }
 
 const ImageCard: React.FC<ImageCardProps> = ({
@@ -41,7 +47,10 @@ const ImageCard: React.FC<ImageCardProps> = ({
   isFocused,
   onSelect,
   onDoubleClick,
-  getSelectedImages
+  getSelectedImages,
+  onDelete,
+  queuePosition = -1,
+  queueLength = 0
 }) => {
   const { showFileName, showStatusIndicator, getThumbnailSizePixels } = useImagePanelStore();
   const thumbnailSize = getThumbnailSizePixels();
@@ -52,21 +61,44 @@ const ImageCard: React.FC<ImageCardProps> = ({
   // 获取显示的 URL
   const displayUrl = image.localUrl || image.thumbnailUrl || image.originalUrl;
 
+  // 计算显示状态
+  // queuePosition: -1=不在队列, 0=正在上传, 1+=等待中的位置
+  const isInQueue = queuePosition >= 0;
+  const isCurrentlyUploading = queuePosition === 0;
+
   // 状态颜色映射
   const statusColors: Record<string, string> = {
     pending: COLORS.pending,
     uploading: COLORS.warning,
     success: COLORS.success,
-    error: COLORS.error
+    error: COLORS.error,
+    queued: COLORS.accent  // 队列中使用蓝色
   };
 
-  // 状态文字映射
-  const statusText: Record<string, string> = {
-    pending: "待上传",
-    uploading: "上传中",
-    success: "已上传",
-    error: "失败"
+  // 获取实际显示的状态
+  const getDisplayStatus = (): { text: string; color: string } => {
+    if (image.state === "pending") {
+      if (isCurrentlyUploading) {
+        return { text: "上传中", color: statusColors.uploading };
+      }
+      if (isInQueue) {
+        return { text: `队列中 (${queuePosition}/${queueLength})`, color: statusColors.queued };
+      }
+      return { text: "待上传", color: statusColors.pending };
+    }
+    if (image.state === "uploading") {
+      return { text: "上传中", color: statusColors.uploading };
+    }
+    if (image.state === "success") {
+      return { text: "已上传", color: statusColors.success };
+    }
+    if (image.state === "error") {
+      return { text: "失败", color: statusColors.error };
+    }
+    return { text: "未知", color: COLORS.textMuted };
   };
+
+  const displayStatus = getDisplayStatus();
 
   // 点击处理
   const handleClick = useCallback((e: React.MouseEvent) => {
@@ -163,7 +195,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      title={`${image.fileName}\n状态: ${statusText[image.state]}\n拖拽到编辑器插入`}
+      title={`${image.fileName}\n状态: ${displayStatus.text}\n拖拽到编辑器插入`}
     >
       {/* 缩略图区域 */}
       <div
@@ -178,6 +210,47 @@ const ImageCard: React.FC<ImageCardProps> = ({
           margin: 2
         }}
       >
+        {/* 删除按钮 */}
+        {isHovered && onDelete && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(image);
+            }}
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 2,
+              width: 18,
+              height: 18,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "rgba(0, 0, 0, 0.7)",
+              border: "none",
+              borderRadius: "50%",
+              color: COLORS.textSecondary,
+              fontSize: 12,
+              cursor: "pointer",
+              zIndex: 10,
+              padding: 0,
+              lineHeight: 1
+            }}
+            title="删除图片"
+            onMouseEnter={(e) => {
+              (e.target as HTMLButtonElement).style.background = COLORS.error;
+              (e.target as HTMLButtonElement).style.color = "#fff";
+            }}
+            onMouseLeave={(e) => {
+              (e.target as HTMLButtonElement).style.background = "rgba(0, 0, 0, 0.7)";
+              (e.target as HTMLButtonElement).style.color = COLORS.textSecondary;
+            }}
+          >
+            ×
+          </button>
+        )}
+
         {imageError || !displayUrl ? (
           // 加载失败占位符
           <div
@@ -259,11 +332,11 @@ const ImageCard: React.FC<ImageCardProps> = ({
                 display: "flex",
                 alignItems: "center",
                 gap: 4,
-                color: statusColors[image.state]
+                color: displayStatus.color
               }}
             >
               <span style={{ fontSize: 8 }}>●</span>
-              <span>{statusText[image.state]}</span>
+              <span>{displayStatus.text}</span>
             </div>
           )}
         </div>
