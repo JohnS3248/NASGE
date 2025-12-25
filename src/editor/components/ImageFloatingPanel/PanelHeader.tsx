@@ -13,18 +13,14 @@ import {
 
 interface PanelHeaderProps {
   imageCount: number;
-  isCollapsed: boolean;
   onDragStart: (e: React.MouseEvent) => void;
-  onCollapse: () => void;
   onMinimize: () => void;
   onClose: () => void;
 }
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   imageCount,
-  isCollapsed,
   onDragStart,
-  onCollapse,
   onMinimize,
   onClose
 }) => {
@@ -66,19 +62,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         style={headerButtonsStyle}
         onMouseDown={(e) => e.stopPropagation()} // 防止触发拖拽
       >
-        {/* 折叠/展开 */}
-        <button
-          type="button"
-          title={isCollapsed ? "展开" : "折叠"}
-          style={getButtonStyle("collapse")}
-          onMouseEnter={() => setHoveredButton("collapse")}
-          onMouseLeave={() => setHoveredButton(null)}
-          onClick={onCollapse}
-        >
-          {isCollapsed ? "▼" : "▲"}
-        </button>
-
-        {/* 最小化 */}
+        {/* 最小化（收到左下角小面板） */}
         <button
           type="button"
           title="最小化"
@@ -87,10 +71,10 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           onMouseLeave={() => setHoveredButton(null)}
           onClick={onMinimize}
         >
-          ─
+          ▼
         </button>
 
-        {/* 关闭 */}
+        {/* 关闭（收到左下角按钮） */}
         <button
           type="button"
           title="关闭"
@@ -99,7 +83,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           onMouseLeave={() => setHoveredButton(null)}
           onClick={onClose}
         >
-          ✕
+          ─
         </button>
       </div>
     </div>

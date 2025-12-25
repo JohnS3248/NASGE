@@ -31,17 +31,6 @@ export {};
           JSON.stringify(data)
         );
         console.log('[NASGE 页面桥接 MAIN] ✅ gPreviewImages 已写入 DOM，共', data.length, '张图片');
-
-        // 打印每张图片的信息
-        data.forEach((img: any, idx: number) => {
-          console.log(`[NASGE 页面桥接 MAIN] 图片${idx}:`, {
-            previewid: img.previewid,
-            filename: img.filename,
-            url: img.url,
-            hasLetterbox: img.url && img.url.includes('Letterbox'),
-            hasImcolor: img.url && img.url.includes('imcolor')
-          });
-        });
       } else {
         console.warn('[NASGE 页面桥接 MAIN] ⚠️ gPreviewImages 不存在或为空');
       }
@@ -57,11 +46,10 @@ export {};
     exposeGPreviewImages();
   }
 
-  // 延迟尝试（以防 gPreviewImages 是异步加载的）
+  // 简化延迟：只在关键时间点尝试
   setTimeout(exposeGPreviewImages, 100);
   setTimeout(exposeGPreviewImages, 500);
   setTimeout(exposeGPreviewImages, 1000);
-  setTimeout(exposeGPreviewImages, 2000);
 
-  console.log('[NASGE 页面桥接 MAIN] 已设置多次尝试');
+  console.log('[NASGE 页面桥接 MAIN] 已设置延迟尝试');
 })();

@@ -8,6 +8,7 @@ import React, { useMemo, useCallback, useState } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
+import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
@@ -110,29 +111,62 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 队列总长度（包括正在上传的）
   const queueLength = queueState.queue.length + (queueState.currentItem ? 1 : 0);
 
-  // 删除图片处理
-  const handleDeleteImage = useCallback((image: ImageWithState) => {
-    const imageId = image.previewId || image.fileName;
-    loggers.image.info("删除图片", { fileName: image.fileName, imageId });
+  // 删除本地图片（未上传的）
+  const doDeleteLocalImage = useCallback((image: ImageWithState) => {
+    loggers.image.info("删除本地图片", { fileName: image.fileName });
 
-    // 先从上传队列中移除（避免队列尝试上传已删除的图片）
+    // 从上传队列中移除
     uploadQueue.dequeue(image.fileName);
 
     // 从图片池中移除
-    if (image.previewId) {
-      removeItem(image.previewId);
-    } else {
-      // 本地图片使用 fileName 作为标识，需要手动从 items 中移除
-      useSteamGuideImageStore.setState((state) => ({
-        items: state.items.filter(item => item.fileName !== image.fileName)
-      }));
-    }
+    useSteamGuideImageStore.setState((state) => ({
+      items: state.items.filter(item => item.fileName !== image.fileName)
+    }));
 
     // 释放本地 URL
     if (image.localUrl) {
       URL.revokeObjectURL(image.localUrl);
     }
+  }, []);
+
+  // 删除 Steam 服务器端图片（已上传的）
+  const doDeleteSteamImage = useCallback(async (image: ImageWithState) => {
+    if (!image.previewId) return;
+
+    loggers.image.info("删除 Steam 图片", { fileName: image.fileName, previewId: image.previewId });
+
+    try {
+      // 调用 Steam API 删除服务器端图片
+      await deleteSteamImage(image.previewId);
+      loggers.image.info("Steam 图片删除成功", { previewId: image.previewId });
+
+      // 从本地图片池中移除
+      removeItem(image.previewId);
+
+      // 释放本地 URL
+      if (image.localUrl) {
+        URL.revokeObjectURL(image.localUrl);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      loggers.image.error("Steam 图片删除失败", { previewId: image.previewId, error: errorMsg });
+      window.alert(`删除失败: ${errorMsg}`);
+    }
   }, [removeItem]);
+
+  // 删除图片处理
+  const handleDeleteImage = useCallback((image: ImageWithState) => {
+    // 已上传的图片：需要确认并删除 Steam 服务器端
+    if (image.state === "success" && image.previewId) {
+      const confirmed = window.confirm(`确认删除 "${image.fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`);
+      if (confirmed) {
+        void doDeleteSteamImage(image);
+      }
+    } else {
+      // 未上传的本地图片：直接删除
+      doDeleteLocalImage(image);
+    }
+  }, [doDeleteSteamImage, doDeleteLocalImage]);
 
   // 检查是否有图片文件
   const hasImageFiles = useCallback((event: React.DragEvent) => {

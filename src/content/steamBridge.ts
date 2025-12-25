@@ -381,35 +381,54 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     consumerAppId = "";
   }
 
-  const params = new URLSearchParams();
-  if (consumerAppId) {
-    params.set("appid", consumerAppId);
+  // 分页加载所有图片
+  const allImages: SteamGuideImage[] = [];
+  let currentPage = 1;
+  const maxPages = 20; // 防止无限循环
+
+  while (currentPage <= maxPages) {
+    const params = new URLSearchParams();
+    if (consumerAppId) {
+      params.set("appid", consumerAppId);
+    }
+    params.set("sessionid", sessionId);
+    params.set("id", guideId);
+    params.set("filetype", "4");
+    params.set("p", String(currentPage));
+
+    console.info("[NASGE] 发起 AJAX 请求", { page: currentPage, params: params.toString() });
+
+    const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: params.toString(),
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      throw new Error(`拉取 Steam 图片池失败：HTTP ${response.status}`);
+    }
+
+    const html = await response.text();
+    console.info("[NASGE] AJAX 响应长度", { page: currentPage, length: html.length });
+
+    const pageImages = parseGuideImagePool(html);
+    console.info("[NASGE] 本页图片数量", { page: currentPage, count: pageImages.length });
+
+    if (pageImages.length === 0) {
+      // 没有更多图片了
+      break;
+    }
+
+    allImages.push(...pageImages);
+    currentPage++;
   }
-  params.set("sessionid", sessionId);
-  params.set("id", guideId);
-  params.set("filetype", "4");
-  params.set("p", "1");
 
-  console.info("[NASGE] 发起 AJAX 请求", params.toString());
-
-  const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-      "X-Requested-With": "XMLHttpRequest"
-    },
-    body: params.toString(),
-    credentials: "include"
-  });
-
-  if (!response.ok) {
-    throw new Error(`拉取 Steam 图片池失败：HTTP ${response.status}`);
-  }
-
-  const html = await response.text();
-  console.info("[NASGE] AJAX 响应长度", html.length);
-
-  return parseGuideImagePool(html);
+  console.info("[NASGE] AJAX 加载完成，共", allImages.length, "张图片");
+  return allImages;
 }
 
 function mapSteamUploadError(successCode: string, errorCode: string | null): string {

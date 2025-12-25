@@ -314,10 +314,15 @@ class UploadQueueManager {
         // Error 29: 图片已存在于 Steam，不算失败
         loggers.image.warn("图片已存在于 Steam (Error 29)", { fileName: item.id });
         this.skippedCount++;
+
+        // 更新图片状态为"已存在"（视为成功）
+        const store = useSteamGuideImageStore.getState();
+        // 标记为成功状态，等待刷新获取 previewId
+        store.setImageState(item.id, "success");
+
         this.emit("upload-duplicate", item, errorMessage);
 
-        // 尝试刷新图片池获取已有的 previewId
-        const store = useSteamGuideImageStore.getState();
+        // 刷新图片池获取已有的 previewId
         void store.refresh();
       } else if (item.retryCount < this.config.maxRetries) {
         // 其他错误：重试
@@ -334,6 +339,11 @@ class UploadQueueManager {
       } else {
         // 重试次数已用完
         this.failedCount++;
+
+        // 更新图片状态为失败
+        const store = useSteamGuideImageStore.getState();
+        store.setImageState(item.id, "error", errorMessage);
+
         this.emit("upload-failed", item, errorMessage);
         loggers.image.error("上传失败，已达最大重试次数", {
           fileName: item.id,
@@ -406,20 +416,22 @@ class UploadQueueManager {
 
   /**
    * 检查是否为 Error 29 (DuplicateRequest)
-   * Steam 返回的错误信息可能包含 "29" 或 "DuplicateRequest"
+   * Steam 返回格式：错误代码：29 或 Error code: 29
    */
   private isDuplicateRequestError(error: unknown): boolean {
     if (!error) return false;
 
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const lowerMessage = errorMessage.toLowerCase();
 
-    // 检查常见的 Error 29 标识
+    // 检测模式：
+    // 1. 独立的数字 29（不匹配 129, 290 等）
+    // 2. 英文关键词
     return (
-      errorMessage.includes("29") ||
-      errorMessage.includes("DuplicateRequest") ||
-      errorMessage.includes("duplicate") ||
-      errorMessage.includes("already exists") ||
-      errorMessage.includes("已存在")
+      /\b29\b/.test(errorMessage) ||
+      lowerMessage.includes("duplicaterequest") ||
+      lowerMessage.includes("duplicate") ||
+      lowerMessage.includes("already exists")
     );
   }
 

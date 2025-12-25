@@ -25,7 +25,6 @@ const ImageFloatingPanel: React.FC = () => {
   const {
     isOpen,
     isMinimized,
-    isCollapsed,
     position,
     size,
     setPosition,
@@ -33,9 +32,7 @@ const ImageFloatingPanel: React.FC = () => {
     open,
     close,
     minimize,
-    restore,
-    collapse,
-    expand
+    restore
   } = useImagePanelStore();
 
   const { items: images, status: imagePoolStatus, refresh: refreshImagePool } = useSteamGuideImageStore();
@@ -93,15 +90,6 @@ const ImageFloatingPanel: React.FC = () => {
     setIsResizing(direction);
     loggers.image.verbose("开始调整尺寸", direction);
   }, [position, size]);
-
-  // ============ 折叠切换 ============
-  const handleCollapseToggle = useCallback(() => {
-    if (isCollapsed) {
-      expand();
-    } else {
-      collapse();
-    }
-  }, [isCollapsed, expand, collapse]);
 
   // ============ 拖拽结束 ============
   const handleDragEnd = useCallback(() => {
@@ -169,9 +157,6 @@ const ImageFloatingPanel: React.FC = () => {
     return <MinimizedPanel imageCount={images.length} onRestore={restore} />;
   }
 
-  // 计算当前高度
-  const currentHeight = isCollapsed ? SIZES.headerHeight : size.height;
-
   return (
     <>
       <div
@@ -180,70 +165,62 @@ const ImageFloatingPanel: React.FC = () => {
           left: position.x,
           top: position.y,
           width: size.width,
-          height: currentHeight,
+          height: size.height,
           zIndex: isDragging || isResizing ? Z_INDEX.panelActive : Z_INDEX.panel
         }}
       >
         {/* 标题栏 */}
         <PanelHeader
           imageCount={images.length}
-          isCollapsed={isCollapsed}
           onDragStart={handleDragStart}
-          onCollapse={handleCollapseToggle}
           onMinimize={minimize}
           onClose={close}
         />
 
-        {/* 内容区（折叠时隐藏） */}
-        {!isCollapsed && (
-          <div style={contentStyle}>
-            <ImageGrid
-              images={images}
-              onImageDoubleClick={handleImageDoubleClick}
-            />
-          </div>
-        )}
+        {/* 内容区 */}
+        <div style={contentStyle}>
+          <ImageGrid
+            images={images}
+            onImageDoubleClick={handleImageDoubleClick}
+          />
+        </div>
 
-        {/* 调整大小手柄（折叠时隐藏） */}
-        {!isCollapsed && (
-          <>
-            <div
-              style={resizeHandleStyle("right")}
-              onMouseDown={(e) => handleResizeStart(e, "right")}
+        {/* 调整大小手柄 */}
+        <div
+          style={resizeHandleStyle("right")}
+          onMouseDown={(e) => handleResizeStart(e, "right")}
+        />
+        <div
+          style={resizeHandleStyle("bottom")}
+          onMouseDown={(e) => handleResizeStart(e, "bottom")}
+        />
+        <div
+          style={{
+            ...resizeHandleStyle("corner"),
+            background: "transparent"
+          }}
+          onMouseDown={(e) => handleResizeStart(e, "corner")}
+        >
+          {/* 角落调整图标 */}
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            style={{
+              position: "absolute",
+              right: 2,
+              bottom: 2,
+              opacity: 0.3
+            }}
+          >
+            <path
+              d="M10 2L2 10M10 6L6 10M10 10L10 10"
+              stroke={COLORS.textMuted}
+              strokeWidth="1.5"
+              strokeLinecap="round"
             />
-            <div
-              style={resizeHandleStyle("bottom")}
-              onMouseDown={(e) => handleResizeStart(e, "bottom")}
-            />
-            <div
-              style={{
-                ...resizeHandleStyle("corner"),
-                background: "transparent"
-              }}
-              onMouseDown={(e) => handleResizeStart(e, "corner")}
-            >
-              {/* 角落调整图标 */}
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 12 12"
-                style={{
-                  position: "absolute",
-                  right: 2,
-                  bottom: 2,
-                  opacity: 0.3
-                }}
-              >
-                <path
-                  d="M10 2L2 10M10 6L6 10M10 10L10 10"
-                  stroke={COLORS.textMuted}
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </div>
-          </>
-        )}
+          </svg>
+        </div>
       </div>
 
       {/* 全局拖拽/调整事件监听层 */}
