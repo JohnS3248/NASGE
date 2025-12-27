@@ -242,14 +242,37 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       autoUpload: autoUploadOnDrop
     });
 
-    // 添加到图片池
+    // 添加到图片池，收集去重结果
     const addedImages: ImageWithState[] = [];
+    const skippedFiles: { fileName: string; existingFileName: string; reason: string }[] = [];
+
     for (const file of imageFiles) {
-      const image = await addLocalImage(file);
-      addedImages.push(image);
+      const result = await addLocalImage(file);
+
+      if (result.skipped) {
+        skippedFiles.push({
+          fileName: file.name,
+          existingFileName: result.existingFileName || '',
+          reason: result.reason === 'duplicate_uploaded' ? '已上传' : '待上传'
+        });
+      } else {
+        addedImages.push(result.image);
+      }
     }
 
-    // 如果启用了自动上传，则将图片加入上传队列
+    // 显示去重提示
+    if (skippedFiles.length > 0) {
+      if (imageFiles.length === 1) {
+        // 单张图片：显示详细提示
+        window.alert(`"${skippedFiles[0].fileName}" 已存在（${skippedFiles[0].reason}），已跳过`);
+      } else {
+        // 批量拖入：显示统计
+        const msg = `已添加 ${addedImages.length} 张图片\n跳过 ${skippedFiles.length} 张重复图片`;
+        window.alert(msg);
+      }
+    }
+
+    // 如果启用了自动上传，则将新添加的图片加入上传队列
     if (autoUploadOnDrop && addedImages.length > 0) {
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
       queueBatchUpload(addedImages);

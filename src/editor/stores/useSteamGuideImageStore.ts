@@ -24,7 +24,31 @@ export type ImageWithState = SteamGuideImage & {
   localUrl?: string;        // 本地临时 URL（用于未上传图片的预览）
   uploadError?: string;     // 上传错误信息
   uploadProgress?: number;  // 上传进度（0-100）
+  contentHash?: string;     // 内容哈希（用于去重检测）
 };
+
+/**
+ * 添加图片的结果
+ */
+export interface AddImageResult {
+  image: ImageWithState;
+  skipped: boolean;
+  reason?: 'duplicate_uploaded' | 'duplicate_local';
+  existingFileName?: string;
+}
+
+/**
+ * 计算图片内容哈希（SHA-256）
+ * 对于大文件只计算前 1MB
+ */
+async function computeImageHash(file: File): Promise<string> {
+  const MAX_BYTES = 1024 * 1024; // 1MB
+  const slice = file.size > MAX_BYTES ? file.slice(0, MAX_BYTES) : file;
+  const buffer = await slice.arrayBuffer();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 type SteamGuideImageState = {
   items: ImageWithState[];
@@ -46,7 +70,7 @@ type SteamGuideImageState = {
   getImageById: (imageId: string) => ImageWithState | undefined;
 
   // === 本地图片管理 ===
-  addLocalImage: (file: File) => Promise<ImageWithState>;
+  addLocalImage: (file: File) => Promise<AddImageResult>;
 };
 
 export const useSteamGuideImageStore = create<SteamGuideImageState>()(
@@ -180,26 +204,93 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       },
 
       // === 本地图片管理 ===
-      addLocalImage: async (file: File) => {
+      /**
+       * 添加本地图片到图片池
+       * @returns { image, skipped, reason } - skipped=true 表示跳过（重复内容）
+       */
+      addLocalImage: async (file: File): Promise<AddImageResult> => {
+        const items = get().items;
+
+        // Phase 2: 内容哈希去重检测
+        const contentHash = await computeImageHash(file);
+
+        // 检查是否有相同内容的图片（已上传的）
+        const existingByHash = items.find(item =>
+          item.contentHash === contentHash && item.state === "success"
+        );
+        if (existingByHash) {
+          loggers.image.info('检测到重复内容（已上传），跳过添加', {
+            fileName: file.name,
+            existingFileName: existingByHash.fileName,
+            existingPreviewId: existingByHash.previewId
+          });
+          // 跳过，返回已存在的图片信息
+          return {
+            image: existingByHash,
+            skipped: true,
+            reason: 'duplicate_uploaded',
+            existingFileName: existingByHash.fileName
+          };
+        }
+
+        // 检查是否有相同内容的本地图片（待上传）
+        const existingLocalByHash = items.find(item =>
+          item.contentHash === contentHash && item.state === "pending"
+        );
+        if (existingLocalByHash) {
+          loggers.image.info('检测到重复内容（本地），跳过添加', {
+            fileName: file.name,
+            existingFileName: existingLocalByHash.fileName
+          });
+          return {
+            image: existingLocalByHash,
+            skipped: true,
+            reason: 'duplicate_local',
+            existingFileName: existingLocalByHash.fileName
+          };
+        }
+
+        // Phase 1: 文件名去重检测（仅对不同内容的同名文件）
+        let finalFileName = file.name;
+        const existingNames = new Set(items.map(item => item.fileName));
+
+        if (existingNames.has(file.name)) {
+          // 文件名冲突，生成新文件名
+          const baseName = file.name.replace(/\.[^.]+$/, ''); // 去掉扩展名
+          const ext = file.name.match(/\.[^.]+$/)?.[0] || ''; // 获取扩展名
+
+          let counter = 2;
+          while (existingNames.has(`${baseName}_${counter}${ext}`)) {
+            counter++;
+          }
+          finalFileName = `${baseName}_${counter}${ext}`;
+
+          loggers.image.info('文件名冲突，自动重命名', {
+            original: file.name,
+            renamed: finalFileName
+          });
+        }
+
         // 创建本地临时 URL
         const localUrl = URL.createObjectURL(file);
 
         const newImage: ImageWithState = {
           previewId: "", // 未上传时为空
-          fileName: file.name,
+          fileName: finalFileName,
           thumbnailUrl: localUrl,
           localUrl: localUrl,
           state: "pending",
-          uploadProgress: 0
+          uploadProgress: 0,
+          contentHash // 保存哈希用于后续去重
         };
 
         set((state) => ({
           items: [...state.items, newImage]
         }));
 
-        loggers.image.info('添加本地图片到图片池', { fileName: file.name });
+        loggers.image.info('添加本地图片到图片池', { fileName: finalFileName });
 
-        return newImage;
+        return { image: newImage, skipped: false };
       }
     }),
     {
