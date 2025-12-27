@@ -6,7 +6,8 @@ export type EditorConfig = {
   autoUploadOnPaste: boolean;   // 编辑器：粘贴自动上传
   autoUploadOnDrop: boolean;    // 编辑器：拖放自动上传
   autoUploadInPanel: boolean;   // 悬浮窗：拖放/粘贴自动上传
-  promptRenameOnPaste: boolean; // 悬浮窗：粘贴时弹出重命名窗口
+  promptRenameOnPaste: boolean; // 悬浮窗：粘贴时启用内联重命名
+  promptRenameOnDrop: boolean;  // 悬浮窗：拖拽时启用内联重命名
   debugMode: boolean;           // 调试模式开关
 };
 
@@ -15,6 +16,7 @@ type EditorConfigState = EditorConfig & {
   setAutoUploadOnDrop: (enabled: boolean) => void;
   setAutoUploadInPanel: (enabled: boolean) => void;
   setPromptRenameOnPaste: (enabled: boolean) => void;
+  setPromptRenameOnDrop: (enabled: boolean) => void;
   setDebugMode: (enabled: boolean) => void;
   reset: () => void;
 };
@@ -24,6 +26,7 @@ const DEFAULT_CONFIG: EditorConfig = {
   autoUploadOnDrop: false,
   autoUploadInPanel: false, // 默认关闭悬浮窗自动上传
   promptRenameOnPaste: true, // 默认开启粘贴时重命名（内联编辑）
+  promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
   debugMode: true // 默认开启调试模式（开发阶段），发布前改为 false
 };
 
@@ -44,8 +47,12 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         set({ autoUploadInPanel: enabled });
       },
       setPromptRenameOnPaste: (enabled) => {
-        loggers.config.info("设置粘贴重命名弹窗:", enabled);
+        loggers.config.info("设置粘贴时重命名:", enabled);
         set({ promptRenameOnPaste: enabled });
+      },
+      setPromptRenameOnDrop: (enabled) => {
+        loggers.config.info("设置拖拽时重命名:", enabled);
+        set({ promptRenameOnDrop: enabled });
       },
       setDebugMode: (enabled) => {
         // 同步更新全局 logger 状态

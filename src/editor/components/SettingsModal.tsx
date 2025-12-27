@@ -22,6 +22,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const promptRenameOnPaste = useEditorConfigStore(
     (state) => state.promptRenameOnPaste
   );
+  const promptRenameOnDrop = useEditorConfigStore(
+    (state) => state.promptRenameOnDrop
+  );
   const debugMode = useEditorConfigStore(
     (state) => state.debugMode
   );
@@ -36,6 +39,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const setPromptRenameOnPaste = useEditorConfigStore(
     (state) => state.setPromptRenameOnPaste
+  );
+  const setPromptRenameOnDrop = useEditorConfigStore(
+    (state) => state.setPromptRenameOnDrop
   );
   const setDebugMode = useEditorConfigStore(
     (state) => state.setDebugMode
@@ -153,6 +159,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               description="粘贴图片到图片池后自动选中文件名便于重命名"
               checked={promptRenameOnPaste}
               onChange={setPromptRenameOnPaste}
+            />
+
+            {/* 拖拽重命名 */}
+            <ToggleOption
+              label="拖拽时重命名"
+              description="拖拽图片到图片池后自动选中文件名便于重命名"
+              checked={promptRenameOnDrop}
+              onChange={setPromptRenameOnDrop}
             />
 
             {/* 提示信息 */}

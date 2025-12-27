@@ -38,8 +38,9 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     setCurrentPage
   } = useImagePanelStore();
 
-  // 悬浮窗专用的自动上传设置
+  // 悬浮窗设置
   const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
+  const promptRenameOnDrop = useEditorConfigStore((state) => state.promptRenameOnDrop);
 
   const thumbnailSize = getThumbnailSizePixels();
   const { setImageState, removeItem } = useSteamGuideImageStore();
@@ -311,12 +312,18 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       }
     }
 
+    // 如果启用了拖拽重命名且只添加了一张图片，进入编辑模式
+    if (promptRenameOnDrop && addedImages.length === 1) {
+      const imageId = addedImages[0].previewId || addedImages[0].fileName;
+      onEditingChange(imageId);
+    }
+
     // 如果启用了自动上传，则将新添加的图片加入上传队列
     if (autoUploadInPanel && addedImages.length > 0) {
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
       queueBatchUpload(addedImages);
     }
-  }, [addLocalImage, autoUploadInPanel]);
+  }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange]);
 
   // 空状态（也支持拖入）
   if (images.length === 0) {
