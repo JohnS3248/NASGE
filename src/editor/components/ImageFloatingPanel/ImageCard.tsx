@@ -102,16 +102,44 @@ const ImageCard: React.FC<ImageCardProps> = ({
     }
   }, [image.fileName, isActuallyEditing, getFileNameParts]);
 
+  // 清理文件名中的非法字符
+  const sanitizeBaseName = useCallback((name: string): string => {
+    // 替换非法字符: \ / : * ? " < > |
+    let sanitized = name.replace(/[\\/:*?"<>|]/g, "_");
+    // 限制长度（文件名部分最大 100 字符）
+    if (sanitized.length > 100) {
+      sanitized = sanitized.substring(0, 100);
+    }
+    return sanitized;
+  }, []);
+
   // 确认重命名
   const handleRenameConfirm = useCallback(() => {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== baseName) {
-      const newFileName = trimmed + extension;
+    if (!trimmed) {
+      onEditingChange?.(null);
+      return;
+    }
+
+    // 验证并清理非法字符
+    const sanitized = sanitizeBaseName(trimmed);
+
+    if (sanitized !== baseName) {
+      const newFileName = sanitized + extension;
       renameImage(image.previewId || image.fileName, newFileName);
-      loggers.image.info("内联重命名图片", { from: image.fileName, to: newFileName });
+
+      if (sanitized !== trimmed) {
+        loggers.image.info("内联重命名（已清理非法字符）", {
+          input: trimmed,
+          sanitized,
+          newFileName
+        });
+      } else {
+        loggers.image.info("内联重命名图片", { from: image.fileName, to: newFileName });
+      }
     }
     onEditingChange?.(null);
-  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange]);
+  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange, sanitizeBaseName]);
 
   // 取消编辑
   const handleRenameCancel = useCallback(() => {
