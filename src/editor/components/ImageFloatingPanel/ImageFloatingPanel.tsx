@@ -5,6 +5,8 @@
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useImagePanelStore";
 import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
+import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
+import { queueImageUpload } from "../../services/uploadQueue";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
@@ -17,6 +19,18 @@ import {
   Z_INDEX
 } from "./styles";
 import { loggers } from "../../../shared/logger";
+
+/**
+ * 根据 MIME 类型获取默认文件名
+ * 剪贴板图片通常没有文件名，使用 image.ext 作为默认值
+ */
+function getDefaultFileName(mimeType: string): string {
+  const ext = mimeType === 'image/png' ? 'png' :
+              mimeType === 'image/jpeg' ? 'jpg' :
+              mimeType === 'image/gif' ? 'gif' :
+              mimeType === 'image/webp' ? 'webp' : 'png';
+  return `image.${ext}`;
+}
 
 const ImageFloatingPanel: React.FC = () => {
   // ============ 所有 Hooks 必须在 early return 之前 ============
@@ -35,11 +49,21 @@ const ImageFloatingPanel: React.FC = () => {
     restore
   } = useImagePanelStore();
 
-  const { items: images, status: imagePoolStatus, refresh: refreshImagePool } = useSteamGuideImageStore();
+  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, addLocalImage } = useSteamGuideImageStore();
+
+  // 悬浮窗设置
+  const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
+  const promptRenameOnPaste = useEditorConfigStore((state) => state.promptRenameOnPaste);
+
+  // 面板引用（用于焦点管理）
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // 拖拽状态
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<string | null>(null);
+
+  // 内联编辑状态：正在编辑文件名的图片 ID
+  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   const dragStartRef = useRef<{
     x: number;
     y: number;
@@ -107,6 +131,87 @@ const ImageFloatingPanel: React.FC = () => {
     }
   }, [imagePoolStatus, refreshImagePool]);
 
+  // 手动刷新处理（添加日志便于调试）
+  const handleRefresh = useCallback(() => {
+    loggers.image.info('手动刷新图片池');
+    void refreshImagePool();
+  }, [refreshImagePool]);
+
+  // ============ 剪贴板粘贴处理 ============
+  const handlePaste = useCallback(async (e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    // 查找图片类型的项目
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        e.preventDefault();
+
+        const blob = item.getAsFile();
+        if (!blob) continue;
+
+        // 使用原始文件名或默认文件名（image.png）
+        // 去重逻辑会自动处理同名文件（变成 image_2.png 等）
+        const fileName = blob.name || getDefaultFileName(blob.type);
+        const file = new File([blob], fileName, { type: blob.type });
+
+        loggers.image.info('剪贴板粘贴图片', {
+          fileName,
+          size: file.size,
+          type: file.type
+        });
+
+        // 添加到图片池（复用现有去重逻辑）
+        const result = await addLocalImage(file);
+
+        if (result.skipped) {
+          // 重复图片提示
+          const reason = result.reason === 'duplicate_uploaded' ? '已上传' : '待上传';
+          window.alert(`此截图已存在于图片池中（${reason}）\n已有文件: ${result.existingFileName}`);
+        } else {
+          // 如果启用粘贴重命名，设置为编辑模式让用户可以重命名
+          if (promptRenameOnPaste) {
+            const imageId = result.image.previewId || result.image.fileName;
+            setEditingImageId(imageId);
+          }
+
+          // 如果启用自动上传则加入队列
+          if (autoUploadInPanel) {
+            loggers.image.info('粘贴图片自动加入上传队列', { fileName: result.image.fileName });
+            queueImageUpload(result.image);
+          }
+        }
+
+        // 只处理第一个图片
+        break;
+      }
+    }
+  }, [addLocalImage, autoUploadInPanel, promptRenameOnPaste]);
+
+  // 监听全局粘贴事件（当悬浮窗打开时）
+  useEffect(() => {
+    if (!isOpen || isMinimized) return;
+
+    const handleGlobalPaste = (e: ClipboardEvent) => {
+      // 检查焦点是否在输入框中，如果是则不处理
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement ||
+          (activeElement as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
+      // 处理粘贴
+      void handlePaste(e);
+    };
+
+    document.addEventListener('paste', handleGlobalPaste);
+    return () => {
+      document.removeEventListener('paste', handleGlobalPaste);
+    };
+  }, [isOpen, isMinimized, handlePaste]);
+
   // ============ Early Returns（在所有 hooks 之后） ============
 
   // 如果未打开，显示触发按钮（固定在左下角）
@@ -172,7 +277,9 @@ const ImageFloatingPanel: React.FC = () => {
         {/* 标题栏 */}
         <PanelHeader
           imageCount={images.length}
+          isRefreshing={imagePoolStatus === "loading"}
           onDragStart={handleDragStart}
+          onRefresh={handleRefresh}
           onMinimize={minimize}
           onClose={close}
         />
@@ -182,6 +289,8 @@ const ImageFloatingPanel: React.FC = () => {
           <ImageGrid
             images={images}
             onImageDoubleClick={handleImageDoubleClick}
+            editingImageId={editingImageId}
+            onEditingChange={setEditingImageId}
           />
         </div>
 

@@ -13,14 +13,18 @@ import {
 
 interface PanelHeaderProps {
   imageCount: number;
+  isRefreshing?: boolean;
   onDragStart: (e: React.MouseEvent) => void;
+  onRefresh: () => void;
   onMinimize: () => void;
   onClose: () => void;
 }
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   imageCount,
+  isRefreshing = false,
   onDragStart,
+  onRefresh,
   onMinimize,
   onClose
 }) => {
@@ -62,6 +66,26 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         style={headerButtonsStyle}
         onMouseDown={(e) => e.stopPropagation()} // 防止触发拖拽
       >
+        {/* 刷新 */}
+        <button
+          type="button"
+          title="刷新图片池"
+          style={{
+            ...getButtonStyle("refresh"),
+            opacity: isRefreshing ? 0.5 : 1,
+            cursor: isRefreshing ? "wait" : "pointer"
+          }}
+          onMouseEnter={() => setHoveredButton("refresh")}
+          onMouseLeave={() => setHoveredButton(null)}
+          onClick={() => {
+            if (!isRefreshing) {
+              onRefresh();
+            }
+          }}
+        >
+          ↻
+        </button>
+
         {/* 最小化（收到左下角小面板） */}
         <button
           type="button"

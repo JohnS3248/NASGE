@@ -71,6 +71,7 @@ type SteamGuideImageState = {
 
   // === 本地图片管理 ===
   addLocalImage: (file: File) => Promise<AddImageResult>;
+  renameImage: (imageId: string, newFileName: string) => void;
 };
 
 export const useSteamGuideImageStore = create<SteamGuideImageState>()(
@@ -288,6 +289,17 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
         loggers.image.info('添加本地图片到图片池', { fileName: finalFileName });
 
         return { image: newImage, skipped: false };
+      },
+
+      renameImage: (imageId: string, newFileName: string) => {
+        set((state) => ({
+          items: state.items.map((item) =>
+            (item.previewId === imageId || item.fileName === imageId)
+              ? { ...item, fileName: newFileName }
+              : item
+          )
+        }));
+        loggers.image.info('重命名图片', { imageId, newFileName });
       }
     }),
     {

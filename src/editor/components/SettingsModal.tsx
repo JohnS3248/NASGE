@@ -16,6 +16,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const autoUploadOnDrop = useEditorConfigStore(
     (state) => state.autoUploadOnDrop
   );
+  const autoUploadInPanel = useEditorConfigStore(
+    (state) => state.autoUploadInPanel
+  );
+  const promptRenameOnPaste = useEditorConfigStore(
+    (state) => state.promptRenameOnPaste
+  );
   const debugMode = useEditorConfigStore(
     (state) => state.debugMode
   );
@@ -24,6 +30,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const setAutoUploadOnDrop = useEditorConfigStore(
     (state) => state.setAutoUploadOnDrop
+  );
+  const setAutoUploadInPanel = useEditorConfigStore(
+    (state) => state.setAutoUploadInPanel
+  );
+  const setPromptRenameOnPaste = useEditorConfigStore(
+    (state) => state.setPromptRenameOnPaste
   );
   const setDebugMode = useEditorConfigStore(
     (state) => state.setDebugMode
@@ -119,12 +131,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={setAutoUploadOnPaste}
             />
 
-            {/* 拖放自动上传 */}
+            {/* 编辑器拖放自动上传 */}
             <ToggleOption
-              label="拖放图片时自动上传"
+              label="编辑器拖放自动上传"
               description="拖拽图片到编辑器后立即上传到 Steam"
               checked={autoUploadOnDrop}
               onChange={setAutoUploadOnDrop}
+            />
+
+            {/* 悬浮窗自动上传 */}
+            <ToggleOption
+              label="图片池自动上传"
+              description="拖放或粘贴图片到图片池悬浮窗后立即上传"
+              checked={autoUploadInPanel}
+              onChange={setAutoUploadInPanel}
+            />
+
+            {/* 粘贴重命名 */}
+            <ToggleOption
+              label="粘贴时重命名"
+              description="粘贴图片到图片池后自动选中文件名便于重命名"
+              checked={promptRenameOnPaste}
+              onChange={setPromptRenameOnPaste}
             />
 
             {/* 提示信息 */}

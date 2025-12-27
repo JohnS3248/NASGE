@@ -7,6 +7,7 @@
 import React, { useMemo, useCallback, useState } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
+import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
 import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
@@ -16,11 +17,15 @@ import { loggers } from "../../../shared/logger";
 interface ImageGridProps {
   images: ImageWithState[];
   onImageDoubleClick: (image: ImageWithState) => void;
+  editingImageId: string | null;
+  onEditingChange: (imageId: string | null) => void;
 }
 
 const ImageGrid: React.FC<ImageGridProps> = ({
   images,
-  onImageDoubleClick
+  onImageDoubleClick,
+  editingImageId,
+  onEditingChange
 }) => {
   const {
     currentPage,
@@ -30,9 +35,11 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     selectImage,
     selectRange,
     getThumbnailSizePixels,
-    setCurrentPage,
-    autoUploadOnDrop
+    setCurrentPage
   } = useImagePanelStore();
+
+  // 悬浮窗专用的自动上传设置
+  const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
 
   const thumbnailSize = getThumbnailSizePixels();
   const { setImageState, removeItem } = useSteamGuideImageStore();
@@ -239,7 +246,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     loggers.image.info("外部文件拖入悬浮窗", {
       count: imageFiles.length,
       fileNames: imageFiles.map(f => f.name),
-      autoUpload: autoUploadOnDrop
+      autoUpload: autoUploadInPanel
     });
 
     // 添加到图片池，收集去重结果
@@ -273,11 +280,11 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     }
 
     // 如果启用了自动上传，则将新添加的图片加入上传队列
-    if (autoUploadOnDrop && addedImages.length > 0) {
+    if (autoUploadInPanel && addedImages.length > 0) {
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
       queueBatchUpload(addedImages);
     }
-  }, [addLocalImage, autoUploadOnDrop]);
+  }, [addLocalImage, autoUploadInPanel]);
 
   // 空状态（也支持拖入）
   if (images.length === 0) {
@@ -348,6 +355,8 @@ const ImageGrid: React.FC<ImageGridProps> = ({
               onDelete={handleDeleteImage}
               queuePosition={getQueuePosition(image.fileName)}
               queueLength={queueLength}
+              isEditing={editingImageId === imageId}
+              onEditingChange={onEditingChange}
             />
           );
         })}
