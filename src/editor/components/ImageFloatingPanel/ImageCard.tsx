@@ -66,6 +66,11 @@ const ImageCard: React.FC<ImageCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 只有待上传状态的图片可以重命名
+  const canRename = image.state === "pending";
+  // 实际编辑状态（需要同时满足：外部传入 isEditing 且图片可重命名）
+  const isActuallyEditing = isEditing && canRename;
+
   // 分离文件名和扩展名
   const getFileNameParts = useCallback((fileName: string) => {
     const lastDotIndex = fileName.lastIndexOf('.');
@@ -83,19 +88,19 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
   // 编辑模式激活时自动聚焦并选中文本（只选中文件名部分）
   useEffect(() => {
-    if (isEditing && inputRef.current) {
+    if (isActuallyEditing && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
-  }, [isEditing]);
+  }, [isActuallyEditing]);
 
   // 同步 image.fileName 到 editValue（当外部更新时）
   useEffect(() => {
-    if (!isEditing) {
+    if (!isActuallyEditing) {
       const { baseName: newBaseName } = getFileNameParts(image.fileName);
       setEditValue(newBaseName);
     }
-  }, [image.fileName, isEditing, getFileNameParts]);
+  }, [image.fileName, isActuallyEditing, getFileNameParts]);
 
   // 确认重命名
   const handleRenameConfirm = useCallback(() => {
@@ -382,7 +387,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
           }}
         >
           {showFileName && (
-            isEditing ? (
+            isActuallyEditing ? (
               <div
                 style={{
                   display: "flex",

@@ -4,7 +4,7 @@
  * 支持外部文件拖入
  * 支持双击上传待上传图片（通过队列）
  */
-import React, { useMemo, useCallback, useState } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
@@ -86,6 +86,38 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 外部文件拖入支持
   const [isDragOver, setIsDragOver] = useState(false);
   const { addLocalImage } = useSteamGuideImageStore();
+
+  // F2 快捷键：重命名选中的待上传图片
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果正在编辑，不处理
+      if (editingImageId) return;
+
+      // F2 键触发重命名
+      if (e.key === "F2" && focusedId) {
+        e.preventDefault();
+
+        // 找到焦点图片
+        const focusedImage = images.find(
+          img => (img.previewId || img.fileName) === focusedId
+        );
+
+        // 只有待上传状态才能重命名
+        if (focusedImage && focusedImage.state === "pending") {
+          loggers.image.info("F2 触发重命名", { fileName: focusedImage.fileName });
+          onEditingChange(focusedId);
+        } else if (focusedImage) {
+          loggers.image.info("F2 重命名被阻止：图片非待上传状态", {
+            fileName: focusedImage.fileName,
+            state: focusedImage.state
+          });
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [focusedId, editingImageId, images, onEditingChange]);
 
   // 处理双击事件 - 待上传或失败的图片加入上传队列
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {

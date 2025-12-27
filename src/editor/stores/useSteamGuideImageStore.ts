@@ -292,6 +292,19 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       },
 
       renameImage: (imageId: string, newFileName: string) => {
+        const image = get().items.find(
+          item => item.previewId === imageId || item.fileName === imageId
+        );
+
+        // 只允许重命名待上传的图片
+        if (!image || image.state !== "pending") {
+          loggers.image.warn('无法重命名非待上传状态的图片', {
+            imageId,
+            state: image?.state
+          });
+          return;
+        }
+
         set((state) => ({
           items: state.items.map((item) =>
             (item.previewId === imageId || item.fileName === imageId)
