@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: EditorConfig = {
   autoUploadOnPaste: false, // 默认关闭自动上传
   autoUploadOnDrop: false,
   autoUploadInPanel: false, // 默认关闭悬浮窗自动上传
-  promptRenameOnPaste: false, // 默认关闭粘贴重命名弹窗
+  promptRenameOnPaste: true, // 默认开启粘贴时重命名（内联编辑）
   debugMode: true // 默认开启调试模式（开发阶段），发布前改为 false
 };
 

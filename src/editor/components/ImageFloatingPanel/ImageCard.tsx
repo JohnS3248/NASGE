@@ -64,10 +64,24 @@ const ImageCard: React.FC<ImageCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [editValue, setEditValue] = useState(image.fileName);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 编辑模式激活时自动聚焦并选中文本
+  // 分离文件名和扩展名
+  const getFileNameParts = useCallback((fileName: string) => {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    if (lastDotIndex > 0) {
+      return {
+        baseName: fileName.substring(0, lastDotIndex),
+        extension: fileName.substring(lastDotIndex) // 包含点号
+      };
+    }
+    return { baseName: fileName, extension: '' };
+  }, []);
+
+  const { baseName, extension } = getFileNameParts(image.fileName);
+  const [editValue, setEditValue] = useState(baseName);
+
+  // 编辑模式激活时自动聚焦并选中文本（只选中文件名部分）
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
@@ -78,25 +92,27 @@ const ImageCard: React.FC<ImageCardProps> = ({
   // 同步 image.fileName 到 editValue（当外部更新时）
   useEffect(() => {
     if (!isEditing) {
-      setEditValue(image.fileName);
+      const { baseName: newBaseName } = getFileNameParts(image.fileName);
+      setEditValue(newBaseName);
     }
-  }, [image.fileName, isEditing]);
+  }, [image.fileName, isEditing, getFileNameParts]);
 
   // 确认重命名
   const handleRenameConfirm = useCallback(() => {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== image.fileName) {
-      renameImage(image.previewId || image.fileName, trimmed);
-      loggers.image.info("内联重命名图片", { from: image.fileName, to: trimmed });
+    if (trimmed && trimmed !== baseName) {
+      const newFileName = trimmed + extension;
+      renameImage(image.previewId || image.fileName, newFileName);
+      loggers.image.info("内联重命名图片", { from: image.fileName, to: newFileName });
     }
     onEditingChange?.(null);
-  }, [editValue, image.fileName, image.previewId, renameImage, onEditingChange]);
+  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange]);
 
   // 取消编辑
   const handleRenameCancel = useCallback(() => {
-    setEditValue(image.fileName);
+    setEditValue(baseName);
     onEditingChange?.(null);
-  }, [image.fileName, onEditingChange]);
+  }, [baseName, onEditingChange]);
 
   // 输入框按键处理
   const handleInputKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -367,26 +383,49 @@ const ImageCard: React.FC<ImageCardProps> = ({
         >
           {showFileName && (
             isEditing ? (
-              <input
-                ref={inputRef}
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onKeyDown={handleInputKeyDown}
-                onBlur={handleRenameConfirm}
-                onClick={(e) => e.stopPropagation()}
+              <div
                 style={{
-                  width: "100%",
-                  padding: "1px 2px",
-                  fontSize: 10,
-                  background: "rgba(102, 192, 244, 0.15)",
-                  border: `1px solid ${COLORS.accent}`,
-                  borderRadius: 2,
-                  color: COLORS.textPrimary,
-                  outline: "none",
-                  boxSizing: "border-box"
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0
                 }}
-              />
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={handleInputKeyDown}
+                  onBlur={handleRenameConfirm}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    padding: "1px 2px",
+                    fontSize: 10,
+                    background: "rgba(102, 192, 244, 0.15)",
+                    border: `1px solid ${COLORS.accent}`,
+                    borderRadius: "2px 0 0 2px",
+                    color: COLORS.textPrimary,
+                    outline: "none",
+                    boxSizing: "border-box"
+                  }}
+                />
+                <span
+                  style={{
+                    flexShrink: 0,
+                    padding: "1px 2px",
+                    fontSize: 10,
+                    background: "rgba(60, 75, 95, 0.6)",
+                    border: `1px solid ${COLORS.accent}`,
+                    borderLeft: "none",
+                    borderRadius: "0 2px 2px 0",
+                    color: COLORS.textMuted
+                  }}
+                >
+                  {extension}
+                </span>
+              </div>
             ) : (
               <div
                 style={{
