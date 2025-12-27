@@ -126,7 +126,12 @@ export async function handleUploadRequest(
         if (!input.isConnected) {
           continue;
         }
-        input.value = value ?? "";
+        // 文件输入框只能设置为空字符串（浏览器安全限制）
+        if (input.type === 'file') {
+          input.value = "";
+        } else {
+          input.value = value ?? "";
+        }
       }
     };
 
@@ -291,8 +296,10 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     isEditSubsectionPage
   });
 
+  // manageguide 页面：使用 gPreviewImages 桥接数据
+  // 注意：AJAX API (userfilesforguide) 返回的是用户截图，不是指南图片池
   if (isManageGuidePage) {
-    console.info("[NASGE] 在 manageguide 页面，直接从 DOM 解析图片池");
+    console.info("[NASGE] 在 manageguide 页面，从 gPreviewImages 桥接数据读取");
     return parseGuideImagePoolFromDOM();
   }
 
@@ -301,7 +308,8 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     return parseGuideImagePoolFromEditSubsectionDOM();
   }
 
-  console.info("[NASGE] 在章节编辑页面，准备通过 AJAX 拉取图片池");
+  // 其他页面（如章节编辑页）：尝试 AJAX
+  console.info("[NASGE] 尝试通过 AJAX 拉取图片池");
 
   let sessionId: string | undefined;
   let consumerAppId: string | undefined;
@@ -316,12 +324,31 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     console.warn("[NASGE] 无法从上传表单读取字段，尝试其他方式", error);
   }
 
-  if (!sessionId) {
-    sessionId = (window as any).g_sessionID;
-  }
-
+  // 从 URL 获取 guideId
   if (!guideId) {
     guideId = new URL(window.location.href).searchParams.get("id") ?? undefined;
+  }
+
+  // 从页面中的任意表单查找 sessionid
+  if (!sessionId) {
+    const allForms = document.querySelectorAll('form');
+    for (const form of allForms) {
+      const sessionInput = form.querySelector<HTMLInputElement>('input[name="sessionid"]');
+      if (sessionInput?.value) {
+        sessionId = sessionInput.value;
+        console.info("[NASGE] 从表单中提取 sessionid");
+        break;
+      }
+    }
+  }
+
+  // 从 cookie 中提取 sessionid（Steam 通常会设置）
+  if (!sessionId) {
+    const match = document.cookie.match(/sessionid=([^;]+)/);
+    if (match) {
+      sessionId = decodeURIComponent(match[1]);
+      console.info("[NASGE] 从 cookie 中提取 sessionid");
+    }
   }
 
   if (!consumerAppId) {
@@ -536,50 +563,43 @@ function absoluteUrl(src: string): string | undefined {
   }
 }
 
-function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
+async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
   const images = new Map<string, SteamGuideImage>();
 
   // 从页面桥接脚本写入的 DOM 属性读取 gPreviewImages
   // Content script 运行在隔离环境，无法直接访问页面的全局变量
+  // 使用 postMessage 请求 MAIN world 脚本刷新数据
   let globalVar: any = null;
 
   try {
-    // 每次都强制刷新 DOM 属性，确保获取最新的 gPreviewImages 数据
-    // 这对于上传图片后刷新图片池特别重要
-    console.log('[NASGE Content Script] 强制刷新 gPreviewImages 桥接数据...');
-    const refreshBridgeScript = document.createElement('script');
-    refreshBridgeScript.textContent = `
-      (function() {
-        if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
-          document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
-          console.log('[NASGE 桥接刷新] ✅ gPreviewImages 已更新到 DOM，共', window.gPreviewImages.length, '张图片');
-        } else {
-          document.documentElement.setAttribute('data-nasge-gpreview-bridge', 'null');
-          console.warn('[NASGE 桥接刷新] ⚠️ gPreviewImages 不存在');
-        }
-      })();
-    `;
-    (document.head || document.documentElement).appendChild(refreshBridgeScript);
-    refreshBridgeScript.remove();
+    console.log('[NASGE Content Script] 请求刷新 gPreviewImages 桥接数据...');
+
+    // 通过 postMessage 请求 MAIN world 刷新数据
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(() => {
+        console.warn('[NASGE Content Script] 刷新请求超时，使用现有数据');
+        resolve();
+      }, 500);
+
+      const handler = (event: MessageEvent) => {
+        if (event.source !== window) return;
+        if (event.data?.channel !== 'nasge:gpreview' || event.data?.action !== 'refreshed') return;
+
+        clearTimeout(timeout);
+        window.removeEventListener('message', handler);
+        console.log('[NASGE Content Script] 收到刷新确认，图片数:', event.data.count);
+        resolve();
+      };
+
+      window.addEventListener('message', handler);
+      window.postMessage({ channel: 'nasge:gpreview', action: 'refresh' }, window.location.origin);
+    });
 
     // 读取刷新后的数据
     const attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
     if (attr && attr !== 'null') {
       globalVar = JSON.parse(attr);
       console.log('[NASGE Content Script] ✅ 读取到 gPreviewImages，共', globalVar?.length, '张图片');
-
-      // 打印调试信息
-      if (Array.isArray(globalVar)) {
-        globalVar.forEach((img: any, idx: number) => {
-          console.log(`[NASGE Content Script] 图片${idx}:`, {
-            previewid: img.previewid,
-            filename: img.filename,
-            url: img.url,
-            hasLetterbox: img.url?.includes('Letterbox'),
-            hasImcolor: img.url?.includes('imcolor')
-          });
-        });
-      }
     } else {
       console.warn('[NASGE Content Script] ❌ gPreviewImages 不存在或为空');
     }
@@ -621,20 +641,6 @@ function parseGuideImagePoolFromDOM(): SteamGuideImage[] {
 
   // Fallback: 从 DOM 解析
   console.warn('[NASGE] ❌ gPreviewImages 不可用，尝试从 DOM 解析');
-  console.log('[NASGE DEBUG] gPreviewImages 状态:', {
-    exists: globalVar !== null,
-    isArray: Array.isArray(globalVar),
-    length: globalVar?.length
-  });
-
-  try {
-    const debugScript = document.createElement('script');
-    debugScript.textContent = `if (window.__NASGE_LAST_PARSE__) window.__NASGE_LAST_PARSE__.usedFallback = true;`;
-    document.documentElement.appendChild(debugScript);
-    debugScript.remove();
-  } catch (error) {
-    // 忽略
-  }
 
   const imageContainers = document.querySelectorAll('.manageSortablePreview, .guide_preview_image_small, .preview_image, [data-previewid]');
 
