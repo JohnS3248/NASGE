@@ -6,6 +6,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
+import { useGuideStore, ImageTag } from "../../stores/useGuideStore";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
 
@@ -60,11 +61,26 @@ const ImageCard: React.FC<ImageCardProps> = ({
 }) => {
   const { showFileName, showStatusIndicator, getThumbnailSizePixels } = useImagePanelStore();
   const { renameImage } = useSteamGuideImageStore();
+  const {
+    currentArchiveId,
+    getCurrentArchive,
+    getTagsForImage,
+    addTagToImage,
+    removeTagFromImage
+  } = useGuideStore();
   const thumbnailSize = getThumbnailSizePixels();
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // 获取当前图片的标签
+  const imageId = image.previewId || image.fileName;
+  const imageTags = currentArchiveId ? getTagsForImage(currentArchiveId, imageId) : [];
+  const archive = getCurrentArchive();
+  const allTags = archive?.imageTags || [];
 
   // 只有待上传状态的图片可以重命名
   const canRename = image.state === "pending";
@@ -261,14 +277,54 @@ const ImageCard: React.FC<ImageCardProps> = ({
     loggers.image.verbose("结束拖拽图片");
   }, []);
 
-  // 计算卡片总高度
-  const cardHeight = thumbnailSize + (showFileName || showStatusIndicator ? 32 : 0);
+  // 右键菜单处理
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // 计算菜单位置（相对于视口）
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // 关闭右键菜单
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // 点击外部关闭右键菜单
+  useEffect(() => {
+    if (contextMenu) {
+      const handleClickOutside = () => closeContextMenu();
+      document.addEventListener("click", handleClickOutside);
+      document.addEventListener("contextmenu", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+        document.removeEventListener("contextmenu", handleClickOutside);
+      };
+    }
+  }, [contextMenu, closeContextMenu]);
+
+  // 切换标签
+  const handleToggleTag = useCallback((tagId: string) => {
+    if (!currentArchiveId) return;
+    const hasTag = imageTags.some(t => t.id === tagId);
+    if (hasTag) {
+      removeTagFromImage(currentArchiveId, imageId, tagId);
+    } else {
+      addTagToImage(currentArchiveId, imageId, tagId);
+    }
+  }, [currentArchiveId, imageId, imageTags, addTagToImage, removeTagFromImage]);
+
+  // 计算卡片总高度（包含标签区域）
+  const hasTagsToShow = imageTags.length > 0;
+  const cardHeight = thumbnailSize + (showFileName || showStatusIndicator ? 32 : 0) + (hasTagsToShow ? 18 : 0);
 
   return (
     <div
+      ref={cardRef}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onContextMenu={handleContextMenu}
       style={{
         width: thumbnailSize,
         height: cardHeight,
@@ -483,6 +539,168 @@ const ImageCard: React.FC<ImageCardProps> = ({
             >
               <span style={{ fontSize: 8 }}>●</span>
               <span>{displayStatus.text}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 标签显示区域 */}
+      {hasTagsToShow && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 2,
+            padding: "2px 4px",
+            overflow: "hidden",
+            maxHeight: 16
+          }}
+        >
+          {imageTags.slice(0, 3).map((tag) => (
+            <span
+              key={tag.id}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 2,
+                padding: "0 4px",
+                borderRadius: 2,
+                fontSize: 9,
+                background: `${tag.color}33`,
+                border: `1px solid ${tag.color}66`,
+                color: COLORS.textPrimary,
+                whiteSpace: "nowrap",
+                maxWidth: 50,
+                overflow: "hidden",
+                textOverflow: "ellipsis"
+              }}
+            >
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: "50%",
+                  background: tag.color,
+                  flexShrink: 0
+                }}
+              />
+              {tag.name}
+            </span>
+          ))}
+          {imageTags.length > 3 && (
+            <span
+              style={{
+                fontSize: 9,
+                color: COLORS.textMuted
+              }}
+            >
+              +{imageTags.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* 右键菜单 */}
+      {contextMenu && (
+        <div
+          style={{
+            position: "fixed",
+            left: contextMenu.x,
+            top: contextMenu.y,
+            background: COLORS.panelBg,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: 6,
+            boxShadow: `0 4px 12px ${COLORS.shadow}`,
+            padding: "4px 0",
+            minWidth: 160,
+            zIndex: 3000
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* 标签选择区域 */}
+          {allTags.length > 0 ? (
+            <>
+              <div
+                style={{
+                  padding: "4px 12px",
+                  fontSize: 11,
+                  color: COLORS.textMuted,
+                  borderBottom: `1px solid ${COLORS.border}`
+                }}
+              >
+                选择标签
+              </div>
+              {allTags.map((tag) => {
+                const hasTag = imageTags.some(t => t.id === tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => {
+                      handleToggleTag(tag.id);
+                      closeContextMenu();
+                    }}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 12px",
+                      border: "none",
+                      background: "transparent",
+                      color: COLORS.textPrimary,
+                      fontSize: 12,
+                      cursor: "pointer",
+                      textAlign: "left"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 14,
+                        height: 14,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: 3,
+                        border: `1px solid ${tag.color}`,
+                        background: hasTag ? tag.color : "transparent",
+                        color: hasTag ? "#fff" : "transparent",
+                        fontSize: 10
+                      }}
+                    >
+                      ✓
+                    </span>
+                    <span
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: "50%",
+                        background: tag.color
+                      }}
+                    />
+                    <span>{tag.name}</span>
+                  </button>
+                );
+              })}
+            </>
+          ) : (
+            <div
+              style={{
+                padding: "12px",
+                fontSize: 12,
+                color: COLORS.textMuted,
+                textAlign: "center"
+              }}
+            >
+              暂无标签
+              <br />
+              <span style={{ fontSize: 11 }}>点击 🏷 创建标签</span>
             </div>
           )}
         </div>
