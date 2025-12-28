@@ -87,6 +87,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             padding: "1.5rem",
             minWidth: "420px",
             maxWidth: "90vw",
+            maxHeight: "85vh",
+            display: "flex",
+            flexDirection: "column",
             boxShadow: "0 24px 48px rgba(6, 12, 20, 0.75)"
           }}
           onClick={(e) => e.stopPropagation()}
@@ -97,10 +100,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               fontSize: "1.15rem",
               fontWeight: 600,
               color: "#e5f3ff",
-              marginBottom: "1.5rem",
+              marginBottom: "1rem",
+              paddingBottom: "0.75rem",
+              borderBottom: "1px solid rgba(102, 192, 244, 0.15)",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between"
+              justifyContent: "space-between",
+              flexShrink: 0
             }}
           >
             <span>编辑器设置</span>
@@ -121,12 +127,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
           </div>
 
-          {/* 设置项 */}
+          {/* 设置项（可滚动） */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "1.25rem"
+              gap: "1.25rem",
+              flex: 1,
+              overflowY: "auto",
+              paddingRight: "0.5rem",
+              marginRight: "-0.5rem"
             }}
           >
             {/* 分组标题 */}
