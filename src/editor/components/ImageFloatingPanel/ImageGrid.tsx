@@ -35,6 +35,8 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     focusedId,
     selectImage,
     selectRange,
+    selectAll,
+    clearSelection,
     getThumbnailSizePixels,
     setCurrentPage
   } = useImagePanelStore();
@@ -92,38 +94,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
   // 获取当前存档 ID（用于关联新添加的图片）
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
-
-  // 快捷键：重命名选中的待上传图片
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果正在编辑，不处理
-      if (editingImageId) return;
-
-      // 重命名快捷键
-      if (matchShortcut(e, shortcuts.renameImage) && focusedId) {
-        e.preventDefault();
-
-        // 找到焦点图片
-        const focusedImage = images.find(
-          img => (img.previewId || img.fileName) === focusedId
-        );
-
-        // 只有待上传状态才能重命名
-        if (focusedImage && focusedImage.state === "pending") {
-          loggers.image.info("快捷键触发重命名", { fileName: focusedImage.fileName, shortcut: shortcuts.renameImage });
-          onEditingChange(focusedId);
-        } else if (focusedImage) {
-          loggers.image.info("重命名被阻止：图片非待上传状态", {
-            fileName: focusedImage.fileName,
-            state: focusedImage.state
-          });
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedId, editingImageId, images, onEditingChange, shortcuts.renameImage]);
 
   // 处理双击事件 - 待上传或失败的图片加入上传队列
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {
@@ -212,6 +182,101 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       doDeleteLocalImage(image);
     }
   }, [doDeleteSteamImage, doDeleteLocalImage]);
+
+  // 快捷键处理
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 如果正在编辑，不处理快捷键
+      if (editingImageId) return;
+
+      // 如果焦点在输入框中，不处理
+      const activeElement = document.activeElement;
+      if (activeElement && (
+        activeElement.tagName === "INPUT" ||
+        activeElement.tagName === "TEXTAREA" ||
+        (activeElement as HTMLElement).isContentEditable
+      )) {
+        return;
+      }
+
+      // 重命名快捷键 (默认 F2)
+      if (matchShortcut(e, shortcuts.renameImage) && focusedId) {
+        e.preventDefault();
+        const focusedImage = images.find(
+          img => (img.previewId || img.fileName) === focusedId
+        );
+        if (focusedImage && focusedImage.state === "pending") {
+          loggers.image.info("快捷键触发重命名", { fileName: focusedImage.fileName });
+          onEditingChange(focusedId);
+        }
+        return;
+      }
+
+      // 删除快捷键 (默认 Delete)
+      if (matchShortcut(e, shortcuts.deleteImage) && selectedIds.length > 0) {
+        e.preventDefault();
+        loggers.image.info("快捷键触发删除", { count: selectedIds.length });
+
+        // 获取选中的图片
+        const selectedImages = images.filter(img => {
+          const imgId = img.previewId || img.fileName;
+          return selectedIds.includes(imgId);
+        });
+
+        // 检查是否有已上传的图片
+        const uploadedImages = selectedImages.filter(img => img.state === "success" && img.previewId);
+        const localImages = selectedImages.filter(img => img.state !== "success" || !img.previewId);
+
+        if (uploadedImages.length > 0) {
+          // 有已上传的图片，需要确认
+          const msg = selectedImages.length === 1
+            ? `确认删除 "${selectedImages[0].fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`
+            : `确认删除 ${selectedImages.length} 张图片？\n\n其中 ${uploadedImages.length} 张已上传到 Steam，删除后无法撤销。`;
+
+          if (window.confirm(msg)) {
+            for (const img of selectedImages) {
+              if (img.state === "success" && img.previewId) {
+                void doDeleteSteamImage(img);
+              } else {
+                doDeleteLocalImage(img);
+              }
+            }
+            clearSelection();
+          }
+        } else {
+          // 只有本地图片，直接删除
+          for (const img of localImages) {
+            doDeleteLocalImage(img);
+          }
+          clearSelection();
+        }
+        return;
+      }
+
+      // 全选快捷键 (默认 Ctrl+A)
+      if (matchShortcut(e, shortcuts.selectAll)) {
+        e.preventDefault();
+        loggers.image.info("快捷键触发全选", { count: allImageIds.length });
+        selectAll(allImageIds);
+        return;
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [
+    focusedId,
+    editingImageId,
+    images,
+    selectedIds,
+    allImageIds,
+    onEditingChange,
+    shortcuts,
+    doDeleteLocalImage,
+    doDeleteSteamImage,
+    selectAll,
+    clearSelection
+  ]);
 
   // 检查是否有图片文件
   const hasImageFiles = useCallback((event: React.DragEvent) => {
