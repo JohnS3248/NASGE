@@ -4,9 +4,11 @@ import { ArchiveManageModal } from './ArchiveManageModal';
 
 /**
  * 存档选择器 - 顶部下拉选择当前存档
+ * 注意：指南模式下只显示当前存档名称，不允许切换（因为图片池依赖 Steam 页面）
  */
 const ArchiveSelector: React.FC = () => {
   const {
+    mode,
     archives,
     currentArchiveId,
     switchArchive,
@@ -50,6 +52,11 @@ const ArchiveSelector: React.FC = () => {
 
   // 如果没有存档，不显示选择器
   if (archiveList.length === 0) {
+    return null;
+  }
+
+  // 指南模式下不显示存档选择器（图片池依赖当前 Steam 页面，切换存档会导致数据不匹配）
+  if (mode === 'guide') {
     return null;
   }
 

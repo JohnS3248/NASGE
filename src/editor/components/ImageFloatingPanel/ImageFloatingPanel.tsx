@@ -2,10 +2,11 @@
  * 图片悬浮窗主组件
  * 支持拖拽移动、尺寸调整、折叠、最小化
  */
-import React, { useCallback, useRef, useState, useEffect } from "react";
+import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useImagePanelStore";
 import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
+import { useGuideStore } from "../../stores/useGuideStore";
 import { queueImageUpload } from "../../services/uploadQueue";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
@@ -49,7 +50,16 @@ const ImageFloatingPanel: React.FC = () => {
     restore
   } = useImagePanelStore();
 
-  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, addLocalImage } = useSteamGuideImageStore();
+  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, addLocalImage, getImagesByGuide } = useSteamGuideImageStore();
+
+  // 获取当前存档信息
+  const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
+  const currentArchive = useGuideStore((state) => state.getCurrentArchive());
+
+  // 过滤当前存档的图片
+  const filteredImages = useMemo(() => {
+    return getImagesByGuide(currentArchiveId);
+  }, [getImagesByGuide, currentArchiveId, images]);
 
   // 悬浮窗设置
   const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
@@ -163,7 +173,7 @@ const ImageFloatingPanel: React.FC = () => {
         });
 
         // 添加到图片池（复用现有去重逻辑）
-        const result = await addLocalImage(file);
+        const result = await addLocalImage(file, currentArchiveId ?? undefined);
 
         if (result.skipped) {
           // 重复图片提示
@@ -187,7 +197,7 @@ const ImageFloatingPanel: React.FC = () => {
         break;
       }
     }
-  }, [addLocalImage, autoUploadInPanel, promptRenameOnPaste]);
+  }, [addLocalImage, autoUploadInPanel, promptRenameOnPaste, currentArchiveId]);
 
   // 监听全局粘贴事件（当悬浮窗打开时）
   useEffect(() => {
@@ -251,7 +261,7 @@ const ImageFloatingPanel: React.FC = () => {
         <span style={{ fontSize: 16 }}>📷</span>
         <span>图片池</span>
         <span style={{ fontSize: 12, color: COLORS.textMuted, fontWeight: 400 }}>
-          ({images.length})
+          ({filteredImages.length})
         </span>
       </button>
     );
@@ -259,7 +269,7 @@ const ImageFloatingPanel: React.FC = () => {
 
   // 如果最小化，显示最小化面板（可拖动的小窗口）
   if (isMinimized) {
-    return <MinimizedPanel imageCount={images.length} onRestore={restore} />;
+    return <MinimizedPanel imageCount={filteredImages.length} archiveName={currentArchive?.guideName} onRestore={restore} />;
   }
 
   return (
@@ -276,7 +286,8 @@ const ImageFloatingPanel: React.FC = () => {
       >
         {/* 标题栏 */}
         <PanelHeader
-          imageCount={images.length}
+          imageCount={filteredImages.length}
+          archiveName={currentArchive?.guideName}
           isRefreshing={imagePoolStatus === "loading"}
           onDragStart={handleDragStart}
           onRefresh={handleRefresh}
@@ -287,7 +298,7 @@ const ImageFloatingPanel: React.FC = () => {
         {/* 内容区 */}
         <div style={contentStyle}>
           <ImageGrid
-            images={images}
+            images={filteredImages}
             onImageDoubleClick={handleImageDoubleClick}
             editingImageId={editingImageId}
             onEditingChange={setEditingImageId}

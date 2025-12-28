@@ -8,6 +8,7 @@ import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
+import { useGuideStore } from "../../stores/useGuideStore";
 import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
 import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
@@ -87,6 +88,9 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 外部文件拖入支持
   const [isDragOver, setIsDragOver] = useState(false);
   const { addLocalImage } = useSteamGuideImageStore();
+
+  // 获取当前存档 ID（用于关联新添加的图片）
+  const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
 
   // F2 快捷键：重命名选中的待上传图片
   useEffect(() => {
@@ -287,7 +291,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     const skippedFiles: { fileName: string; existingFileName: string; reason: string }[] = [];
 
     for (const file of imageFiles) {
-      const result = await addLocalImage(file);
+      const result = await addLocalImage(file, currentArchiveId ?? undefined);
 
       if (result.skipped) {
         skippedFiles.push({
@@ -323,7 +327,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
       queueBatchUpload(addedImages);
     }
-  }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange]);
+  }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange, currentArchiveId]);
 
   // 空状态（也支持拖入）
   if (images.length === 0) {

@@ -667,7 +667,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               gap: '0.5rem'
             }}
           >
-            {isBindingMode ? '📌 选择要绑定的章节' : '目录'}
+            {isBindingMode ? '📌 选择要绑定的章节' : (currentArchive ? `${currentArchive.guideName}` : '目录')}
             {isOfflineData && (
               <span
                 style={{

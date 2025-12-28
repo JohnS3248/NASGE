@@ -6,6 +6,7 @@ import { JSONContent } from "@tiptap/core";
 import { createEmptyDoc } from "../utils/editorExtensions";
 import { createTitleFromText, createEmptyTitle } from "../utils/titleHelpers";
 import { loggers } from "../../shared/logger";
+import type { SteamGuideImage } from "../../shared/messages";
 
 // ============================================================================
 // 类型定义
@@ -63,6 +64,10 @@ export type GuideArchive = {
 
   // 图片分组
   imageGroups: ImageGroup[];
+
+  // 缓存的 Steam 图片元数据
+  cachedImages?: SteamGuideImage[];
+  imagesUpdatedAt?: number;
 
   // 关联的草稿 ID 列表（便于查询）
   draftIds: string[];
@@ -244,6 +249,35 @@ export const useGuideStore = create<GuideState>()(
                 currentArchiveId: info.id
               }));
             }
+
+            // 从存档加载缓存的图片（延迟导入避免循环依赖）
+            import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
+              useSteamGuideImageStore.getState().loadFromArchive(info.id);
+            });
+
+            // 切换到对应存档的草稿
+            const archiveDrafts = state.drafts.filter(d => d.linkedGuideId === info.id);
+            if (archiveDrafts.length > 0) {
+              // 有草稿：选择最近更新的
+              const mostRecentDraft = archiveDrafts.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+              set({ activeDraftId: mostRecentDraft.id });
+              loggers.store.info('切换到存档草稿', { draftId: mostRecentDraft.id, draftName: mostRecentDraft.draftName });
+            } else {
+              // 没有草稿：创建新草稿
+              const newDraft: Draft = {
+                id: crypto.randomUUID(),
+                draftName: '草稿 1',
+                title: createEmptyTitle(),
+                content: createEmptyDoc(),
+                updatedAt: Date.now(),
+                linkedGuideId: info.id
+              };
+              set((s) => ({
+                drafts: [...s.drafts, newDraft],
+                activeDraftId: newDraft.id
+              }));
+              loggers.store.info('为存档创建新草稿', { guideId: info.id, draftId: newDraft.id });
+            }
           } else {
             set({ guideInfo: info, mode: 'guide' });
           }
@@ -252,6 +286,9 @@ export const useGuideStore = create<GuideState>()(
         clearGuideInfo: () => {
           set({ guideInfo: null, currentChapterId: null });
         },
+
+        // 注意：setGuideInfo 内部会触发图片池加载
+        // 这是通过动态导入实现的，避免循环依赖
 
         // === 草稿管理 ===
         selectDraft: (id) => {
@@ -567,6 +604,12 @@ export const useGuideStore = create<GuideState>()(
               guideInfo: null,
               mode: 'offline'
             });
+
+            // 加载图片池（清空 Steam 图片，禁用自动 refresh）
+            // 延迟导入避免循环依赖
+            import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
+              useSteamGuideImageStore.getState().loadFromArchive(null, false);
+            });
             return;
           }
 
@@ -596,6 +639,12 @@ export const useGuideStore = create<GuideState>()(
               }
             }
           }));
+
+          // 从存档加载缓存的图片（禁用自动 refresh，避免获取错误数据）
+          // 延迟导入避免循环依赖
+          import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
+            useSteamGuideImageStore.getState().loadFromArchive(guideId, false);
+          });
 
           loggers.store.info('切换存档', { guideId, guideName: archive.guideName });
         },

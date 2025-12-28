@@ -8,11 +8,13 @@ import { useImagePanelStore, PanelPosition } from "../../stores/useImagePanelSto
 
 interface MinimizedPanelProps {
   imageCount: number;
+  archiveName?: string;
   onRestore: () => void;
 }
 
 const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
   imageCount,
+  archiveName,
   onRestore
 }) => {
   const { position, setPosition } = useImagePanelStore();
@@ -89,7 +91,14 @@ const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <span style={{ fontSize: 16 }}>📷</span>
-      <span>图片池</span>
+      <span style={{
+        maxWidth: archiveName ? 100 : undefined,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap'
+      }}>
+        {archiveName || '图片池'}
+      </span>
       <span style={{
         fontSize: 12,
         color: COLORS.textMuted,

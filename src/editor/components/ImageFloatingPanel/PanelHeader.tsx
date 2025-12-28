@@ -13,6 +13,7 @@ import {
 
 interface PanelHeaderProps {
   imageCount: number;
+  archiveName?: string;
   isRefreshing?: boolean;
   onDragStart: (e: React.MouseEvent) => void;
   onRefresh: () => void;
@@ -22,6 +23,7 @@ interface PanelHeaderProps {
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   imageCount,
+  archiveName,
   isRefreshing = false,
   onDragStart,
   onRefresh,
@@ -51,7 +53,14 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
       {/* 标题 */}
       <div style={headerTitleStyle}>
         <span style={{ fontSize: 16 }}>📷</span>
-        <span>图片池</span>
+        <span style={{
+          maxWidth: archiveName ? 120 : undefined,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {archiveName || '图片池'}
+        </span>
         <span style={{
           fontSize: 12,
           color: COLORS.textMuted,

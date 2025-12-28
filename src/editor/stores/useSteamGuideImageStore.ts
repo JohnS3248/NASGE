@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { SteamGuideImage } from "../../shared/messages";
 import { fetchSteamGuideImages } from "../services/steamBridge";
 import { useImageStore } from "./useImageStore";
+import { useGuideStore } from "./useGuideStore";
 import { loggers } from "../../shared/logger";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
@@ -25,6 +26,7 @@ export type ImageWithState = SteamGuideImage & {
   uploadError?: string;     // 上传错误信息
   uploadProgress?: number;  // 上传进度（0-100）
   contentHash?: string;     // 内容哈希（用于去重检测）
+  linkedGuideId?: string;   // 关联的存档 ID（用于图片池隔离）
 };
 
 /**
@@ -70,8 +72,19 @@ type SteamGuideImageState = {
   getImageById: (imageId: string) => ImageWithState | undefined;
 
   // === 本地图片管理 ===
-  addLocalImage: (file: File) => Promise<AddImageResult>;
+  addLocalImage: (file: File, linkedGuideId?: string) => Promise<AddImageResult>;
   renameImage: (imageId: string, newFileName: string) => void;
+
+  // === 存档关联 ===
+  /**
+   * 从存档加载缓存的图片
+   * @param guideId - 存档 ID
+   * @param triggerRefresh - 是否在缓存为空时触发 refresh（默认 true）
+   *   - true: 用于"编辑此指南"入口，首次打开需要获取图片
+   *   - false: 用于编辑器内切换存档，避免获取错误的图片
+   */
+  loadFromArchive: (guideId: string | null, triggerRefresh?: boolean) => void;
+  getImagesByGuide: (guideId: string | null) => ImageWithState[];
 };
 
 export const useSteamGuideImageStore = create<SteamGuideImageState>()(
@@ -85,32 +98,35 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       refresh: async () => {
         set({ status: "loading", error: undefined });
 
+        // 获取当前存档 ID
+        const currentArchiveId = useGuideStore.getState().currentArchiveId;
+
         // 简化重试逻辑：2次重试，间隔500ms
         const fetchWithRetry = async (retries = 2, retryDelay = 500) => {
           for (let i = 0; i < retries; i++) {
             try {
               const list = await fetchSteamGuideImages("chapter-preview");
-              loggers.image.info('图片池加载成功', { count: list.length, attempt: i + 1 });
+              loggers.image.info('图片池加载成功', { count: list.length, attempt: i + 1, archiveId: currentArchiveId });
 
-              // 将 Steam 图片标记为 success 状态
+              // 将 Steam 图片标记为 success 状态，并关联当前存档
               const itemsWithState: ImageWithState[] = list.map(item => ({
                 ...item,
-                state: "success" as ImageState
+                state: "success" as ImageState,
+                linkedGuideId: currentArchiveId ?? undefined
               }));
 
               // 创建 previewId 集合，用于检查哪些本地图片已经在 Steam 图片池中
               const steamPreviewIds = new Set(list.map(item => item.previewId));
 
               // 合并本地图片：
-              // - 只保留 pending 和 uploading 状态的图片（尚未完成上传）
-              // - success 状态的图片以 Steam 图片池为准（如果不在池中则移除）
+              // - 只保留当前存档的 pending 和 uploading 状态的图片
+              // - success 状态的图片以 Steam 图片池为准
               const existingLocalImages = get().items.filter(item => {
                 // 只保留 pending 或 uploading 状态的图片
                 if (item.state === "pending" || item.state === "uploading") {
-                  return true;
+                  // 只保留当前存档的本地图片
+                  return item.linkedGuideId === currentArchiveId;
                 }
-                // success 状态的图片不保留，以 Steam 图片池为准
-                // 如果在 Steam 端被删除，刷新后应该消失
                 return false;
               });
 
@@ -118,6 +134,15 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
                 items: [...itemsWithState, ...existingLocalImages],
                 status: "ready"
               });
+
+              // 保存图片元数据到存档缓存
+              if (currentArchiveId) {
+                useGuideStore.getState().updateArchive(currentArchiveId, {
+                  cachedImages: list,
+                  imagesUpdatedAt: Date.now()
+                });
+                loggers.image.info('图片元数据已缓存到存档', { archiveId: currentArchiveId, count: list.length });
+              }
 
               // 验证 BBCode 导入的图片引用是否有效
               // 将不在 Steam 图片池中的图片标记为 orphaned
@@ -204,9 +229,11 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       // === 本地图片管理 ===
       /**
        * 添加本地图片到图片池
+       * @param file - 图片文件
+       * @param linkedGuideId - 关联的存档 ID（可选，用于图片池隔离）
        * @returns { image, skipped, reason } - skipped=true 表示跳过（重复内容）
        */
-      addLocalImage: async (file: File): Promise<AddImageResult> => {
+      addLocalImage: async (file: File, linkedGuideId?: string): Promise<AddImageResult> => {
         const items = get().items;
 
         // Phase 2: 内容哈希去重检测
@@ -279,7 +306,8 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           localUrl: localUrl,
           state: "pending",
           uploadProgress: 0,
-          contentHash // 保存哈希用于后续去重
+          contentHash, // 保存哈希用于后续去重
+          linkedGuideId // 关联存档 ID
         };
 
         set((state) => ({
@@ -313,6 +341,89 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           )
         }));
         loggers.image.info('重命名图片', { imageId, newFileName });
+      },
+
+      // === 存档关联 ===
+      /**
+       * 从存档加载缓存的图片
+       * @param guideId - 存档 ID
+       * @param triggerRefresh - 是否在缓存为空时触发 refresh（默认 true）
+       */
+      loadFromArchive: (guideId: string | null, triggerRefresh: boolean = true) => {
+        const currentItems = get().items;
+
+        // 保留所有本地图片（pending/uploading/error 状态）
+        const localImages = currentItems.filter(item =>
+          item.state === "pending" || item.state === "uploading" || item.state === "error"
+        );
+
+        if (!guideId) {
+          // 没有存档时，只保留本地图片，清空 Steam 图片
+          set({ items: localImages, status: "idle" });
+          loggers.image.info('切换到无存档模式，清空 Steam 图片');
+          return;
+        }
+
+        // 从存档加载缓存的图片
+        const archive = useGuideStore.getState().getArchive(guideId);
+        const cachedImages = archive?.cachedImages || [];
+
+        // 将缓存的图片转换为 ImageWithState
+        const steamImages: ImageWithState[] = cachedImages.map(img => ({
+          ...img,
+          state: "success" as ImageState,
+          linkedGuideId: guideId
+        }));
+
+        // 合并：缓存的 Steam 图片 + 当前存档的本地图片
+        const archiveLocalImages = localImages.filter(img => img.linkedGuideId === guideId);
+
+        // 决定 status：
+        // - 有缓存：ready
+        // - 无缓存 + triggerRefresh：idle（触发 refresh）
+        // - 无缓存 + !triggerRefresh：ready（显示空，避免获取错误数据）
+        const newStatus = cachedImages.length > 0 ? "ready" :
+                         triggerRefresh ? "idle" : "ready";
+
+        set({
+          items: [...steamImages, ...archiveLocalImages],
+          status: newStatus
+        });
+
+        loggers.image.info('从存档加载图片', {
+          guideId,
+          cachedCount: cachedImages.length,
+          localCount: archiveLocalImages.length,
+          triggerRefresh,
+          newStatus
+        });
+      },
+
+      /**
+       * 获取指定存档的图片（用于 UI 过滤显示）
+       * @param guideId - 存档 ID，null 表示显示未关联的图片
+       */
+      getImagesByGuide: (guideId: string | null): ImageWithState[] => {
+        const items = get().items;
+        return items.filter(item => {
+          // Steam 图片（success 状态）：
+          // - 如果有 linkedGuideId，按它过滤
+          // - 如果没有 linkedGuideId（旧数据或 refresh 时 archiveId 还没设置），显示所有
+          if (item.state === "success") {
+            if (!item.linkedGuideId) {
+              // 没有关联的 Steam 图片，显示（兼容旧数据）
+              return true;
+            }
+            // 有关联的，按 guideId 过滤
+            return guideId === null ? false : item.linkedGuideId === guideId;
+          }
+
+          // 本地图片（pending/uploading/error）严格按 linkedGuideId 过滤
+          if (guideId === null) {
+            return !item.linkedGuideId;
+          }
+          return item.linkedGuideId === guideId;
+        });
       }
     }),
     {
