@@ -13,6 +13,7 @@ import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
 import TagManager from "./TagManager";
 import SearchBar from "./SearchBar";
+import FullscreenPanel from "./FullscreenPanel";
 import {
   panelContainerStyle,
   contentStyle,
@@ -84,6 +85,8 @@ const ImageFloatingPanel: React.FC = () => {
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   // 标签管理弹窗状态
   const [showTagManager, setShowTagManager] = useState(false);
+  // 全屏模式状态
+  const [isFullscreen, setIsFullscreen] = useState(false);
   // 搜索状态
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -380,11 +383,13 @@ const ImageFloatingPanel: React.FC = () => {
           imageCount={searchQuery ? filteredImages.length : archiveImages.length}
           archiveName={currentArchive?.guideName}
           isRefreshing={imagePoolStatus === "loading"}
+          isFullscreen={isFullscreen}
           onDragStart={handleDragStart}
           onRefresh={handleRefresh}
           onMinimize={minimize}
           onClose={close}
           onOpenTagManager={() => setShowTagManager(true)}
+          onToggleFullscreen={() => setIsFullscreen(true)}
         />
 
         {/* 搜索栏 */}
@@ -465,6 +470,26 @@ const ImageFloatingPanel: React.FC = () => {
         visible={showTagManager}
         onClose={() => setShowTagManager(false)}
       />
+
+      {/* 全屏模式 */}
+      {isFullscreen && (
+        <FullscreenPanel
+          images={filteredImages}
+          archiveImages={archiveImages}
+          archiveName={currentArchive?.guideName}
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortByChange={setSortBy}
+          onToggleSortOrder={toggleSortOrder}
+          filterStatus={filterStatus}
+          onFilterStatusChange={setFilterStatus}
+          editingImageId={editingImageId}
+          onEditingChange={setEditingImageId}
+          onClose={() => setIsFullscreen(false)}
+        />
+      )}
     </>
   );
 };

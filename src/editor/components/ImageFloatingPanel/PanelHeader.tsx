@@ -15,22 +15,26 @@ interface PanelHeaderProps {
   imageCount: number;
   archiveName?: string;
   isRefreshing?: boolean;
+  isFullscreen?: boolean;
   onDragStart: (e: React.MouseEvent) => void;
   onRefresh: () => void;
   onMinimize: () => void;
   onClose: () => void;
   onOpenTagManager?: () => void;
+  onToggleFullscreen?: () => void;
 }
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   imageCount,
   archiveName,
   isRefreshing = false,
+  isFullscreen = false,
   onDragStart,
   onRefresh,
   onMinimize,
   onClose,
-  onOpenTagManager
+  onOpenTagManager,
+  onToggleFullscreen
 }) => {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -114,6 +118,20 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             onClick={onOpenTagManager}
           >
             🏷
+          </button>
+        )}
+
+        {/* 全屏按钮 */}
+        {onToggleFullscreen && (
+          <button
+            type="button"
+            title={isFullscreen ? "退出全屏" : "全屏模式"}
+            style={getButtonStyle("fullscreen")}
+            onMouseEnter={() => setHoveredButton("fullscreen")}
+            onMouseLeave={() => setHoveredButton(null)}
+            onClick={onToggleFullscreen}
+          >
+            {isFullscreen ? "⊡" : "⊞"}
           </button>
         )}
 
