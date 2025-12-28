@@ -44,8 +44,14 @@ const ImageFloatingPanel: React.FC = () => {
     isMinimized,
     position,
     size,
+    sortBy,
+    sortOrder,
+    filterStatus,
     setPosition,
     setSize,
+    setSortBy,
+    toggleSortOrder,
+    setFilterStatus,
     open,
     close,
     minimize,
@@ -81,38 +87,83 @@ const ImageFloatingPanel: React.FC = () => {
   // 搜索状态
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 搜索过滤后的图片
+  // 搜索、状态筛选、排序后的图片
   const filteredImages = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return archiveImages;
+    let result = archiveImages;
+
+    // 1. 状态筛选
+    if (filterStatus !== "all") {
+      result = result.filter((image) => {
+        switch (filterStatus) {
+          case "pending":
+            return image.state === "pending";
+          case "success":
+            return image.state === "success";
+          case "error":
+            return image.state === "error";
+          default:
+            return true;
+        }
+      });
     }
 
-    const query = searchQuery.toLowerCase().trim();
-    const imageTags = currentArchive?.imageTags || [];
-    const imageTagMap = currentArchive?.imageTagMap || {};
+    // 2. 搜索过滤
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const imageTags = currentArchive?.imageTags || [];
+      const imageTagMap = currentArchive?.imageTagMap || {};
 
-    return archiveImages.filter((image) => {
-      // 1. 按文件名匹配（不区分大小写）
-      if (image.fileName.toLowerCase().includes(query)) {
-        return true;
-      }
-
-      // 2. 按标签名匹配
-      const imageId = image.previewId || image.fileName;
-      const tagIds = imageTagMap[imageId] || [];
-      if (tagIds.length > 0) {
-        const matchedTag = tagIds.some((tagId: string) => {
-          const tag = imageTags.find((t) => t.id === tagId);
-          return tag && tag.name.toLowerCase().includes(query);
-        });
-        if (matchedTag) {
+      result = result.filter((image) => {
+        // 按文件名匹配（不区分大小写）
+        if (image.fileName.toLowerCase().includes(query)) {
           return true;
         }
+
+        // 按标签名匹配
+        const imageId = image.previewId || image.fileName;
+        const tagIds = imageTagMap[imageId] || [];
+        if (tagIds.length > 0) {
+          const matchedTag = tagIds.some((tagId: string) => {
+            const tag = imageTags.find((t) => t.id === tagId);
+            return tag && tag.name.toLowerCase().includes(query);
+          });
+          if (matchedTag) {
+            return true;
+          }
+        }
+
+        return false;
+      });
+    }
+
+    // 3. 排序
+    result = [...result].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortBy) {
+        case "uploadTime":
+          // 按上传时间排序
+          // 使用 previewId 作为时间代理（Steam previewId 通常按时间递增）
+          // 本地图片 previewId 为空，排在最后
+          const idA = parseInt(a.previewId || "0", 10);
+          const idB = parseInt(b.previewId || "0", 10);
+          comparison = idA - idB;
+          break;
+
+        case "fileName":
+          // 按文件名排序（不区分大小写）
+          comparison = a.fileName.toLowerCase().localeCompare(b.fileName.toLowerCase());
+          break;
+
+        default:
+          comparison = 0;
       }
 
-      return false;
+      return sortOrder === "asc" ? comparison : -comparison;
     });
-  }, [archiveImages, searchQuery, currentArchive]);
+
+    return result;
+  }, [archiveImages, searchQuery, currentArchive, filterStatus, sortBy, sortOrder]);
 
   const dragStartRef = useRef<{
     x: number;
@@ -338,10 +389,16 @@ const ImageFloatingPanel: React.FC = () => {
 
         {/* 搜索栏 */}
         <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
+          searchValue={searchQuery}
+          onSearchChange={setSearchQuery}
           resultCount={filteredImages.length}
           totalCount={archiveImages.length}
+          sortBy={sortBy}
+          sortOrder={sortOrder}
+          onSortByChange={setSortBy}
+          onToggleSortOrder={toggleSortOrder}
+          filterStatus={filterStatus}
+          onFilterStatusChange={setFilterStatus}
         />
 
         {/* 内容区 */}

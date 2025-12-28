@@ -19,7 +19,7 @@ export const THUMBNAIL_SIZE_MAP: Record<Exclude<ThumbnailSizePreset, "custom">, 
 };
 
 /** 排序字段 */
-export type SortBy = "uploadTime" | "fileName" | "fileSize";
+export type SortBy = "uploadTime" | "fileName";
 
 /** 排序方向 */
 export type SortOrder = "asc" | "desc";
