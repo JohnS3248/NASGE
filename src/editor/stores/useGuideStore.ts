@@ -41,6 +41,7 @@ export type GuideInfo = {
 
 /**
  * 图片分组（本地功能，Steam 无此功能）
+ * @deprecated 使用新的标签系统 ImageTag 替代
  */
 export type ImageGroup = {
   id: string;
@@ -49,6 +50,31 @@ export type ImageGroup = {
   imageIds: string[];  // previewId 或 fileName
   order: number;
 };
+
+/**
+ * 图片标签（一个图片可以有多个标签）
+ */
+export type ImageTag = {
+  id: string;
+  name: string;
+  color: string;  // 标签颜色（必填，用于 UI 识别）
+  order: number;  // 排序顺序
+};
+
+/**
+ * 预设标签颜色
+ */
+export const TAG_COLORS = [
+  '#ef4444', // 红色
+  '#f97316', // 橙色
+  '#eab308', // 黄色
+  '#22c55e', // 绿色
+  '#06b6d4', // 青色
+  '#3b82f6', // 蓝色
+  '#8b5cf6', // 紫色
+  '#ec4899', // 粉色
+  '#6b7280', // 灰色
+] as const;
 
 /**
  * 指南存档（每个指南一个）
@@ -62,8 +88,12 @@ export type GuideArchive = {
   chapters: ChapterInfo[];
   chaptersUpdatedAt: number;
 
-  // 图片分组
+  // 图片分组（已废弃，保留兼容）
   imageGroups: ImageGroup[];
+
+  // 图片标签系统（新）
+  imageTags: ImageTag[];                    // 存档的标签定义
+  imageTagMap: Record<string, string[]>;    // imageId -> tagIds 映射
 
   // 缓存的 Steam 图片元数据
   cachedImages?: SteamGuideImage[];
@@ -157,12 +187,29 @@ type GuideState = {
   // === 存档章节管理 ===
   saveChaptersToArchive: (guideId: string, chapters: ChapterInfo[]) => void;
 
-  // === 存档图片分组管理 ===
+  // === 存档图片分组管理（已废弃） ===
   createImageGroup: (guideId: string, name: string, color?: string) => ImageGroup | null;
   updateImageGroup: (guideId: string, groupId: string, patch: Partial<ImageGroup>) => void;
   deleteImageGroup: (guideId: string, groupId: string) => void;
   addImageToGroup: (guideId: string, groupId: string, imageId: string) => void;
   removeImageFromGroup: (guideId: string, groupId: string, imageId: string) => void;
+
+  // === 图片标签管理（新） ===
+  // 标签 CRUD
+  createTag: (guideId: string, name: string, color?: string) => ImageTag | null;
+  updateTag: (guideId: string, tagId: string, patch: Partial<Omit<ImageTag, 'id'>>) => void;
+  deleteTag: (guideId: string, tagId: string) => void;
+  reorderTags: (guideId: string, tagIds: string[]) => void;
+
+  // 图片打标签
+  addTagToImage: (guideId: string, imageId: string, tagId: string) => void;
+  removeTagFromImage: (guideId: string, imageId: string, tagId: string) => void;
+  setImageTags: (guideId: string, imageId: string, tagIds: string[]) => void;
+
+  // 标签查询
+  getTagsForImage: (guideId: string, imageId: string) => ImageTag[];
+  getImageIdsByTag: (guideId: string, tagId: string) => string[];
+  getUntaggedImageIds: (guideId: string) => string[];
 
   // === 草稿与存档关联 ===
   getDraftsByArchive: (guideId: string | null) => Draft[];
@@ -235,6 +282,8 @@ export const useGuideStore = create<GuideState>()(
                 chapters: info.chapters,
                 chaptersUpdatedAt: Date.now(),
                 imageGroups: [],
+                imageTags: [],
+                imageTagMap: {},
                 draftIds: [],
                 createdAt: Date.now(),
                 lastAccessedAt: Date.now()
@@ -263,20 +312,9 @@ export const useGuideStore = create<GuideState>()(
               set({ activeDraftId: mostRecentDraft.id });
               loggers.store.info('切换到存档草稿', { draftId: mostRecentDraft.id, draftName: mostRecentDraft.draftName });
             } else {
-              // 没有草稿：创建新草稿
-              const newDraft: Draft = {
-                id: crypto.randomUUID(),
-                draftName: '草稿 1',
-                title: createEmptyTitle(),
-                content: createEmptyDoc(),
-                updatedAt: Date.now(),
-                linkedGuideId: info.id
-              };
-              set((s) => ({
-                drafts: [...s.drafts, newDraft],
-                activeDraftId: newDraft.id
-              }));
-              loggers.store.info('为存档创建新草稿', { guideId: info.id, draftId: newDraft.id });
+              // 没有草稿：清空当前草稿，显示"暂无草稿"引导
+              set({ activeDraftId: null });
+              loggers.store.info('存档无草稿', { guideId: info.id });
             }
           } else {
             set({ guideInfo: info, mode: 'guide' });
@@ -553,6 +591,8 @@ export const useGuideStore = create<GuideState>()(
             chapters: guideInfo.chapters,
             chaptersUpdatedAt: Date.now(),
             imageGroups: [],
+            imageTags: [],
+            imageTagMap: {},
             draftIds: [],
             createdAt: Date.now(),
             lastAccessedAt: Date.now()
@@ -783,6 +823,237 @@ export const useGuideStore = create<GuideState>()(
           });
         },
 
+        // === 图片标签管理（新） ===
+
+        // 创建标签
+        createTag: (guideId, name, color) => {
+          const state = get();
+          const archive = state.archives[guideId];
+          if (!archive) return null;
+
+          // 自动选择颜色：使用预设颜色，按顺序循环
+          const usedColors = archive.imageTags.map(t => t.color);
+          const availableColor = TAG_COLORS.find(c => !usedColors.includes(c)) || TAG_COLORS[archive.imageTags.length % TAG_COLORS.length];
+
+          const newTag: ImageTag = {
+            id: crypto.randomUUID(),
+            name,
+            color: color || availableColor,
+            order: archive.imageTags.length
+          };
+
+          set((s) => ({
+            archives: {
+              ...s.archives,
+              [guideId]: {
+                ...archive,
+                imageTags: [...archive.imageTags, newTag]
+              }
+            }
+          }));
+
+          loggers.store.info('创建标签', { guideId, tagName: name, tagId: newTag.id });
+          return newTag;
+        },
+
+        // 更新标签
+        updateTag: (guideId, tagId, patch) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTags: archive.imageTags.map((t) =>
+                    t.id === tagId ? { ...t, ...patch } : t
+                  )
+                }
+              }
+            };
+          });
+        },
+
+        // 删除标签（同时从所有图片移除该标签）
+        deleteTag: (guideId, tagId) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            // 从 imageTagMap 中移除该标签
+            const newTagMap: Record<string, string[]> = {};
+            for (const [imageId, tagIds] of Object.entries(archive.imageTagMap)) {
+              const filtered = tagIds.filter(id => id !== tagId);
+              if (filtered.length > 0) {
+                newTagMap[imageId] = filtered;
+              }
+              // 如果过滤后为空，则不保留该条目
+            }
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTags: archive.imageTags.filter((t) => t.id !== tagId),
+                  imageTagMap: newTagMap
+                }
+              }
+            };
+          });
+          loggers.store.info('删除标签', { guideId, tagId });
+        },
+
+        // 重新排序标签
+        reorderTags: (guideId, tagIds) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            const reorderedTags = tagIds
+              .map((id, index) => {
+                const tag = archive.imageTags.find(t => t.id === id);
+                return tag ? { ...tag, order: index } : null;
+              })
+              .filter((t): t is ImageTag => t !== null);
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTags: reorderedTags
+                }
+              }
+            };
+          });
+        },
+
+        // 为图片添加标签
+        addTagToImage: (guideId, imageId, tagId) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            // 检查标签是否存在
+            if (!archive.imageTags.some(t => t.id === tagId)) return state;
+
+            const currentTags = archive.imageTagMap[imageId] || [];
+            if (currentTags.includes(tagId)) return state; // 已有该标签
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTagMap: {
+                    ...archive.imageTagMap,
+                    [imageId]: [...currentTags, tagId]
+                  }
+                }
+              }
+            };
+          });
+        },
+
+        // 从图片移除标签
+        removeTagFromImage: (guideId, imageId, tagId) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            const currentTags = archive.imageTagMap[imageId] || [];
+            const newTags = currentTags.filter(id => id !== tagId);
+
+            const newTagMap = { ...archive.imageTagMap };
+            if (newTags.length > 0) {
+              newTagMap[imageId] = newTags;
+            } else {
+              delete newTagMap[imageId];
+            }
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTagMap: newTagMap
+                }
+              }
+            };
+          });
+        },
+
+        // 设置图片的所有标签（替换）
+        setImageTags: (guideId, imageId, tagIds) => {
+          set((state) => {
+            const archive = state.archives[guideId];
+            if (!archive) return state;
+
+            // 只保留存在的标签
+            const validTagIds = tagIds.filter(id => archive.imageTags.some(t => t.id === id));
+
+            const newTagMap = { ...archive.imageTagMap };
+            if (validTagIds.length > 0) {
+              newTagMap[imageId] = validTagIds;
+            } else {
+              delete newTagMap[imageId];
+            }
+
+            return {
+              archives: {
+                ...state.archives,
+                [guideId]: {
+                  ...archive,
+                  imageTagMap: newTagMap
+                }
+              }
+            };
+          });
+        },
+
+        // 获取图片的所有标签
+        getTagsForImage: (guideId, imageId) => {
+          const state = get();
+          const archive = state.archives[guideId];
+          if (!archive) return [];
+
+          const tagIds = archive.imageTagMap[imageId] || [];
+          return tagIds
+            .map(id => archive.imageTags.find(t => t.id === id))
+            .filter((t): t is ImageTag => t !== undefined)
+            .sort((a, b) => a.order - b.order);
+        },
+
+        // 获取某标签下的所有图片 ID
+        getImageIdsByTag: (guideId, tagId) => {
+          const state = get();
+          const archive = state.archives[guideId];
+          if (!archive) return [];
+
+          return Object.entries(archive.imageTagMap)
+            .filter(([_, tagIds]) => tagIds.includes(tagId))
+            .map(([imageId]) => imageId);
+        },
+
+        // 获取没有任何标签的图片 ID
+        getUntaggedImageIds: (guideId) => {
+          const state = get();
+          const archive = state.archives[guideId];
+          if (!archive) return [];
+
+          // 获取所有缓存的图片 ID
+          const allImageIds = (archive.cachedImages || []).map(img => img.previewId);
+
+          // 过滤出没有标签的图片
+          return allImageIds.filter(id => {
+            const tags = archive.imageTagMap[id];
+            return !tags || tags.length === 0;
+          });
+        },
+
         // === 草稿与存档关联 ===
         getDraftsByArchive: (guideId) => {
           const state = get();
@@ -895,6 +1166,17 @@ export const useGuideStore = create<GuideState>()(
           deleteImageGroup: currentState.deleteImageGroup,
           addImageToGroup: currentState.addImageToGroup,
           removeImageFromGroup: currentState.removeImageFromGroup,
+          // 新增：图片标签管理
+          createTag: currentState.createTag,
+          updateTag: currentState.updateTag,
+          deleteTag: currentState.deleteTag,
+          reorderTags: currentState.reorderTags,
+          addTagToImage: currentState.addTagToImage,
+          removeTagFromImage: currentState.removeTagFromImage,
+          setImageTags: currentState.setImageTags,
+          getTagsForImage: currentState.getTagsForImage,
+          getImageIdsByTag: currentState.getImageIdsByTag,
+          getUntaggedImageIds: currentState.getUntaggedImageIds,
           getDraftsByArchive: currentState.getDraftsByArchive,
           getUnlinkedDrafts: currentState.getUnlinkedDrafts
         } as GuideState;
@@ -928,7 +1210,20 @@ export const useGuideStore = create<GuideState>()(
           };
         }
 
-        // v1 已是最新，直接返回
+        // 迁移旧存档：添加缺失的 imageTags 和 imageTagMap 字段
+        if (state.archives) {
+          const migratedArchives: Record<string, GuideArchive> = {};
+          for (const [guideId, archive] of Object.entries(state.archives)) {
+            migratedArchives[guideId] = {
+              ...archive,
+              // 确保新字段存在
+              imageTags: (archive as GuideArchive).imageTags || [],
+              imageTagMap: (archive as GuideArchive).imageTagMap || {}
+            };
+          }
+          state.archives = migratedArchives;
+        }
+
         return state;
       },
 
