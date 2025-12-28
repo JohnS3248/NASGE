@@ -144,9 +144,10 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
                 loggers.image.info('图片元数据已缓存到存档', { archiveId: currentArchiveId, count: list.length });
               }
 
-              // 验证 BBCode 导入的图片引用是否有效
-              // 将不在 Steam 图片池中的图片标记为 orphaned
-              useImageStore.getState().validateReferences(steamPreviewIds);
+              // 同步 Steam 图片池数据到新 Store
+              // 注意：不再调用 validateReferences，因为跨指南引用的图片是有效的
+              // 图片的有效性应该由实际加载结果决定（onLoad/onError）
+              useImageStore.getState().syncFromSteamPool(list);
 
               return;
             } catch (error) {

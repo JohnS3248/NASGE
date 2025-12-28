@@ -404,6 +404,22 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
             statusLabel: `图片引用失效 (ID: ${imageEntity.steamPreviewId})`
           };
         }
+
+        // BBCode 导入但没有 steamUrls：说明图片不在 Steam 图片池中
+        // 也没有本地预览，视为引用失效
+        const hasAnyUrl = imageEntity.steamUrls?.originalUrl ||
+                          imageEntity.steamUrls?.thumbnailUrl ||
+                          imageEntity.localPreviewUrl;
+        if (imageEntity.source === "bbcode" && !hasAnyUrl) {
+          return {
+            containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+            imageStyle: placeholderImageStyle(),
+            placeholderStyle: orphanedPlaceholderStyle(),
+            statusStyle: statusOverlayStyle("#ff8080"),
+            statusLabel: `图片引用失效 (ID: ${imageEntity.steamPreviewId})`
+          };
+        }
+
         // 其他状态（uploaded/synced）但没有 URL 时
         return {
           containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
@@ -500,13 +516,40 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     return attrPreview;
   }, [imageEntity, imageNode, steamPoolImage, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
 
+  // 处理图片加载成功
+  const handleImageLoad = useCallback(() => {
+    // 如果图片从 BBCode 导入，加载成功说明引用有效，标记为 synced
+    if (imageEntity && imageEntity.status === "uploaded" && imageEntity.source === "bbcode") {
+      loggers.image.info('BBCode 导入图片加载成功，标记为 synced', {
+        imageId: imageEntity.id,
+        steamPreviewId: imageEntity.steamPreviewId
+      });
+      useImageStore.getState().markSynced(imageEntity.id);
+    }
+  }, [imageEntity]);
+
   // 处理图片加载失败
   const handleImageLoadError = useCallback(() => {
+    // 优先处理 CDN URL 回退
     if (imageNode?.cdnUrl && !cdnUrlLoadFailed) {
       loggers.image.warn('CDN URL 加载失败，尝试回退到本地预览:', imageNode.cdnUrl);
       setCdnUrlLoadFailed(true);
+      return;
     }
-  }, [imageNode?.cdnUrl, cdnUrlLoadFailed]);
+
+    // 如果图片从 BBCode 导入且没有本地预览，加载失败说明引用失效
+    if (imageEntity && imageEntity.status === "uploaded" && imageEntity.source === "bbcode") {
+      // 检查是否还有本地预览可用
+      const hasLocalPreview = imageEntity.localPreviewUrl || node.attrs.previewDataUrl;
+      if (!hasLocalPreview) {
+        loggers.image.warn('BBCode 导入图片加载失败，标记为 orphaned', {
+          imageId: imageEntity.id,
+          steamPreviewId: imageEntity.steamPreviewId
+        });
+        useImageStore.getState().markOrphaned(imageEntity.id);
+      }
+    }
+  }, [imageNode?.cdnUrl, cdnUrlLoadFailed, imageEntity, node.attrs.previewDataUrl]);
 
   const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? (node.attrs.fileName as string) ?? "NASGE 图片";
 
@@ -514,6 +557,14 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const imageState = useMemo(() => {
     // === 优先使用新 Store 的 imageEntity ===
     if (imageEntity) {
+      // BBCode 导入但没有可用 URL，视为错误
+      const hasAnyUrl = imageEntity.steamUrls?.originalUrl ||
+                        imageEntity.steamUrls?.thumbnailUrl ||
+                        imageEntity.localPreviewUrl;
+      if (imageEntity.source === "bbcode" && !hasAnyUrl) {
+        return "error";
+      }
+
       switch (imageEntity.status) {
         case "local":
           return "pending";
@@ -563,6 +614,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
             alt={alt}
             style={imageStyle}
             draggable={false}
+            onLoad={handleImageLoad}
             onError={handleImageLoadError}
           />
           {statusStyle && statusLabel ? (
