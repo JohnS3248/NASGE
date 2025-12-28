@@ -12,6 +12,7 @@ import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
 import TagManager from "./TagManager";
+import SearchBar from "./SearchBar";
 import {
   panelContainerStyle,
   contentStyle,
@@ -58,7 +59,7 @@ const ImageFloatingPanel: React.FC = () => {
   const currentArchive = useGuideStore((state) => state.getCurrentArchive());
 
   // 过滤当前存档的图片
-  const filteredImages = useMemo(() => {
+  const archiveImages = useMemo(() => {
     return getImagesByGuide(currentArchiveId);
   }, [getImagesByGuide, currentArchiveId, images]);
 
@@ -77,6 +78,42 @@ const ImageFloatingPanel: React.FC = () => {
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
   // 标签管理弹窗状态
   const [showTagManager, setShowTagManager] = useState(false);
+  // 搜索状态
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // 搜索过滤后的图片
+  const filteredImages = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return archiveImages;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const imageTags = currentArchive?.imageTags || [];
+    const imageTagMap = currentArchive?.imageTagMap || {};
+
+    return archiveImages.filter((image) => {
+      // 1. 按文件名匹配（不区分大小写）
+      if (image.fileName.toLowerCase().includes(query)) {
+        return true;
+      }
+
+      // 2. 按标签名匹配
+      const imageId = image.previewId || image.fileName;
+      const tagIds = imageTagMap[imageId] || [];
+      if (tagIds.length > 0) {
+        const matchedTag = tagIds.some((tagId: string) => {
+          const tag = imageTags.find((t) => t.id === tagId);
+          return tag && tag.name.toLowerCase().includes(query);
+        });
+        if (matchedTag) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+  }, [archiveImages, searchQuery, currentArchive]);
+
   const dragStartRef = useRef<{
     x: number;
     y: number;
@@ -289,7 +326,7 @@ const ImageFloatingPanel: React.FC = () => {
       >
         {/* 标题栏 */}
         <PanelHeader
-          imageCount={filteredImages.length}
+          imageCount={searchQuery ? filteredImages.length : archiveImages.length}
           archiveName={currentArchive?.guideName}
           isRefreshing={imagePoolStatus === "loading"}
           onDragStart={handleDragStart}
@@ -297,6 +334,14 @@ const ImageFloatingPanel: React.FC = () => {
           onMinimize={minimize}
           onClose={close}
           onOpenTagManager={() => setShowTagManager(true)}
+        />
+
+        {/* 搜索栏 */}
+        <SearchBar
+          value={searchQuery}
+          onChange={setSearchQuery}
+          resultCount={filteredImages.length}
+          totalCount={archiveImages.length}
         />
 
         {/* 内容区 */}
