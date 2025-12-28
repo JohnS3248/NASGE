@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { SettingsModal } from './SettingsModal';
+import ArchiveSelector from './ArchiveSelector';
 
 const EditorHeader: React.FC = () => {
   const { mode, guideInfo } = useGuideStore();
@@ -113,6 +114,9 @@ const EditorHeader: React.FC = () => {
             : '离线编辑模式 - 不关联任何 Steam 内容'}
         </p>
       </div>
+
+      {/* 存档选择器 */}
+      <ArchiveSelector />
 
       {/* 设置按钮 */}
       <button
