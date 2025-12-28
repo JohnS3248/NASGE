@@ -83,6 +83,10 @@ export type EditorConfig = {
   promptRenameOnDrop: boolean;  // 悬浮窗：拖拽时启用内联重命名
   debugMode: boolean;           // 调试模式开关
   shortcuts: ShortcutConfig;    // 快捷键配置
+  // 智能布局配置（全屏模式）
+  smartLayoutEnabled: boolean;        // 智能布局开关
+  smartLayoutWidthThreshold: number;  // 大图宽度阈值 (px)
+  smartLayoutHeightThreshold: number; // 大图高度阈值 (px)
 };
 
 type EditorConfigState = EditorConfig & {
@@ -95,6 +99,10 @@ type EditorConfigState = EditorConfig & {
   // 快捷键相关
   setShortcut: (key: keyof ShortcutConfig, value: string) => void;
   resetShortcuts: () => void;
+  // 智能布局相关
+  setSmartLayoutEnabled: (enabled: boolean) => void;
+  setSmartLayoutWidthThreshold: (value: number) => void;
+  setSmartLayoutHeightThreshold: (value: number) => void;
   reset: () => void;
 };
 
@@ -105,7 +113,11 @@ const DEFAULT_CONFIG: EditorConfig = {
   promptRenameOnPaste: true, // 默认开启粘贴时重命名（内联编辑）
   promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
   debugMode: true, // 默认开启调试模式（开发阶段），发布前改为 false
-  shortcuts: DEFAULT_SHORTCUTS
+  shortcuts: DEFAULT_SHORTCUTS,
+  // 智能布局默认值
+  smartLayoutEnabled: false,       // 默认关闭
+  smartLayoutWidthThreshold: 800,  // 默认 800px
+  smartLayoutHeightThreshold: 600  // 默认 600px
 };
 
 export const useEditorConfigStore = create<EditorConfigState>()(
@@ -152,6 +164,18 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         loggers.config.info("重置快捷键配置");
         set({ shortcuts: DEFAULT_SHORTCUTS });
       },
+      setSmartLayoutEnabled: (enabled) => {
+        loggers.config.info("设置智能布局:", enabled ? "开启" : "关闭");
+        set({ smartLayoutEnabled: enabled });
+      },
+      setSmartLayoutWidthThreshold: (value) => {
+        loggers.config.info("设置智能布局宽度阈值:", value);
+        set({ smartLayoutWidthThreshold: Math.max(200, Math.min(2000, value)) });
+      },
+      setSmartLayoutHeightThreshold: (value) => {
+        loggers.config.info("设置智能布局高度阈值:", value);
+        set({ smartLayoutHeightThreshold: Math.max(200, Math.min(2000, value)) });
+      },
       reset: () => {
         loggers.config.info("重置配置");
         set(DEFAULT_CONFIG);
@@ -171,7 +195,11 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           shortcuts: {
             ...DEFAULT_SHORTCUTS,
             ...(persisted?.shortcuts || {})
-          }
+          },
+          // 确保智能布局字段有默认值
+          smartLayoutEnabled: persisted?.smartLayoutEnabled ?? DEFAULT_CONFIG.smartLayoutEnabled,
+          smartLayoutWidthThreshold: persisted?.smartLayoutWidthThreshold ?? DEFAULT_CONFIG.smartLayoutWidthThreshold,
+          smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold
         };
       },
       onRehydrateStorage: () => {

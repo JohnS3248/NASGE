@@ -1,11 +1,14 @@
 /**
  * 全屏图片池面板
  * 提供更大的浏览区域，支持 ESC 退出
+ * 支持智能布局模式
  */
 import React, { useEffect, useCallback } from "react";
 import { ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { SortBy, SortOrder, FilterStatus } from "../../stores/useImagePanelStore";
+import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import ImageGrid from "./ImageGrid";
+import SmartImageGrid from "./SmartImageGrid";
 import SearchBar from "./SearchBar";
 import { COLORS, Z_INDEX } from "./styles";
 
@@ -47,6 +50,9 @@ const FullscreenPanel: React.FC<FullscreenPanelProps> = ({
   onEditingChange,
   onClose
 }) => {
+  // 智能布局设置
+  const smartLayoutEnabled = useEditorConfigStore((s) => s.smartLayoutEnabled);
+
   // ESC 键退出全屏
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -166,12 +172,21 @@ const FullscreenPanel: React.FC<FullscreenPanelProps> = ({
             padding: 16
           }}
         >
-          <ImageGrid
-            images={images}
-            onImageDoubleClick={() => {}}
-            editingImageId={editingImageId}
-            onEditingChange={onEditingChange}
-          />
+          {smartLayoutEnabled ? (
+            <SmartImageGrid
+              images={images}
+              onImageDoubleClick={() => {}}
+              editingImageId={editingImageId}
+              onEditingChange={onEditingChange}
+            />
+          ) : (
+            <ImageGrid
+              images={images}
+              onImageDoubleClick={() => {}}
+              editingImageId={editingImageId}
+              onEditingChange={onEditingChange}
+            />
+          )}
         </div>
       </div>
     </div>

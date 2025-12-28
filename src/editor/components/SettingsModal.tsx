@@ -83,6 +83,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     (state) => state.setItemsPerPage
   );
 
+  // 智能布局设置
+  const smartLayoutEnabled = useEditorConfigStore(
+    (state) => state.smartLayoutEnabled
+  );
+  const smartLayoutWidthThreshold = useEditorConfigStore(
+    (state) => state.smartLayoutWidthThreshold
+  );
+  const smartLayoutHeightThreshold = useEditorConfigStore(
+    (state) => state.smartLayoutHeightThreshold
+  );
+  const setSmartLayoutEnabled = useEditorConfigStore(
+    (state) => state.setSmartLayoutEnabled
+  );
+  const setSmartLayoutWidthThreshold = useEditorConfigStore(
+    (state) => state.setSmartLayoutWidthThreshold
+  );
+  const setSmartLayoutHeightThreshold = useEditorConfigStore(
+    (state) => state.setSmartLayoutHeightThreshold
+  );
+
   if (!visible) return null;
 
   return (
@@ -291,6 +311,38 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={(v) => setThumbnailSize("custom", v)}
               />
             )}
+
+            {/* TODO: 智能布局功能暂时隐藏，待解决与缩略图尺寸设置的冲突后再开放
+            <ToggleOption
+              label="智能布局模式"
+              description="全屏模式下根据图片尺寸自动调整网格占用（大图占用更大空间）"
+              checked={smartLayoutEnabled}
+              onChange={setSmartLayoutEnabled}
+            />
+
+            {smartLayoutEnabled && (
+              <>
+                <SliderOption
+                  label="大图宽度阈值"
+                  description={`宽度 ≥ ${smartLayoutWidthThreshold}px 的图片视为大图`}
+                  value={smartLayoutWidthThreshold}
+                  min={200}
+                  max={2000}
+                  step={50}
+                  onChange={setSmartLayoutWidthThreshold}
+                />
+                <SliderOption
+                  label="大图高度阈值"
+                  description={`高度 ≥ ${smartLayoutHeightThreshold}px 的图片视为大图`}
+                  value={smartLayoutHeightThreshold}
+                  min={200}
+                  max={2000}
+                  step={50}
+                  onChange={setSmartLayoutHeightThreshold}
+                />
+              </>
+            )}
+            */}
 
             {/* 分隔线 */}
             <div
