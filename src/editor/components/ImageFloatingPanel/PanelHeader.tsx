@@ -19,6 +19,7 @@ interface PanelHeaderProps {
   onRefresh: () => void;
   onMinimize: () => void;
   onClose: () => void;
+  onOpenTagManager?: () => void;
 }
 
 const PanelHeader: React.FC<PanelHeaderProps> = ({
@@ -28,7 +29,8 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onDragStart,
   onRefresh,
   onMinimize,
-  onClose
+  onClose,
+  onOpenTagManager
 }) => {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
 
@@ -98,6 +100,20 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
             }}
           >
             ↻
+          </button>
+        )}
+
+        {/* 管理标签按钮 */}
+        {onOpenTagManager && (
+          <button
+            type="button"
+            title="管理标签"
+            style={getButtonStyle("tags")}
+            onMouseEnter={() => setHoveredButton("tags")}
+            onMouseLeave={() => setHoveredButton(null)}
+            onClick={onOpenTagManager}
+          >
+            🏷
           </button>
         )}
 

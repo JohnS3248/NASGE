@@ -11,6 +11,7 @@ import { queueImageUpload } from "../../services/uploadQueue";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
+import TagManager from "./TagManager";
 import {
   panelContainerStyle,
   contentStyle,
@@ -74,6 +75,8 @@ const ImageFloatingPanel: React.FC = () => {
 
   // 内联编辑状态：正在编辑文件名的图片 ID
   const [editingImageId, setEditingImageId] = useState<string | null>(null);
+  // 标签管理弹窗状态
+  const [showTagManager, setShowTagManager] = useState(false);
   const dragStartRef = useRef<{
     x: number;
     y: number;
@@ -293,6 +296,7 @@ const ImageFloatingPanel: React.FC = () => {
           onRefresh={handleRefresh}
           onMinimize={minimize}
           onClose={close}
+          onOpenTagManager={() => setShowTagManager(true)}
         />
 
         {/* 内容区 */}
@@ -352,6 +356,12 @@ const ImageFloatingPanel: React.FC = () => {
         setSize={setSize}
         onDragEnd={handleDragEnd}
         onResizeEnd={handleResizeEnd}
+      />
+
+      {/* 标签管理弹窗 */}
+      <TagManager
+        visible={showTagManager}
+        onClose={() => setShowTagManager(false)}
       />
     </>
   );
