@@ -1,10 +1,29 @@
 import React, { useState, useMemo } from 'react';
-import { useGuideStore } from '../stores/useGuideStore';
+import { useGuideStore, type ChapterInfo } from '../stores/useGuideStore';
 import { useChapterSync } from '../hooks/useChapterSync';
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import type { ImageState } from '../stores/useSteamGuideImageStore';
 import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
+
+/**
+ * 格式化同步时间
+ */
+const formatSyncTime = (timestamp: number): string => {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - timestamp;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return '刚刚';
+  if (diffMins < 60) return `${diffMins} 分钟前`;
+  if (diffHours < 24) return `${diffHours} 小时前`;
+  if (diffDays < 7) return `${diffDays} 天前`;
+
+  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+};
 
 interface ChapterNavProps {
   onRefresh?: () => Promise<void>;
@@ -324,6 +343,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const mode = useGuideStore((state) => state.mode);
   const guideInfo = useGuideStore((state) => state.guideInfo);
   const reorderChapters = useGuideStore((state) => state.reorderChapters);
+  const getCurrentArchive = useGuideStore((state) => state.getCurrentArchive);
 
   // 绑定模式相关
   const isBindingMode = useGuideStore((state) => state.isBindingMode);
@@ -338,8 +358,47 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
 
-  // 只在 guide 模式下显示章节导航
-  if (mode !== 'guide' || !guideInfo || !guideInfo.chapters || !Array.isArray(guideInfo.chapters)) {
+  // 获取当前存档（用于离线数据）
+  const currentArchive = getCurrentArchive();
+
+  // 章节数据源：优先使用 guideInfo，离线时使用存档缓存
+  const { chapters, isOfflineData, syncTime } = useMemo(() => {
+    // 如果是 offline 模式，标记为离线数据
+    const isOfflineMode = mode === 'offline';
+
+    // 优先使用 guideInfo（实时数据）
+    if (guideInfo?.chapters && Array.isArray(guideInfo.chapters) && guideInfo.chapters.length > 0) {
+      return {
+        chapters: guideInfo.chapters as ChapterInfo[],
+        isOfflineData: isOfflineMode,  // offline 模式下也标记为离线
+        syncTime: currentArchive?.chaptersUpdatedAt || Date.now()
+      };
+    }
+
+    // 回退到存档缓存（离线数据）
+    if (currentArchive?.chapters && currentArchive.chapters.length > 0) {
+      loggers.editor.info('使用离线缓存的章节数据', {
+        count: currentArchive.chapters.length,
+        syncTime: currentArchive.chaptersUpdatedAt
+      });
+      return {
+        chapters: currentArchive.chapters,
+        isOfflineData: true,
+        syncTime: currentArchive.chaptersUpdatedAt
+      };
+    }
+
+    return { chapters: [], isOfflineData: false, syncTime: 0 };
+  }, [mode, guideInfo?.chapters, currentArchive?.chapters, currentArchive?.chaptersUpdatedAt]);
+
+  // 显示章节导航的条件：
+  // 1. guide 模式且有章节数据
+  // 2. 或者任意模式下有离线缓存的章节数据（允许在离线模式查看缓存）
+  // 3. review 模式始终不显示
+  if (mode === 'review') {
+    return null;
+  }
+  if (chapters.length === 0) {
     return null;
   }
 
@@ -362,7 +421,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
   // 处理绑定操作
   const handleBindToChapter = (sectionId: string) => {
-    const chapter = guideInfo?.chapters.find((c) => c.sectionId === sectionId);
+    const chapter = chapters.find((c) => c.sectionId === sectionId);
     if (!chapter) return;
 
     const result = bindDraftToChapter(sectionId);
@@ -409,14 +468,20 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
   const handleDrop = async (e: React.DragEvent, targetId: string) => {
     e.preventDefault();
-    if (!draggedId || draggedId === targetId || !guideInfo) return;
+    if (!draggedId || draggedId === targetId || chapters.length === 0) return;
 
-    const draggedIndex = guideInfo.chapters.findIndex(c => c.sectionId === draggedId);
-    const targetIndex = guideInfo.chapters.findIndex(c => c.sectionId === targetId);
+    // 离线模式下禁止拖拽排序（需要连接 Steam）
+    if (isOfflineData) {
+      window.alert('离线模式下无法重新排序章节，请先刷新连接 Steam');
+      return;
+    }
+
+    const draggedIndex = chapters.findIndex(c => c.sectionId === draggedId);
+    const targetIndex = chapters.findIndex(c => c.sectionId === targetId);
 
     if (draggedIndex === -1 || targetIndex === -1) return;
 
-    const newOrder = [...guideInfo.chapters];
+    const newOrder = [...chapters];
     const [removed] = newOrder.splice(draggedIndex, 1);
     newOrder.splice(targetIndex, 0, removed);
 
@@ -460,6 +525,12 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   // 创建新章节
   const handleCreateChapter = async () => {
     if (isCreatingChapter || !guideInfo?.id) return;
+
+    // 离线模式下禁止创建章节
+    if (isOfflineData) {
+      window.alert('离线模式下无法创建新章节，请先刷新连接 Steam');
+      return;
+    }
 
     setIsCreatingChapter(true);
     try {
@@ -583,25 +654,53 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           alignItems: 'center'
         }}
       >
-        <h3
-          style={{
-            margin: 0,
-            fontSize: '0.95rem',
-            fontWeight: 400,
-            color: isBindingMode ? '#66c0f4' : '#c5c5c5',
-            letterSpacing: '0.02em',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          {isBindingMode ? '📌 选择要绑定的章节' : '目录'}
-          {(isSyncing || isRefreshing) && (
-            <span style={{ fontSize: '0.75rem', color: '#66c0f4' }}>
-              {isSyncing ? '同步中...' : '刷新中...'}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '0.95rem',
+              fontWeight: 400,
+              color: isBindingMode ? '#66c0f4' : '#c5c5c5',
+              letterSpacing: '0.02em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {isBindingMode ? '📌 选择要绑定的章节' : '目录'}
+            {isOfflineData && (
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  color: '#FFC107',
+                  padding: '0.1rem 0.35rem',
+                  background: 'rgba(255, 193, 7, 0.15)',
+                  borderRadius: '0.2rem',
+                  fontWeight: 500
+                }}
+              >
+                离线
+              </span>
+            )}
+            {(isSyncing || isRefreshing) && (
+              <span style={{ fontSize: '0.75rem', color: '#66c0f4' }}>
+                {isSyncing ? '同步中...' : '刷新中...'}
+              </span>
+            )}
+          </h3>
+          {/* 同步时间显示 */}
+          {syncTime > 0 && !isBindingMode && (
+            <span
+              style={{
+                fontSize: '0.7rem',
+                color: isOfflineData ? '#FFC107' : '#8b8b8b',
+                opacity: 0.8
+              }}
+            >
+              {isOfflineData ? '离线数据 · ' : ''}同步于 {formatSyncTime(syncTime)}
             </span>
           )}
-        </h3>
+        </div>
 
         {/* 刷新按钮 */}
         {onRefresh && (
@@ -644,7 +743,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           flex: 1
         }}
       >
-        {guideInfo.chapters.length === 0 ? (
+        {chapters.length === 0 ? (
           <div
             style={{
               padding: '2rem 1.2rem',
@@ -657,7 +756,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             该指南暂无章节
           </div>
         ) : (
-          guideInfo.chapters.map((chapter) => {
+          chapters.map((chapter) => {
             const linkedDraft = getChapterDraft(chapter.sectionId);
             const isLinked = !!linkedDraft;
             const status = syncStatus[chapter.sectionId] || 'idle';
