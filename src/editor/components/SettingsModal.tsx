@@ -5,6 +5,11 @@ import {
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS
 } from "../stores/useEditorConfigStore";
+import {
+  useImagePanelStore,
+  ThumbnailSizePreset,
+  THUMBNAIL_SIZE_MAP
+} from "../stores/useImagePanelStore";
 
 type SettingsModalProps = {
   visible: boolean;
@@ -59,6 +64,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const resetShortcuts = useEditorConfigStore(
     (state) => state.resetShortcuts
+  );
+
+  // 图片池设置
+  const thumbnailSizePreset = useImagePanelStore(
+    (state) => state.thumbnailSizePreset
+  );
+  const customThumbnailSize = useImagePanelStore(
+    (state) => state.customThumbnailSize
+  );
+  const itemsPerPage = useImagePanelStore(
+    (state) => state.itemsPerPage
+  );
+  const setThumbnailSize = useImagePanelStore(
+    (state) => state.setThumbnailSize
+  );
+  const setItemsPerPage = useImagePanelStore(
+    (state) => state.setItemsPerPage
   );
 
   if (!visible) return null;
@@ -209,6 +231,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               💡 <strong>提示：</strong>关闭自动上传后，图片仍会插入编辑器并显示本地预览。
               未来版本将支持手动选择上传图片。
             </div>
+
+            {/* 分隔线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(102, 192, 244, 0.15)",
+                margin: "0.5rem 0"
+              }}
+            />
+
+            {/* 图片池设置分组 */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "rgba(173, 205, 244, 0.8)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "-0.5rem"
+              }}
+            >
+              图片池显示
+            </div>
+
+            {/* 每页显示数量 */}
+            <NumberInputOption
+              label="每页显示数量"
+              description="图片池中每页显示的图片数量，0 表示显示全部"
+              value={itemsPerPage}
+              min={0}
+              max={100}
+              onChange={setItemsPerPage}
+            />
+
+            {/* 缩略图尺寸 */}
+            <SelectOption
+              label="缩略图尺寸"
+              description="图片池中缩略图的显示大小"
+              value={thumbnailSizePreset}
+              options={[
+                { value: "small", label: `小 (${THUMBNAIL_SIZE_MAP.small}px)` },
+                { value: "medium", label: `中 (${THUMBNAIL_SIZE_MAP.medium}px)` },
+                { value: "large", label: `大 (${THUMBNAIL_SIZE_MAP.large}px)` },
+                { value: "custom", label: "自定义" }
+              ]}
+              onChange={(v) => setThumbnailSize(v as ThumbnailSizePreset)}
+            />
+
+            {/* 自定义尺寸滑块 */}
+            {thumbnailSizePreset === "custom" && (
+              <SliderOption
+                label="自定义尺寸"
+                description={`当前: ${customThumbnailSize}px`}
+                value={customThumbnailSize}
+                min={32}
+                max={256}
+                step={8}
+                onChange={(v) => setThumbnailSize("custom", v)}
+              />
+            )}
 
             {/* 分隔线 */}
             <div
@@ -510,6 +592,230 @@ const ShortcutInput: React.FC<ShortcutInputProps> = ({
         }}
       >
         {isRecording ? "按下快捷键..." : value}
+      </div>
+    </div>
+  );
+};
+
+type NumberInputOptionProps = {
+  label: string;
+  description: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+};
+
+const NumberInputOption: React.FC<NumberInputOptionProps> = ({
+  label,
+  description,
+  value,
+  min,
+  max,
+  onChange
+}) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "1rem"
+      }}
+    >
+      {/* 数字输入框 */}
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const num = parseInt(e.target.value, 10);
+          if (!isNaN(num) && num >= min && num <= max) {
+            onChange(num);
+          }
+        }}
+        style={{
+          flexShrink: 0,
+          width: "70px",
+          padding: "6px 8px",
+          background: "rgba(40, 55, 75, 0.6)",
+          border: "1px solid rgba(102, 192, 244, 0.25)",
+          borderRadius: "6px",
+          color: "#d7e8ff",
+          fontSize: "0.85rem",
+          textAlign: "center",
+          outline: "none"
+        }}
+      />
+
+      {/* 文字说明 */}
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: 500,
+            color: "#d7e8ff",
+            marginBottom: "0.25rem"
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: "0.8rem",
+            color: "rgba(205, 226, 255, 0.6)",
+            lineHeight: 1.5
+          }}
+        >
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type SelectOptionProps = {
+  label: string;
+  description: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+};
+
+const SelectOption: React.FC<SelectOptionProps> = ({
+  label,
+  description,
+  value,
+  options,
+  onChange
+}) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "1rem"
+      }}
+    >
+      {/* 下拉选择 */}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          flexShrink: 0,
+          width: "100px",
+          padding: "6px 8px",
+          background: "rgba(40, 55, 75, 0.6)",
+          border: "1px solid rgba(102, 192, 244, 0.25)",
+          borderRadius: "6px",
+          color: "#d7e8ff",
+          fontSize: "0.8rem",
+          cursor: "pointer",
+          outline: "none"
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {/* 文字说明 */}
+      <div style={{ flex: 1 }}>
+        <div
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: 500,
+            color: "#d7e8ff",
+            marginBottom: "0.25rem"
+          }}
+        >
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: "0.8rem",
+            color: "rgba(205, 226, 255, 0.6)",
+            lineHeight: 1.5
+          }}
+        >
+          {description}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type SliderOptionProps = {
+  label: string;
+  description: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+};
+
+const SliderOption: React.FC<SliderOptionProps> = ({
+  label,
+  description,
+  value,
+  min,
+  max,
+  step,
+  onChange
+}) => {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "0.5rem",
+        marginLeft: "116px" // 与上面的下拉框对齐
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem"
+        }}
+      >
+        <input
+          type="range"
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{
+            flex: 1,
+            height: "4px",
+            appearance: "none",
+            background: "rgba(102, 192, 244, 0.3)",
+            borderRadius: "2px",
+            cursor: "pointer"
+          }}
+        />
+        <span
+          style={{
+            fontSize: "0.8rem",
+            color: "#66c0f4",
+            minWidth: "50px",
+            textAlign: "right"
+          }}
+        >
+          {value}px
+        </span>
+      </div>
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "rgba(205, 226, 255, 0.5)"
+        }}
+      >
+        {label}: {description}
       </div>
     </div>
   );
