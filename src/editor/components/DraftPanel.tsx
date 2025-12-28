@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { extractTitleText } from '../utils/titleHelpers';
-import type { ChapterInfo } from '../stores/useGuideStore';
+import type { ChapterInfo, Draft } from '../stores/useGuideStore';
 import { loggers } from '../../shared/logger';
+
+type DraftViewMode = 'current' | 'unlinked';
 
 const DraftPanel: React.FC = () => {
   const {
@@ -20,13 +22,41 @@ const DraftPanel: React.FC = () => {
     isBindingMode,
     enterBindingMode,
     exitBindingMode,
-    unbindDraft
+    unbindDraft,
+    // 存档相关
+    currentArchiveId,
+    getCurrentArchive
   } = useGuideStore();
   const [isOpen, setIsOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isDraggable, setIsDraggable] = useState<{ [key: string]: boolean }>({});
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [viewMode, setViewMode] = useState<DraftViewMode>('current');
+
+  const currentArchive = getCurrentArchive();
+
+  // 过滤草稿：当前存档的草稿 vs 未关联的草稿
+  const { currentDrafts, unlinkedDrafts } = useMemo(() => {
+    const current: Draft[] = [];
+    const unlinked: Draft[] = [];
+
+    drafts.forEach(draft => {
+      if (!draft.linkedGuideId) {
+        // 未关联任何存档
+        unlinked.push(draft);
+      } else if (draft.linkedGuideId === currentArchiveId) {
+        // 关联到当前存档
+        current.push(draft);
+      }
+      // 关联到其他存档的草稿不显示
+    });
+
+    return { currentDrafts: current, unlinkedDrafts: unlinked };
+  }, [drafts, currentArchiveId]);
+
+  // 根据视图模式显示的草稿
+  const displayedDrafts = viewMode === 'current' ? currentDrafts : unlinkedDrafts;
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
 
@@ -332,6 +362,70 @@ const DraftPanel: React.FC = () => {
             gap: '0.6rem'
           }}
         >
+          {/* 视图切换标签 */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.3rem' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('current')}
+              style={{
+                padding: '0.4rem 0.8rem',
+                borderRadius: '0.4rem',
+                border: 'none',
+                background: viewMode === 'current'
+                  ? 'rgba(102, 192, 244, 0.25)'
+                  : 'transparent',
+                color: viewMode === 'current' ? '#66c0f4' : '#8aa4c7',
+                fontSize: '0.8rem',
+                fontWeight: viewMode === 'current' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {currentArchive ? currentArchive.guideName : '当前存档'}
+              {currentDrafts.length > 0 && (
+                <span style={{
+                  marginLeft: '0.4rem',
+                  padding: '0.1rem 0.35rem',
+                  borderRadius: '0.25rem',
+                  background: 'rgba(102, 192, 244, 0.2)',
+                  fontSize: '0.7rem'
+                }}>
+                  {currentDrafts.length}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('unlinked')}
+              style={{
+                padding: '0.4rem 0.8rem',
+                borderRadius: '0.4rem',
+                border: 'none',
+                background: viewMode === 'unlinked'
+                  ? 'rgba(255, 193, 7, 0.2)'
+                  : 'transparent',
+                color: viewMode === 'unlinked' ? '#FFC107' : '#8aa4c7',
+                fontSize: '0.8rem',
+                fontWeight: viewMode === 'unlinked' ? 600 : 400,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              离线草稿箱
+              {unlinkedDrafts.length > 0 && (
+                <span style={{
+                  marginLeft: '0.4rem',
+                  padding: '0.1rem 0.35rem',
+                  borderRadius: '0.25rem',
+                  background: 'rgba(255, 193, 7, 0.2)',
+                  fontSize: '0.7rem'
+                }}>
+                  {unlinkedDrafts.length}
+                </span>
+              )}
+            </button>
+          </div>
+
           <div
             style={{
               display: 'grid',
@@ -341,7 +435,7 @@ const DraftPanel: React.FC = () => {
               overflowY: 'auto'
             }}
           >
-            {drafts.length === 0 ? (
+            {displayedDrafts.length === 0 ? (
               <div
                 style={{
                   padding: '2rem 1rem',
@@ -352,10 +446,14 @@ const DraftPanel: React.FC = () => {
                   gridColumn: '1 / -1'
                 }}
               >
-                暂无草稿，点击上方"新建草稿"创建第一个草稿
+                {viewMode === 'current'
+                  ? (currentArchive
+                      ? `"${currentArchive.guideName}" 暂无草稿，点击右上方"新建草稿"创建`
+                      : '暂无草稿，点击右上方"新建草稿"创建')
+                  : '离线草稿箱为空（历史草稿会显示在这里）'}
               </div>
             ) : (
-              drafts.map((draft) => {
+              displayedDrafts.map((draft) => {
                 const isActive = activeDraftId === draft.id;
                 const isDragging = draggedId === draft.id;
                 const isDragOver = dragOverId === draft.id;
@@ -450,9 +548,30 @@ const DraftPanel: React.FC = () => {
                 display: 'flex',
                 gap: '0.5rem',
                 paddingTop: '0.5rem',
-                borderTop: '1px solid rgba(102, 192, 244, 0.15)'
+                borderTop: '1px solid rgba(102, 192, 244, 0.15)',
+                flexWrap: 'wrap'
               }}
             >
+              {/* 移动到当前存档按钮（仅在离线草稿箱视图且有当前存档时显示） */}
+              {viewMode === 'unlinked' && currentArchiveId && !activeDraft.linkedGuideId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm(`将草稿"${activeDraft.draftName}"移动到"${currentArchive?.guideName || '当前存档'}"？`)) {
+                      updateDraft(activeDraft.id, { linkedGuideId: currentArchiveId });
+                      setViewMode('current');
+                    }
+                  }}
+                  style={{
+                    ...subActionButtonStyle,
+                    background: 'rgba(102, 192, 244, 0.2)',
+                    color: '#66c0f4',
+                    fontWeight: 500
+                  }}
+                >
+                  移动到当前存档
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
