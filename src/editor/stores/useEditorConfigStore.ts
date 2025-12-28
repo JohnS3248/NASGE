@@ -12,19 +12,6 @@ export type ShortcutConfig = {
   renameImage: string;        // 重命名图片
   deleteImage: string;        // 删除图片
   selectAll: string;          // 全选图片
-
-  // 标签筛选（数字键 1-9 对应标签，0 为未标签）
-  filterTag1: string;
-  filterTag2: string;
-  filterTag3: string;
-  filterTag4: string;
-  filterTag5: string;
-  filterTag6: string;
-  filterTag7: string;
-  filterTag8: string;
-  filterTag9: string;
-  filterNoTag: string;        // 显示未标签图片
-  clearFilter: string;        // 清除筛选
 };
 
 /**
@@ -33,18 +20,7 @@ export type ShortcutConfig = {
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   renameImage: "F2",
   deleteImage: "Delete",
-  selectAll: "Ctrl+A",
-  filterTag1: "1",
-  filterTag2: "2",
-  filterTag3: "3",
-  filterTag4: "4",
-  filterTag5: "5",
-  filterTag6: "6",
-  filterTag7: "7",
-  filterTag8: "8",
-  filterTag9: "9",
-  filterNoTag: "0",
-  clearFilter: "Escape"
+  selectAll: "Ctrl+A"
 };
 
 /**
@@ -53,18 +29,7 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
 export const SHORTCUT_LABELS: Record<keyof ShortcutConfig, string> = {
   renameImage: "重命名图片",
   deleteImage: "删除图片",
-  selectAll: "全选图片",
-  filterTag1: "筛选标签 1",
-  filterTag2: "筛选标签 2",
-  filterTag3: "筛选标签 3",
-  filterTag4: "筛选标签 4",
-  filterTag5: "筛选标签 5",
-  filterTag6: "筛选标签 6",
-  filterTag7: "筛选标签 7",
-  filterTag8: "筛选标签 8",
-  filterTag9: "筛选标签 9",
-  filterNoTag: "筛选未标签",
-  clearFilter: "清除筛选"
+  selectAll: "全选图片"
 };
 
 /**
