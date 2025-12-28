@@ -7,7 +7,7 @@
 import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
-import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
+import { useEditorConfigStore, matchShortcut } from "../../stores/useEditorConfigStore";
 import { useGuideStore } from "../../stores/useGuideStore";
 import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
 import { deleteSteamImage } from "../../services/steamBridge";
@@ -42,6 +42,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 悬浮窗设置
   const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
   const promptRenameOnDrop = useEditorConfigStore((state) => state.promptRenameOnDrop);
+  const shortcuts = useEditorConfigStore((state) => state.shortcuts);
 
   const thumbnailSize = getThumbnailSizePixels();
   const { setImageState, removeItem } = useSteamGuideImageStore();
@@ -92,14 +93,14 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 获取当前存档 ID（用于关联新添加的图片）
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
 
-  // F2 快捷键：重命名选中的待上传图片
+  // 快捷键：重命名选中的待上传图片
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 如果正在编辑，不处理
       if (editingImageId) return;
 
-      // F2 键触发重命名
-      if (e.key === "F2" && focusedId) {
+      // 重命名快捷键
+      if (matchShortcut(e, shortcuts.renameImage) && focusedId) {
         e.preventDefault();
 
         // 找到焦点图片
@@ -109,10 +110,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
         // 只有待上传状态才能重命名
         if (focusedImage && focusedImage.state === "pending") {
-          loggers.image.info("F2 触发重命名", { fileName: focusedImage.fileName });
+          loggers.image.info("快捷键触发重命名", { fileName: focusedImage.fileName, shortcut: shortcuts.renameImage });
           onEditingChange(focusedId);
         } else if (focusedImage) {
-          loggers.image.info("F2 重命名被阻止：图片非待上传状态", {
+          loggers.image.info("重命名被阻止：图片非待上传状态", {
             fileName: focusedImage.fileName,
             state: focusedImage.state
           });
@@ -122,7 +123,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedId, editingImageId, images, onEditingChange]);
+  }, [focusedId, editingImageId, images, onEditingChange, shortcuts.renameImage]);
 
   // 处理双击事件 - 待上传或失败的图片加入上传队列
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {

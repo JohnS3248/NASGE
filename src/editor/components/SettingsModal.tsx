@@ -1,5 +1,10 @@
-import React from "react";
-import { useEditorConfigStore } from "../stores/useEditorConfigStore";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import {
+  useEditorConfigStore,
+  ShortcutConfig,
+  SHORTCUT_LABELS,
+  DEFAULT_SHORTCUTS
+} from "../stores/useEditorConfigStore";
 
 type SettingsModalProps = {
   visible: boolean;
@@ -45,6 +50,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const setDebugMode = useEditorConfigStore(
     (state) => state.setDebugMode
+  );
+  const shortcuts = useEditorConfigStore(
+    (state) => state.shortcuts
+  );
+  const setShortcut = useEditorConfigStore(
+    (state) => state.setShortcut
+  );
+  const resetShortcuts = useEditorConfigStore(
+    (state) => state.resetShortcuts
   );
 
   if (!visible) return null;
@@ -195,6 +209,66 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }}
             />
 
+            {/* 快捷键分组 */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "rgba(173, 205, 244, 0.8)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "-0.5rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between"
+              }}
+            >
+              <span>快捷键</span>
+              <button
+                type="button"
+                onClick={resetShortcuts}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  color: "rgba(102, 192, 244, 0.7)",
+                  fontSize: "0.75rem",
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                  textTransform: "none",
+                  letterSpacing: "normal"
+                }}
+              >
+                重置默认
+              </button>
+            </div>
+
+            {/* 快捷键设置网格 */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "0.75rem"
+              }}
+            >
+              {(Object.keys(SHORTCUT_LABELS) as (keyof ShortcutConfig)[]).map((key) => (
+                <ShortcutInput
+                  key={key}
+                  label={SHORTCUT_LABELS[key]}
+                  value={shortcuts?.[key] ?? DEFAULT_SHORTCUTS[key]}
+                  onChange={(value) => setShortcut(key, value)}
+                />
+              ))}
+            </div>
+
+            {/* 分隔线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(102, 192, 244, 0.15)",
+                margin: "0.5rem 0"
+              }}
+            />
+
             {/* 开发者选项分组 */}
             <div
               style={{
@@ -303,6 +377,129 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
         >
           {description}
         </div>
+      </div>
+    </div>
+  );
+};
+
+type ShortcutInputProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
+
+/**
+ * 快捷键输入组件
+ * 点击后监听键盘输入，捕获组合键
+ */
+const ShortcutInput: React.FC<ShortcutInputProps> = ({
+  label,
+  value,
+  onChange
+}) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const inputRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // 忽略单独的修饰键
+    if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) {
+      return;
+    }
+
+    // 构建快捷键字符串
+    const parts: string[] = [];
+    if (e.ctrlKey) parts.push("Ctrl");
+    if (e.altKey) parts.push("Alt");
+    if (e.shiftKey) parts.push("Shift");
+    if (e.metaKey) parts.push("Meta");
+
+    // 处理特殊键名
+    let key = e.key;
+    if (key === " ") key = "Space";
+    else if (key === "Escape") key = "Escape";
+    else if (key.length === 1) key = key.toUpperCase();
+
+    parts.push(key);
+    const shortcut = parts.join("+");
+
+    onChange(shortcut);
+    setIsRecording(false);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!isRecording) return;
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isRecording, handleKeyDown]);
+
+  // 点击外部取消录制
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.contains(e.target as Node)) {
+        setIsRecording(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isRecording]);
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "4px"
+      }}
+    >
+      <div
+        style={{
+          fontSize: "0.75rem",
+          color: "rgba(205, 226, 255, 0.7)"
+        }}
+      >
+        {label}
+      </div>
+      <div
+        ref={inputRef}
+        tabIndex={0}
+        onClick={() => setIsRecording(true)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsRecording(true);
+          }
+        }}
+        style={{
+          padding: "6px 10px",
+          background: isRecording
+            ? "rgba(102, 192, 244, 0.15)"
+            : "rgba(40, 55, 75, 0.6)",
+          border: isRecording
+            ? "1px solid rgba(102, 192, 244, 0.5)"
+            : "1px solid rgba(102, 192, 244, 0.2)",
+          borderRadius: "6px",
+          fontSize: "0.8rem",
+          color: isRecording ? "#66c0f4" : "#d7e8ff",
+          cursor: "pointer",
+          minHeight: "28px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "all 0.15s ease"
+        }}
+      >
+        {isRecording ? "按下快捷键..." : value}
       </div>
     </div>
   );

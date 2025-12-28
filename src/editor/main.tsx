@@ -15,6 +15,9 @@ import("./stores/useSteamGuideImageStore").then(({ useSteamGuideImageStore }) =>
 import("./services/ImageUploadService").then(({ ImageUploadService }) => {
   (window as any).__uploadService = ImageUploadService;
 });
+import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
+  (window as any).__editorConfigStore = useEditorConfigStore;
+});
 // === END DEBUG ===
 
 const container = document.getElementById("root");
