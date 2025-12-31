@@ -4,7 +4,18 @@ import {
   ShortcutConfig,
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
-  EditorAlignment
+  EditorAlignment,
+  // 右键菜单配置
+  ContextMenuType,
+  MenuItemConfig,
+  MenuGroupConfig,
+  MenuItemDefinition,
+  IMAGE_MENU_PRESET_ITEMS,
+  IMAGE_MENU_ALIGN_ITEMS,
+  IMAGE_MENU_ACTION_ITEMS,
+  SELECTION_MENU_ITEMS,
+  EMPTY_MENU_ITEMS,
+  IMAGE_POOL_MENU_ITEMS
 } from "../stores/useEditorConfigStore";
 import {
   useImagePanelStore,
@@ -111,6 +122,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const setEditorAlignment = useEditorConfigStore(
     (state) => state.setEditorAlignment
   );
+
+  // 图片池右键菜单（旧版兼容）
+  const imageContextMenuEnabled = useEditorConfigStore(
+    (state) => state.imageContextMenuEnabled
+  );
+  const setImageContextMenuEnabled = useEditorConfigStore(
+    (state) => state.setImageContextMenuEnabled
+  );
+
+  // 右键菜单配置
+  const imageMenuConfig = useEditorConfigStore((state) => state.imageMenuConfig);
+  const selectionMenuConfig = useEditorConfigStore((state) => state.selectionMenuConfig);
+  const emptyMenuConfig = useEditorConfigStore((state) => state.emptyMenuConfig);
+  const imagePoolMenuConfig = useEditorConfigStore((state) => state.imagePoolMenuConfig);
+  const setContextMenuEnabled = useEditorConfigStore((state) => state.setContextMenuEnabled);
+  const setMenuItemEnabled = useEditorConfigStore((state) => state.setMenuItemEnabled);
+  const reorderMenuItems = useEditorConfigStore((state) => state.reorderMenuItems);
+  const resetContextMenuConfig = useEditorConfigStore((state) => state.resetContextMenuConfig);
 
   if (!visible) return null;
 
@@ -352,6 +381,80 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </>
             )}
             */}
+
+            {/* 分隔线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(102, 192, 244, 0.15)",
+                margin: "0.5rem 0"
+              }}
+            />
+
+            {/* 右键菜单分组 */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "rgba(173, 205, 244, 0.8)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "-0.5rem"
+              }}
+            >
+              右键菜单
+            </div>
+
+            {/* 文字选择菜单 */}
+            <MenuConfigSection
+              title="文字选择菜单"
+              description="选中文字后右键显示的菜单"
+              enabled={selectionMenuConfig.enabled}
+              onEnabledChange={(enabled) => setContextMenuEnabled('selection', enabled)}
+              items={selectionMenuConfig.items}
+              definitions={SELECTION_MENU_ITEMS}
+              onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('selection', itemId, enabled)}
+              onReorder={(itemIds) => reorderMenuItems('selection', itemIds)}
+              onReset={() => resetContextMenuConfig('selection')}
+            />
+
+            {/* 空白处菜单 */}
+            <MenuConfigSection
+              title="空白处菜单"
+              description="在编辑器空白处右键显示的菜单"
+              enabled={emptyMenuConfig.enabled}
+              onEnabledChange={(enabled) => setContextMenuEnabled('empty', enabled)}
+              items={emptyMenuConfig.items}
+              definitions={EMPTY_MENU_ITEMS}
+              onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('empty', itemId, enabled)}
+              onReorder={(itemIds) => reorderMenuItems('empty', itemIds)}
+              onReset={() => resetContextMenuConfig('empty')}
+            />
+
+            {/* 编辑器图片菜单 */}
+            <ImageMenuConfigSection
+              title="编辑器图片菜单"
+              description="右键编辑器内图片显示的菜单"
+              config={imageMenuConfig}
+              onEnabledChange={(enabled) => setContextMenuEnabled('image', enabled)}
+              onItemEnabledChange={(itemId, enabled, groupId) => setMenuItemEnabled('image', itemId, enabled, groupId)}
+              onReorder={(itemIds, groupId) => reorderMenuItems('image', itemIds, groupId)}
+              onReset={() => resetContextMenuConfig('image')}
+            />
+
+            {/* 图片池菜单 */}
+            <MenuConfigSection
+              title="图片池菜单"
+              description="在图片池中右键图片显示的菜单"
+              enabled={imagePoolMenuConfig.enabled}
+              onEnabledChange={(enabled) => setContextMenuEnabled('imagePool', enabled)}
+              items={imagePoolMenuConfig.items}
+              definitions={IMAGE_POOL_MENU_ITEMS}
+              onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('imagePool', itemId, enabled)}
+              onReorder={(itemIds) => reorderMenuItems('imagePool', itemIds)}
+              onReset={() => resetContextMenuConfig('imagePool')}
+              hideIfSingleItem
+            />
 
             {/* 分隔线 */}
             <div
@@ -914,6 +1017,510 @@ const SliderOption: React.FC<SliderOptionProps> = ({
       >
         {label}: {description}
       </div>
+    </div>
+  );
+};
+
+// ==================== 右键菜单配置组件 ====================
+
+type MenuConfigSectionProps = {
+  title: string;
+  description: string;
+  enabled: boolean;
+  onEnabledChange: (enabled: boolean) => void;
+  items: MenuItemConfig[];
+  definitions: MenuItemDefinition[];
+  onItemEnabledChange: (itemId: string, enabled: boolean) => void;
+  onReorder: (itemIds: string[]) => void;
+  onReset: () => void;
+  hideIfSingleItem?: boolean;
+};
+
+const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
+  title,
+  description,
+  enabled,
+  onEnabledChange,
+  items,
+  definitions,
+  onItemEnabledChange,
+  onReorder,
+  onReset,
+  hideIfSingleItem = false
+}) => {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  // 获取菜单项标签
+  const getLabel = (id: string) => {
+    const def = definitions.find(d => d.id === id);
+    return def?.label || id;
+  };
+
+  // 拖拽处理
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (draggedId && draggedId !== id) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId) return;
+
+    const currentIds = items.map(item => item.id);
+    const draggedIndex = currentIds.indexOf(draggedId);
+    const targetIndex = currentIds.indexOf(targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const newIds = [...currentIds];
+    newIds.splice(draggedIndex, 1);
+    newIds.splice(targetIndex, 0, draggedId);
+
+    onReorder(newIds);
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+  // 如果只有一个项且设置了 hideIfSingleItem，只显示总开关
+  const showItemsList = !(hideIfSingleItem && items.length <= 1);
+
+  return (
+    <div
+      style={{
+        background: "rgba(40, 55, 75, 0.3)",
+        border: "1px solid rgba(102, 192, 244, 0.15)",
+        borderRadius: "0.6rem",
+        padding: "0.75rem",
+        marginTop: "0.5rem"
+      }}
+    >
+      {/* 标题行：开关 + 标题 + 重置按钮 */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          marginBottom: showItemsList ? "0.5rem" : 0
+        }}
+      >
+        {/* 总开关 */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={() => onEnabledChange(!enabled)}
+          style={{
+            flexShrink: 0,
+            width: "36px",
+            height: "20px",
+            background: enabled ? "rgba(102, 192, 244, 0.85)" : "rgba(60, 75, 95, 0.6)",
+            border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+            borderRadius: "10px",
+            cursor: "pointer",
+            position: "relative",
+            transition: "all 0.2s ease",
+            padding: 0
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: "14px",
+              height: "14px",
+              background: "#ffffff",
+              borderRadius: "50%",
+              top: "2px",
+              left: enabled ? "18px" : "2px",
+              transition: "left 0.2s ease",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)"
+            }}
+          />
+        </button>
+
+        {/* 标题和描述 */}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#d7e8ff" }}>
+            {title}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "rgba(205, 226, 255, 0.5)" }}>
+            {description}
+          </div>
+        </div>
+
+        {/* 重置按钮 */}
+        {showItemsList && (
+          <button
+            type="button"
+            onClick={onReset}
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "rgba(102, 192, 244, 0.6)",
+              fontSize: "0.7rem",
+              cursor: "pointer",
+              padding: "2px 6px"
+            }}
+          >
+            重置
+          </button>
+        )}
+      </div>
+
+      {/* 菜单项列表 */}
+      {showItemsList && enabled && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "2px",
+            marginTop: "0.5rem"
+          }}
+        >
+          {items.map(item => (
+            <DraggableMenuItem
+              key={item.id}
+              id={item.id}
+              label={getLabel(item.id)}
+              enabled={item.enabled}
+              onEnabledChange={(enabled) => onItemEnabledChange(item.id, enabled)}
+              isDragging={draggedId === item.id}
+              isDragOver={dragOverId === item.id}
+              onDragStart={(e) => handleDragStart(e, item.id)}
+              onDragOver={(e) => handleDragOver(e, item.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, item.id)}
+              onDragEnd={handleDragEnd}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// 图片菜单配置（分组）
+type ImageMenuConfigSectionProps = {
+  title: string;
+  description: string;
+  config: { enabled: boolean; groups: MenuGroupConfig[] };
+  onEnabledChange: (enabled: boolean) => void;
+  onItemEnabledChange: (itemId: string, enabled: boolean, groupId: 'preset' | 'align' | 'action') => void;
+  onReorder: (itemIds: string[], groupId: 'preset' | 'align' | 'action') => void;
+  onReset: () => void;
+};
+
+const GROUP_LABELS: Record<string, string> = {
+  preset: '尺寸',
+  align: '对齐',
+  action: '操作'
+};
+
+const GROUP_DEFINITIONS: Record<string, MenuItemDefinition[]> = {
+  preset: IMAGE_MENU_PRESET_ITEMS,
+  align: IMAGE_MENU_ALIGN_ITEMS,
+  action: IMAGE_MENU_ACTION_ITEMS
+};
+
+const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
+  title,
+  description,
+  config,
+  onEnabledChange,
+  onItemEnabledChange,
+  onReorder,
+  onReset
+}) => {
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [dragGroupId, setDragGroupId] = useState<string | null>(null);
+
+  const getLabel = (groupId: string, id: string) => {
+    const defs = GROUP_DEFINITIONS[groupId] || [];
+    const def = defs.find(d => d.id === id);
+    return def?.label || id;
+  };
+
+  const handleDragStart = (e: React.DragEvent, id: string, groupId: string) => {
+    setDraggedId(id);
+    setDragGroupId(groupId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string, groupId: string) => {
+    e.preventDefault();
+    if (draggedId && draggedId !== id && dragGroupId === groupId) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string, groupId: string) => {
+    e.preventDefault();
+    if (!draggedId || draggedId === targetId || dragGroupId !== groupId) return;
+
+    const group = config.groups.find(g => g.groupId === groupId);
+    if (!group) return;
+
+    const currentIds = group.items.map(item => item.id);
+    const draggedIndex = currentIds.indexOf(draggedId);
+    const targetIndex = currentIds.indexOf(targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const newIds = [...currentIds];
+    newIds.splice(draggedIndex, 1);
+    newIds.splice(targetIndex, 0, draggedId);
+
+    onReorder(newIds, groupId as 'preset' | 'align' | 'action');
+    setDraggedId(null);
+    setDragOverId(null);
+    setDragGroupId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+    setDragGroupId(null);
+  };
+
+  return (
+    <div
+      style={{
+        background: "rgba(40, 55, 75, 0.3)",
+        border: "1px solid rgba(102, 192, 244, 0.15)",
+        borderRadius: "0.6rem",
+        padding: "0.75rem",
+        marginTop: "0.5rem"
+      }}
+    >
+      {/* 标题行 */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          marginBottom: "0.5rem"
+        }}
+      >
+        <button
+          type="button"
+          role="switch"
+          aria-checked={config.enabled}
+          onClick={() => onEnabledChange(!config.enabled)}
+          style={{
+            flexShrink: 0,
+            width: "36px",
+            height: "20px",
+            background: config.enabled ? "rgba(102, 192, 244, 0.85)" : "rgba(60, 75, 95, 0.6)",
+            border: config.enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+            borderRadius: "10px",
+            cursor: "pointer",
+            position: "relative",
+            transition: "all 0.2s ease",
+            padding: 0
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: "14px",
+              height: "14px",
+              background: "#ffffff",
+              borderRadius: "50%",
+              top: "2px",
+              left: config.enabled ? "18px" : "2px",
+              transition: "left 0.2s ease",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.3)"
+            }}
+          />
+        </button>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#d7e8ff" }}>
+            {title}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "rgba(205, 226, 255, 0.5)" }}>
+            {description}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onReset}
+          style={{
+            border: "none",
+            background: "transparent",
+            color: "rgba(102, 192, 244, 0.6)",
+            fontSize: "0.7rem",
+            cursor: "pointer",
+            padding: "2px 6px"
+          }}
+        >
+          重置
+        </button>
+      </div>
+
+      {/* 分组列表 */}
+      {config.enabled && config.groups.map((group, index) => (
+        <div key={group.groupId}>
+          {/* 分组标签 */}
+          <div
+            style={{
+              fontSize: "0.7rem",
+              color: "rgba(173, 205, 244, 0.6)",
+              marginTop: index > 0 ? "0.5rem" : "0.25rem",
+              marginBottom: "0.25rem",
+              paddingLeft: "4px"
+            }}
+          >
+            {GROUP_LABELS[group.groupId]}
+          </div>
+
+          {/* 组内菜单项 */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+            {group.items.map(item => (
+              <DraggableMenuItem
+                key={item.id}
+                id={item.id}
+                label={getLabel(group.groupId, item.id)}
+                enabled={item.enabled}
+                onEnabledChange={(enabled) => onItemEnabledChange(item.id, enabled, group.groupId)}
+                isDragging={draggedId === item.id}
+                isDragOver={dragOverId === item.id}
+                onDragStart={(e) => handleDragStart(e, item.id, group.groupId)}
+                onDragOver={(e) => handleDragOver(e, item.id, group.groupId)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, item.id, group.groupId)}
+                onDragEnd={handleDragEnd}
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// 可拖拽菜单项
+type DraggableMenuItemProps = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  onEnabledChange: (enabled: boolean) => void;
+  isDragging: boolean;
+  isDragOver: boolean;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: React.DragEvent) => void;
+  onDragEnd: () => void;
+};
+
+const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({
+  id,
+  label,
+  enabled,
+  onEnabledChange,
+  isDragging,
+  isDragOver,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd
+}) => {
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        padding: "6px 8px",
+        background: isDragOver
+          ? "rgba(102, 192, 244, 0.2)"
+          : isDragging
+            ? "rgba(102, 192, 244, 0.1)"
+            : "rgba(30, 42, 58, 0.5)",
+        borderRadius: "4px",
+        cursor: "grab",
+        opacity: isDragging ? 0.5 : 1,
+        transition: "background 0.15s ease",
+        border: isDragOver ? "1px dashed rgba(102, 192, 244, 0.5)" : "1px solid transparent"
+      }}
+    >
+      {/* 拖拽手柄 */}
+      <span
+        style={{
+          color: "rgba(205, 226, 255, 0.4)",
+          fontSize: "10px",
+          cursor: "grab",
+          userSelect: "none"
+        }}
+      >
+        ≡
+      </span>
+
+      {/* 标签 */}
+      <span
+        style={{
+          flex: 1,
+          fontSize: "0.8rem",
+          color: enabled ? "#d7e8ff" : "rgba(205, 226, 255, 0.4)"
+        }}
+      >
+        {label}
+      </span>
+
+      {/* 启用开关 */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEnabledChange(!enabled);
+        }}
+        style={{
+          width: "16px",
+          height: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+          borderRadius: "3px",
+          background: enabled ? "rgba(102, 192, 244, 0.3)" : "transparent",
+          color: enabled ? "#66c0f4" : "rgba(205, 226, 255, 0.3)",
+          fontSize: "10px",
+          cursor: "pointer",
+          padding: 0
+        }}
+      >
+        {enabled ? "✓" : ""}
+      </button>
     </div>
   );
 };

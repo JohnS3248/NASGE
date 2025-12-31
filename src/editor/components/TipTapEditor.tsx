@@ -9,7 +9,14 @@ import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
-import { useEditorConfigStore } from "../stores/useEditorConfigStore";
+import {
+  useEditorConfigStore,
+  SELECTION_MENU_ITEMS,
+  EMPTY_MENU_ITEMS,
+  IMAGE_MENU_PRESET_ITEMS,
+  IMAGE_MENU_ALIGN_ITEMS,
+  IMAGE_MENU_ACTION_ITEMS
+} from "../stores/useEditorConfigStore";
 import { useGuideStore } from "../stores/useGuideStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
@@ -90,6 +97,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   }));
   // 选择变化计数器 - 用于强制工具栏重新渲染
   const [selectionKey, setSelectionKey] = useState(0);
+
+  // === 右键菜单配置 ===
+  const imageMenuConfig = useEditorConfigStore(state => state.imageMenuConfig);
+  const selectionMenuConfig = useEditorConfigStore(state => state.selectionMenuConfig);
+  const emptyMenuConfig = useEditorConfigStore(state => state.emptyMenuConfig);
 
   const editor = useEditor({
     extensions,
@@ -744,7 +756,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }}
         className="nasge-editor-container"
         onContextMenu={(event) => {
-          event.preventDefault();
           if (!editor) {
             return;
           }
@@ -754,6 +765,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           if (imageElement) {
             const imageNodeId = imageElement.dataset.imageNodeId;
             if (imageNodeId) {
+              // 检查图片菜单总开关
+              if (!imageMenuConfig.enabled) {
+                return; // 使用浏览器原生菜单
+              }
+              event.preventDefault();
               const coords = editor.view.posAtCoords({
                 left: event.clientX,
                 top: event.clientY
@@ -781,6 +797,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
           const mode: ContextMenuMode = editor.state.selection.empty ? "empty" : "selection";
 
+          // 检查对应菜单的总开关
+          const menuEnabled = mode === "selection" ? selectionMenuConfig.enabled : emptyMenuConfig.enabled;
+          if (!menuEnabled) {
+            return; // 使用浏览器原生菜单
+          }
+
+          event.preventDefault();
           setContextMenu({
             visible: true,
             x: event.clientX,
@@ -836,39 +859,72 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           {contextMenu.mode === "image" ? (
             contextMenuImageNode ? (
               <>
-                <MenuSectionLabel label="尺寸" />
-                {IMAGE_SIZE_OPTIONS.map((option) => (
-                  <MenuItem
-                    key={option.value}
-                    label={option.label}
-                    active={contextMenuImageNode.display.preset === option.value}
-                    onClick={() => applyImagePreset(option.value)}
-                    onComplete={closeContextMenu}
-                  />
-                ))}
-                <MenuDivider />
-                <MenuSectionLabel label="对齐" />
-                {IMAGE_ALIGNMENT_OPTIONS.map((option) => (
-                  <MenuItem
-                    key={option.value}
-                    label={option.label}
-                    active={contextMenuImageNode.display.alignment === option.value}
-                    onClick={() => applyImageAlignment(option.value)}
-                    onComplete={closeContextMenu}
-                  />
-                ))}
-                <MenuDivider />
-                <MenuItem
-                  label="上传图片"
-                  onClick={handleUploadImage}
-                  onComplete={closeContextMenu}
-                />
-                <MenuItem
-                  label="删除图片"
-                  danger
-                  onClick={handleDeleteImage}
-                  onComplete={closeContextMenu}
-                />
+                {/* 动态渲染图片菜单 - 分组 */}
+                {imageMenuConfig.groups.map((group, groupIndex) => {
+                  const enabledItems = group.items.filter(item => item.enabled);
+                  if (enabledItems.length === 0) return null;
+
+                  // 获取分组的定义和标签
+                  const groupDefs = group.groupId === 'preset' ? IMAGE_MENU_PRESET_ITEMS
+                    : group.groupId === 'align' ? IMAGE_MENU_ALIGN_ITEMS
+                    : IMAGE_MENU_ACTION_ITEMS;
+                  const groupLabel = group.groupId === 'preset' ? '尺寸'
+                    : group.groupId === 'align' ? '对齐'
+                    : null; // action 组无标签
+
+                  return (
+                    <React.Fragment key={group.groupId}>
+                      {groupIndex > 0 && <MenuDivider />}
+                      {groupLabel && <MenuSectionLabel label={groupLabel} />}
+                      {enabledItems.map(item => {
+                        const def = groupDefs.find(d => d.id === item.id);
+                        if (!def) return null;
+
+                        // 根据 id 确定 onClick 和 active 状态
+                        if (group.groupId === 'preset') {
+                          const preset = item.id.replace('preset-', '') as ImageSizePreset;
+                          return (
+                            <MenuItem
+                              key={item.id}
+                              label={def.label}
+                              active={contextMenuImageNode.display.preset === preset}
+                              onClick={() => applyImagePreset(preset)}
+                              onComplete={closeContextMenu}
+                            />
+                          );
+                        } else if (group.groupId === 'align') {
+                          const alignment = item.id.replace('align-', '') as ImageAlignment;
+                          return (
+                            <MenuItem
+                              key={item.id}
+                              label={def.label}
+                              active={contextMenuImageNode.display.alignment === alignment}
+                              onClick={() => applyImageAlignment(alignment)}
+                              onComplete={closeContextMenu}
+                            />
+                          );
+                        } else {
+                          // action 组
+                          const actionMap: Record<string, { onClick: () => void; danger?: boolean }> = {
+                            upload: { onClick: handleUploadImage },
+                            delete: { onClick: handleDeleteImage, danger: true }
+                          };
+                          const action = actionMap[item.id];
+                          if (!action) return null;
+                          return (
+                            <MenuItem
+                              key={item.id}
+                              label={def.label}
+                              onClick={action.onClick}
+                              onComplete={closeContextMenu}
+                              danger={action.danger}
+                            />
+                          );
+                        }
+                      })}
+                    </React.Fragment>
+                  );
+                })}
               </>
             ) : (
               <div
@@ -883,62 +939,60 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             )
           ) : contextMenu.mode === "selection" ? (
             <>
-              <MenuItem
-                label="一级标题"
-                onClick={() => editor.chain().focus().setHeading({ level: 1 }).run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="二级标题"
-                onClick={() => editor.chain().focus().setHeading({ level: 2 }).run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="三级标题"
-                onClick={() => editor.chain().focus().setHeading({ level: 3 }).run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="隐藏文本"
-                onClick={toggleSpoiler}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="加粗"
-                onClick={() => editor.chain().focus().toggleBold().run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="斜体"
-                onClick={() => editor.chain().focus().toggleItalic().run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="删除线"
-                onClick={() => editor.chain().focus().toggleStrike().run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="下划线"
-                onClick={() => editor.chain().focus().toggleUnderline().run()}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem label="插入链接" onClick={toggleLink} onComplete={closeContextMenu} />
+              {/* 动态渲染文字选择菜单 */}
+              {selectionMenuConfig.items
+                .filter(item => item.enabled)
+                .map(item => {
+                  const def = SELECTION_MENU_ITEMS.find(d => d.id === item.id);
+                  if (!def) return null;
+                  const actionMap: Record<string, () => void> = {
+                    heading1: () => editor.chain().focus().setHeading({ level: 1 }).run(),
+                    heading2: () => editor.chain().focus().setHeading({ level: 2 }).run(),
+                    heading3: () => editor.chain().focus().setHeading({ level: 3 }).run(),
+                    spoiler: toggleSpoiler,
+                    bold: () => editor.chain().focus().toggleBold().run(),
+                    italic: () => editor.chain().focus().toggleItalic().run(),
+                    strike: () => editor.chain().focus().toggleStrike().run(),
+                    underline: () => editor.chain().focus().toggleUnderline().run(),
+                    link: toggleLink
+                  };
+                  const onClick = actionMap[item.id];
+                  if (!onClick) return null;
+                  return (
+                    <MenuItem
+                      key={item.id}
+                      label={def.label}
+                      onClick={onClick}
+                      onComplete={closeContextMenu}
+                    />
+                  );
+                })}
             </>
           ) : (
             <>
-              <MenuItem label="插入图片" onClick={insertImage} onComplete={closeContextMenu} />
-              <MenuItem
-                label="插入代码块"
-                onClick={insertCodeBlock}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem
-                label="插入引用"
-                onClick={insertQuote}
-                onComplete={closeContextMenu}
-              />
-              <MenuItem label="插入表格" onClick={insertTable} onComplete={closeContextMenu} />
+              {/* 动态渲染空白处菜单 */}
+              {emptyMenuConfig.items
+                .filter(item => item.enabled)
+                .map(item => {
+                  const def = EMPTY_MENU_ITEMS.find(d => d.id === item.id);
+                  if (!def) return null;
+                  const actionMap: Record<string, () => void> = {
+                    insertImage: insertImage,
+                    codeBlock: insertCodeBlock,
+                    quote: insertQuote,
+                    table: insertTable
+                  };
+                  const onClick = actionMap[item.id];
+                  if (!onClick) return null;
+                  return (
+                    <MenuItem
+                      key={item.id}
+                      label={def.label}
+                      onClick={onClick}
+                      onComplete={closeContextMenu}
+                    />
+                  );
+                })}
             </>
           )}
         </div>

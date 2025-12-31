@@ -7,6 +7,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, ImageTag } from "../../stores/useGuideStore";
+import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { queueImageUpload } from "../../services/uploadQueue";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
@@ -309,13 +310,22 @@ const ImageCard: React.FC<ImageCardProps> = ({
     loggers.image.verbose("结束拖拽图片");
   }, []);
 
+  // 获取右键菜单配置（使用新的 imagePoolMenuConfig）
+  const imagePoolMenuConfig = useEditorConfigStore(
+    (state) => state.imagePoolMenuConfig
+  );
+
   // 右键菜单处理
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    // 如果禁用右键菜单，则不处理（让浏览器显示原生菜单）
+    if (!imagePoolMenuConfig.enabled) {
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     // 计算菜单位置（相对于视口）
     setContextMenu({ x: e.clientX, y: e.clientY });
-  }, []);
+  }, [imagePoolMenuConfig.enabled]);
 
   // 关闭右键菜单
   const closeContextMenu = useCallback(() => {
