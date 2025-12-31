@@ -6,7 +6,7 @@ type TableControlsProps = {
   containerRef: React.RefObject<HTMLDivElement | null>;
 };
 
-type ControlPosition = {
+type TableInfo = {
   tableElement: HTMLTableElement;
   top: number;
   left: number;
@@ -14,8 +14,11 @@ type ControlPosition = {
   height: number;
 };
 
+type HoverArea = "none" | "row" | "column";
+
 const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) => {
-  const [hoveredTable, setHoveredTable] = useState<ControlPosition | null>(null);
+  const [tableInfo, setTableInfo] = useState<TableInfo | null>(null);
+  const [hoverArea, setHoverArea] = useState<HoverArea>("none");
   const [isHoveringControl, setIsHoveringControl] = useState(false);
   const hideTimeoutRef = useRef<number | null>(null);
 
@@ -30,62 +33,60 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
     clearHideTimeout();
     hideTimeoutRef.current = window.setTimeout(() => {
       if (!isHoveringControl) {
-        setHoveredTable(null);
+        setHoverArea("none");
+        setTableInfo(null);
       }
     }, 150);
   }, [clearHideTimeout, isHoveringControl]);
 
-  // 基于坐标检测鼠标是否在表格区域内
-  const findTableAtPoint = useCallback((clientX: number, clientY: number): HTMLTableElement | null => {
-    if (!containerRef.current) return null;
-
-    // 获取编辑器内所有表格
-    const tables = containerRef.current.querySelectorAll("table");
-
-    for (const table of tables) {
-      const rect = table.getBoundingClientRect();
-      // 扩大检测区域，包括控制条区域
-      const expandedRect = {
-        left: rect.left,
-        right: rect.right + 30, // 右侧控制条区域
-        top: rect.top,
-        bottom: rect.bottom + 25, // 底部控制条区域
-      };
-
-      if (
-        clientX >= expandedRect.left &&
-        clientX <= expandedRect.right &&
-        clientY >= expandedRect.top &&
-        clientY <= expandedRect.bottom
-      ) {
-        return table as HTMLTableElement;
-      }
-    }
-
-    return null;
-  }, [containerRef]);
-
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!containerRef.current) return;
 
-    const tableElement = findTableAtPoint(e.clientX, e.clientY);
+    const tables = containerRef.current.querySelectorAll("table");
+    let foundTable: HTMLTableElement | null = null;
+    let foundArea: HoverArea = "none";
 
-    if (tableElement) {
+    for (const table of tables) {
+      const rect = table.getBoundingClientRect();
+
+      // 检测是否在右侧控制条区域 (表格右边 0-35px)
+      const inColumnArea =
+        e.clientX >= rect.right &&
+        e.clientX <= rect.right + 35 &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      // 检测是否在底部控制条区域 (表格下方 0-30px)
+      const inRowArea =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.bottom &&
+        e.clientY <= rect.bottom + 30;
+
+      if (inColumnArea || inRowArea) {
+        foundTable = table as HTMLTableElement;
+        foundArea = inColumnArea ? "column" : "row";
+        break;
+      }
+    }
+
+    if (foundTable && foundArea !== "none") {
       clearHideTimeout();
       const containerRect = containerRef.current.getBoundingClientRect();
-      const tableRect = tableElement.getBoundingClientRect();
+      const tableRect = foundTable.getBoundingClientRect();
 
-      setHoveredTable({
-        tableElement,
+      setTableInfo({
+        tableElement: foundTable,
         top: tableRect.top - containerRect.top,
         left: tableRect.left - containerRect.left,
         width: tableRect.width,
         height: tableRect.height,
       });
+      setHoverArea(foundArea);
     } else if (!isHoveringControl) {
       scheduleHide();
     }
-  }, [containerRef, findTableAtPoint, clearHideTimeout, scheduleHide, isHoveringControl]);
+  }, [containerRef, clearHideTimeout, scheduleHide, isHoveringControl]);
 
   const handleMouseLeave = useCallback(() => {
     if (!isHoveringControl) {
@@ -118,17 +119,15 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
   }, [scheduleHide]);
 
   const addRow = useCallback(() => {
-    if (!editor || !hoveredTable) return;
+    if (!editor || !tableInfo) return;
 
     const { state } = editor;
     let lastCellPos: number | null = null;
 
-    // 找到表格中最后一个单元格的位置
     state.doc.descendants((node, pos) => {
       if (node.type.name === "table") {
         const domNode = editor.view.nodeDOM(pos);
-        if (domNode && (domNode === hoveredTable.tableElement || domNode.contains(hoveredTable.tableElement) || hoveredTable.tableElement.contains(domNode as Node))) {
-          // 找到这个表格的最后一个单元格
+        if (domNode && (domNode === tableInfo.tableElement || domNode.contains(tableInfo.tableElement) || tableInfo.tableElement.contains(domNode as Node))) {
           node.descendants((childNode, childPos) => {
             if (childNode.type.name === "tableCell" || childNode.type.name === "tableHeader") {
               lastCellPos = pos + childPos + 1;
@@ -141,23 +140,20 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
     });
 
     if (lastCellPos !== null) {
-      // 先将光标放在最后一个单元格内，然后添加行
       editor.chain().focus().setTextSelection(lastCellPos).addRowAfter().run();
     }
-  }, [editor, hoveredTable]);
+  }, [editor, tableInfo]);
 
   const addColumn = useCallback(() => {
-    if (!editor || !hoveredTable) return;
+    if (!editor || !tableInfo) return;
 
     const { state } = editor;
     let lastCellPos: number | null = null;
 
-    // 找到表格中最后一行最后一个单元格的位置
     state.doc.descendants((node, pos) => {
       if (node.type.name === "table") {
         const domNode = editor.view.nodeDOM(pos);
-        if (domNode && (domNode === hoveredTable.tableElement || domNode.contains(hoveredTable.tableElement) || hoveredTable.tableElement.contains(domNode as Node))) {
-          // 找到这个表格的最后一个单元格
+        if (domNode && (domNode === tableInfo.tableElement || domNode.contains(tableInfo.tableElement) || tableInfo.tableElement.contains(domNode as Node))) {
           node.descendants((childNode, childPos) => {
             if (childNode.type.name === "tableCell" || childNode.type.name === "tableHeader") {
               lastCellPos = pos + childPos + 1;
@@ -170,26 +166,28 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
     });
 
     if (lastCellPos !== null) {
-      // 先将光标放在最后一个单元格内，然后添加列
       editor.chain().focus().setTextSelection(lastCellPos).addColumnAfter().run();
     }
-  }, [editor, hoveredTable]);
+  }, [editor, tableInfo]);
 
-  if (!hoveredTable) return null;
+  if (!tableInfo) return null;
 
-  const controlBarStyle: React.CSSProperties = {
+  const showRowControl = hoverArea === "row" || isHoveringControl;
+  const showColumnControl = hoverArea === "column" || isHoveringControl;
+
+  const controlBarBaseStyle: React.CSSProperties = {
     position: "absolute",
-    background: "rgba(102, 192, 244, 0.15)",
+    background: "rgba(102, 192, 244, 0.1)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     cursor: "pointer",
-    transition: "background 0.2s ease",
+    transition: "opacity 0.2s ease, background 0.2s ease",
     zIndex: 10,
   };
 
   const plusIconStyle: React.CSSProperties = {
-    color: "rgba(102, 192, 244, 0.8)",
+    color: "rgba(102, 192, 244, 0.6)",
     fontSize: "16px",
     fontWeight: "bold",
     userSelect: "none",
@@ -203,20 +201,22 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
         onClick={addRow}
         title="添加行"
         style={{
-          ...controlBarStyle,
-          top: hoveredTable.top + hoveredTable.height + 4,
-          left: hoveredTable.left,
-          width: hoveredTable.width,
+          ...controlBarBaseStyle,
+          top: tableInfo.top + tableInfo.height + 4,
+          left: tableInfo.left,
+          width: tableInfo.width,
           height: 16,
           borderRadius: "0 0 4px 4px",
+          opacity: showRowControl && hoverArea === "row" ? 1 : 0,
+          pointerEvents: showRowControl && hoverArea === "row" ? "auto" : "none",
         }}
         onMouseEnter={(e) => {
           handleControlMouseEnter();
-          e.currentTarget.style.background = "rgba(102, 192, 244, 0.3)";
+          e.currentTarget.style.background = "rgba(102, 192, 244, 0.2)";
         }}
         onMouseLeave={(e) => {
           handleControlMouseLeave();
-          e.currentTarget.style.background = "rgba(102, 192, 244, 0.15)";
+          e.currentTarget.style.background = "rgba(102, 192, 244, 0.1)";
         }}
       >
         <span style={plusIconStyle}>+</span>
@@ -228,20 +228,22 @@ const TableControls: React.FC<TableControlsProps> = ({ editor, containerRef }) =
         onClick={addColumn}
         title="添加列"
         style={{
-          ...controlBarStyle,
-          top: hoveredTable.top,
-          left: hoveredTable.left + hoveredTable.width + 8,
+          ...controlBarBaseStyle,
+          top: tableInfo.top,
+          left: tableInfo.left + tableInfo.width + 8,
           width: 16,
-          height: hoveredTable.height,
+          height: tableInfo.height,
           borderRadius: "0 4px 4px 0",
+          opacity: showColumnControl && hoverArea === "column" ? 1 : 0,
+          pointerEvents: showColumnControl && hoverArea === "column" ? "auto" : "none",
         }}
         onMouseEnter={(e) => {
           handleControlMouseEnter();
-          e.currentTarget.style.background = "rgba(102, 192, 244, 0.3)";
+          e.currentTarget.style.background = "rgba(102, 192, 244, 0.2)";
         }}
         onMouseLeave={(e) => {
           handleControlMouseLeave();
-          e.currentTarget.style.background = "rgba(102, 192, 244, 0.15)";
+          e.currentTarget.style.background = "rgba(102, 192, 244, 0.1)";
         }}
       >
         <span style={plusIconStyle}>+</span>
