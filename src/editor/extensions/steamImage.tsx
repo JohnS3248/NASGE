@@ -622,9 +622,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     <NodeViewWrapper
       as="div"
       className="nasge-image-node"
-      data-preview-id={imageNode?.previewId}
+      data-preview-id={attrPreviewId ?? imageNode?.previewId}
       data-upload-id={imageNode?.uploadId}
-      data-image-node-id={imageNode?.nodeId ?? (node.attrs.imageNodeId as string | null) ?? undefined}
+      data-image-node-id={imageNode?.nodeId ?? (node.attrs.imageNodeId as string | null) ?? attrPreviewId ?? undefined}
       style={containerStyle}
     >
       {src ? (
@@ -800,7 +800,7 @@ function computeDisplayStyles(
     height: "auto",
     maxWidth: "100%",
     userSelect: "none",
-    pointerEvents: "none",
+    // pointerEvents: "none" 已移除 - 允许图片响应点击和右键事件
     objectFit: "contain",
     margin: 0,
   };
@@ -866,7 +866,7 @@ function resolveImageStyle(dimensions: RenderDimensions): React.CSSProperties {
     height: "auto",
     maxWidth: "100%",
     userSelect: "none",
-    pointerEvents: "none",
+    // pointerEvents: "none" 已移除 - 允许图片响应点击和右键事件
     // 确保图片保持原始宽高比
     objectFit: "contain",
     // 覆盖prose等全局样式
