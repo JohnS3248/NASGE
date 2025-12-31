@@ -283,7 +283,7 @@ function wrapTextInParagraphs(html: string): string {
           // 有内容的行：先输出之前累积的空行，再添加内容
           // 注意：第一个空行是段落分隔，从第二个开始才是真正的空行
           for (let i = 1; i < consecutiveEmptyLines; i++) {
-            result.push('<p><br /></p>');
+            result.push('<p></p>');  // 空段落不加 br，让 TipTap 自己处理
           }
           consecutiveEmptyLines = 0;
           paragraphBuffer.push(document.createTextNode(line));
@@ -303,7 +303,7 @@ function wrapTextInParagraphs(html: string): string {
       // 处理末尾的空行（在块级元素之前）
       if (consecutiveEmptyLines > 0 && nextIsBlock) {
         for (let i = 1; i < consecutiveEmptyLines; i++) {
-          result.push('<p><br /></p>');
+          result.push('<p></p>');  // 空段落不加 br，让 TipTap 自己处理
         }
       }
 
@@ -515,7 +515,7 @@ export function bbcodeToHtml(bbcode: string): string {
   return paragraphs
     .map((paragraph) => {
       if (!paragraph.trim()) {
-        return "<p><br /></p>";
+        return "<p></p>";  // 空段落不加 br，让 TipTap 自己处理
       }
       return `<p>${paragraph.replace(/\n/g, "<br />")}</p>`;
     })
