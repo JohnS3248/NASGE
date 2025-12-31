@@ -147,6 +147,17 @@
         border: 1px solid rgba(102, 192, 244, 0.18);
         margin: 0.5rem 0;
       }
+
+      /* ===== 图片节点样式: 对齐 Steam 指南预览 ===== */
+      /* 图片节点容器：移除底部 margin，与 Steam 一致 */
+      .nasge-image-node {
+        margin-bottom: 0 !important;
+      }
+
+      /* 图片节点后面紧跟的段落：移除顶部 margin */
+      .nasge-image-node + p {
+        margin-top: 0;
+      }
       .nasge-quote {
         border: 1px solid rgba(102, 192, 244, 0.28);
         border-radius: 0.75rem;

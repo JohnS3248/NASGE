@@ -264,9 +264,9 @@ function wrapTextInParagraphs(html: string): string {
       const nextSibling = node.nextSibling;
 
       const prevIsBlock = prevSibling?.nodeType === Node.ELEMENT_NODE &&
-        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/i.test((prevSibling as Element).tagName);
+        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((prevSibling as Element).tagName);
       const nextIsBlock = nextSibling?.nodeType === Node.ELEMENT_NODE &&
-        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/i.test((nextSibling as Element).tagName);
+        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((nextSibling as Element).tagName);
 
       if ((prevIsBlock || nextIsBlock) && !text.trim()) {
         return;
@@ -290,7 +290,7 @@ function wrapTextInParagraphs(html: string): string {
       const element = node as Element;
       const tagName = element.tagName.toLowerCase();
 
-      const isBlock = /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr)$/.test(tagName);
+      const isBlock = /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/.test(tagName);
 
       if (isBlock) {
         // 遇到块级元素，先刷新当前段落
@@ -444,7 +444,7 @@ export function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
 
   // 检查是否有块级元素
-  const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr|blockquote)/i.test(html);
+  const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr|blockquote|figure)/i.test(html);
   if (hasBlock) {
     // 有块级元素时，使用 wrapTextInParagraphs 处理混合内容
     // 确保块级元素外的文本正确包装成段落，并保留换行
