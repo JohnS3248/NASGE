@@ -122,8 +122,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
           return undefined;
         }
-        // 通过 sourceNodeId 查找新 Store 中的图片
-        return state.getImageBySourceNodeId(contextMenu.payload.imageNodeId);
+        const nodeId = contextMenu.payload.imageNodeId;
+        // 1. 先通过 sourceNodeId 查找（本地上传的图片）
+        const bySourceNodeId = state.getImageBySourceNodeId(nodeId);
+        if (bySourceNodeId) return bySourceNodeId;
+        // 2. 再通过 steamPreviewId 查找（BBCode 导入的图片，nodeId 可能是 previewId）
+        return state.getImageBySteamPreviewId(nodeId);
       },
       [contextMenu]
     )
@@ -554,9 +558,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       <style>
         {`
           /* 覆盖 prose 类对图片的影响，确保图片容器和图片本身能正确显示 */
-          .nasge-editor-container .nasge-image-node {
-            max-width: 100% !important;
-          }
+          /* 注意：不要在容器上设置 max-width !important，否则会覆盖内联样式的尺寸设置 */
 
           .nasge-editor-container .nasge-image-node img {
             margin: 0 !important;
