@@ -8,6 +8,9 @@ import { uploadSingleImage } from "../services/ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import { useEditorConfigStore } from "../stores/useEditorConfigStore";
+import { useGuideStore } from "../stores/useGuideStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
@@ -460,8 +463,46 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       if (!files.length) return;
       event.preventDefault();
       event.stopPropagation();
-      editor.commands.focus();
-      void handleIncomingFiles(files, "paste");
+
+      // 新流程：粘贴图片到图片池，而不是直接插入编辑器
+      const imagePoolStore = useSteamGuideImageStore.getState();
+      const imagePanelStore = useImagePanelStore.getState();
+      const configStore = useEditorConfigStore.getState();
+      const currentArchiveId = useGuideStore.getState().currentArchiveId;
+
+      loggers.image.info("粘贴图片到图片池", { fileCount: files.length, currentArchiveId });
+
+      // 异步添加图片到图片池
+      (async () => {
+        const addedImages: string[] = [];
+        for (const file of files) {
+          // 传递当前存档 ID，确保图片在图片池中可见
+          const result = await imagePoolStore.addLocalImage(file, currentArchiveId ?? undefined);
+          if (!result.skipped) {
+            addedImages.push(result.image.fileName);
+          } else {
+            loggers.image.info("图片已存在，跳过添加", {
+              fileName: file.name,
+              existingFileName: result.existingFileName
+            });
+          }
+        }
+
+        // 打开图片池面板
+        if (addedImages.length > 0) {
+          imagePanelStore.open();
+
+          // 如果开启了"粘贴时重命名"，设置新图片为编辑状态
+          if (configStore.promptRenameOnPaste) {
+            // 延迟设置编辑状态，确保图片已渲染
+            setTimeout(() => {
+              imagePanelStore.setEditingImageId(addedImages[addedImages.length - 1]);
+            }, 100);
+          }
+
+          loggers.image.info("已添加图片到图片池", { addedImages });
+        }
+      })();
     };
 
     const onDrop = (event: DragEvent) => {

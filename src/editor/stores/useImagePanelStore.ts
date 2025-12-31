@@ -90,6 +90,9 @@ export interface ImagePanelRuntimeState {
   selectedIds: string[];
   focusedId: string | null;
   lastSelectedId: string | null; // 用于 Shift 范围选择
+
+  // 编辑状态
+  editingImageId: string | null; // 正在编辑文件名的图片 ID
 }
 
 /** Store 完整状态 */
@@ -135,6 +138,9 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
   selectAll: (ids: string[]) => void;
   clearSelection: () => void;
   setFocus: (id: string | null) => void;
+
+  // ============ 编辑 Actions ============
+  setEditingImageId: (id: string | null) => void;
 
   // ============ 上传设置 Actions ============
   setAutoUploadOnDrop: (enabled: boolean) => void;
@@ -187,7 +193,8 @@ const DEFAULT_RUNTIME_STATE: ImagePanelRuntimeState = {
   searchQuery: "",
   selectedIds: [],
   focusedId: null,
-  lastSelectedId: null
+  lastSelectedId: null,
+  editingImageId: null
 };
 
 // ============ Store 创建 ============
@@ -419,6 +426,12 @@ export const useImagePanelStore = create<ImagePanelState>()(
 
       setFocus: (id) => {
         set({ focusedId: id });
+      },
+
+      // ============ 编辑 Actions ============
+      setEditingImageId: (id) => {
+        loggers.image.verbose("设置编辑中的图片", id);
+        set({ editingImageId: id });
       },
 
       // ============ 上传设置 Actions ============

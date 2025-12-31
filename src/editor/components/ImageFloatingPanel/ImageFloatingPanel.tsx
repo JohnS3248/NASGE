@@ -48,11 +48,13 @@ const ImageFloatingPanel: React.FC = () => {
     sortBy,
     sortOrder,
     filterStatus,
+    editingImageId,
     setPosition,
     setSize,
     setSortBy,
     toggleSortOrder,
     setFilterStatus,
+    setEditingImageId,
     open,
     close,
     minimize,
@@ -81,8 +83,6 @@ const ImageFloatingPanel: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<string | null>(null);
 
-  // 内联编辑状态：正在编辑文件名的图片 ID
-  const [editingImageId, setEditingImageId] = useState<string | null>(null);
   // 标签管理弹窗状态
   const [showTagManager, setShowTagManager] = useState(false);
   // 全屏模式状态
