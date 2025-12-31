@@ -492,15 +492,29 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         if (addedImages.length > 0) {
           imagePanelStore.open();
 
-          // 如果开启了"粘贴时重命名"，设置新图片为编辑状态
-          if (configStore.promptRenameOnPaste) {
+          // 判断粘贴后行为
+          const shouldRename = configStore.promptRenameOnPaste;
+          const shouldAutoUpload = configStore.autoUploadInPanel;
+
+          if (shouldRename) {
+            // 如果开启了"粘贴时重命名"，设置新图片为编辑状态
             // 延迟设置编辑状态，确保图片已渲染
             setTimeout(() => {
               imagePanelStore.setEditingImageId(addedImages[addedImages.length - 1]);
             }, 100);
-          }
 
-          loggers.image.info("已添加图片到图片池", { addedImages });
+            // 如果同时开启了自动上传，将图片添加到"待改名后上传"列表
+            if (shouldAutoUpload) {
+              for (const imageFileName of addedImages) {
+                imagePanelStore.addPendingUploadAfterRename(imageFileName);
+              }
+              loggers.image.info("图片将在改名后自动上传", { addedImages });
+            }
+          }
+          // 注意：如果只开启了 autoUploadOnPaste 但没开启 promptRenameOnPaste，
+          // 上传逻辑由 ImageFloatingPanel 处理（现有逻辑）
+
+          loggers.image.info("已添加图片到图片池", { addedImages, shouldRename, shouldAutoUpload });
         }
       })();
     };

@@ -204,26 +204,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               图片上传
             </div>
 
-            {/* 粘贴自动上传 */}
-            <ToggleOption
+            {/* 废弃：粘贴自动上传（现在粘贴统一进入图片池）*/}
+            {/* <ToggleOption
               label="粘贴图片时自动上传"
               description="复制粘贴图片后立即上传到 Steam"
               checked={autoUploadOnPaste}
               onChange={setAutoUploadOnPaste}
-            />
+            /> */}
 
-            {/* 编辑器拖放自动上传 */}
-            <ToggleOption
+            {/* 废弃：编辑器拖放自动上传（现在拖放统一进入图片池）*/}
+            {/* <ToggleOption
               label="编辑器拖放自动上传"
               description="拖拽图片到编辑器后立即上传到 Steam"
               checked={autoUploadOnDrop}
               onChange={setAutoUploadOnDrop}
-            />
+            /> */}
 
-            {/* 悬浮窗自动上传 */}
+            {/* 图片池自动上传 */}
             <ToggleOption
               label="图片池自动上传"
-              description="拖放或粘贴图片到图片池悬浮窗后立即上传"
+              description="图片添加到图片池后自动上传到 Steam（配合重命名选项时先改名后上传）"
               checked={autoUploadInPanel}
               onChange={setAutoUploadInPanel}
             />

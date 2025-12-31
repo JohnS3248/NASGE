@@ -7,6 +7,7 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, ImageTag } from "../../stores/useGuideStore";
+import { queueImageUpload } from "../../services/uploadQueue";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
 
@@ -59,8 +60,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
   isEditing = false,
   onEditingChange
 }) => {
-  const { showFileName, showStatusIndicator, getThumbnailSizePixels } = useImagePanelStore();
-  const { renameImage } = useSteamGuideImageStore();
+  const {
+    showFileName,
+    showStatusIndicator,
+    getThumbnailSizePixels,
+    isPendingUploadAfterRename,
+    removePendingUploadAfterRename
+  } = useImagePanelStore();
+  const { renameImage, getImageById } = useSteamGuideImageStore();
   const {
     currentArchiveId,
     getCurrentArchive,
@@ -139,9 +146,10 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
     // 验证并清理非法字符
     const sanitized = sanitizeBaseName(trimmed);
+    const oldFileName = image.fileName;
+    const newFileName = sanitized !== baseName ? sanitized + extension : oldFileName;
 
     if (sanitized !== baseName) {
-      const newFileName = sanitized + extension;
       renameImage(image.previewId || image.fileName, newFileName);
 
       if (sanitized !== trimmed) {
@@ -151,11 +159,35 @@ const ImageCard: React.FC<ImageCardProps> = ({
           newFileName
         });
       } else {
-        loggers.image.info("内联重命名图片", { from: image.fileName, to: newFileName });
+        loggers.image.info("内联重命名图片", { from: oldFileName, to: newFileName });
       }
     }
+
+    // 检查是否需要在改名后自动上传
+    // 注意：原始文件名可能在 pending 列表中
+    if (isPendingUploadAfterRename(oldFileName)) {
+      // 移除 pending 状态（用原始文件名）
+      removePendingUploadAfterRename(oldFileName);
+
+      // 获取更新后的图片数据（用新文件名查找）
+      // 需要延迟一下确保 rename 操作完成
+      setTimeout(() => {
+        const updatedImage = getImageById(newFileName);
+        if (updatedImage && updatedImage.state === "pending") {
+          loggers.image.info("改名完成，触发自动上传", { fileName: newFileName });
+          queueImageUpload(updatedImage);
+        } else {
+          loggers.image.warn("改名后无法找到图片或图片已不是待上传状态", {
+            newFileName,
+            found: !!updatedImage,
+            state: updatedImage?.state
+          });
+        }
+      }, 50);
+    }
+
     onEditingChange?.(null);
-  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange, sanitizeBaseName]);
+  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange, sanitizeBaseName, isPendingUploadAfterRename, removePendingUploadAfterRename, getImageById]);
 
   // 取消编辑
   const handleRenameCancel = useCallback(() => {
