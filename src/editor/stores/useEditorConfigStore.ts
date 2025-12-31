@@ -77,8 +77,11 @@ export function matchShortcut(e: KeyboardEvent, shortcut: string): boolean {
 
 /**
  * 编辑器对齐方式
+ * - left: 靠左 (限制宽度)
+ * - center: 居中 (限制宽度)
+ * - full: 全屏 (不限制宽度)
  */
-export type EditorAlignment = 'left' | 'center';
+export type EditorAlignment = 'left' | 'center' | 'full';
 
 export type EditorConfig = {
   autoUploadOnPaste: boolean;   // 编辑器：粘贴自动上传

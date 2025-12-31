@@ -143,7 +143,7 @@ const App: React.FC = () => {
         <main
           style={{
             flex: 1,
-            maxWidth: "720px", // 适配 Steam 指南宽度 (638px 内容 + padding)
+            maxWidth: editorAlignment === 'full' ? undefined : "720px",
             margin: editorAlignment === 'center' ? '0 auto' : undefined,
             borderRadius: "1.05rem",
             background: "rgba(13, 23, 36, 0.9)",

@@ -439,11 +439,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* 编辑器对齐方式 */}
             <SelectOption
               label="编辑器对齐"
-              description="编辑器区域在页面中的水平对齐方式"
+              description="编辑器区域在页面中的水平对齐方式和宽度限制"
               value={editorAlignment}
               options={[
-                { value: "center", label: "居中" },
-                { value: "left", label: "靠左" }
+                { value: "center", label: "居中 (720px)" },
+                { value: "left", label: "靠左 (720px)" },
+                { value: "full", label: "全屏" }
               ]}
               onChange={(v) => setEditorAlignment(v as EditorAlignment)}
             />
