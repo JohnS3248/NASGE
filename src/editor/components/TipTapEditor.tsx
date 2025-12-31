@@ -639,12 +639,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           active={editor.isActive("spoiler")}
           onClick={toggleSpoiler}
         />
-        <ToolbarIcon label="🔗" title="插入链接" onClick={toggleLink} />
-        <ToolbarIcon
-          label="❝"
-          active={editor.isActive("blockquote")}
-          onClick={insertQuote}
-        />
         <ToolbarIcon
           label="<>"
           active={editor.isActive("codeBlock")}
