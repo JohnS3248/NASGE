@@ -179,7 +179,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     // 根据对齐方式选择标签类型
     const tagType = alignment === "inline" ? "previewicon" : "previewimg";
 
-    return `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
+    return block(`[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`, context);
   }
 
   if (tagName === "img") {
@@ -268,23 +268,44 @@ function wrapTextInParagraphs(html: string): string {
       const nextIsBlock = nextSibling?.nodeType === Node.ELEMENT_NODE &&
         /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((nextSibling as Element).tagName);
 
-      if ((prevIsBlock || nextIsBlock) && !text.trim()) {
+      // 只在前后都是块级元素时才跳过空白，保留单侧相邻的换行
+      if (prevIsBlock && nextIsBlock && !text.trim()) {
         return;
       }
 
       // 按换行符分割文本，每个换行符创建新段落
       const lines = text.split('\n');
+      // 跟踪连续空行数量
+      let consecutiveEmptyLines = 0;
+
       lines.forEach((line, index) => {
         if (line) {
-          // 添加文本节点到当前段落
+          // 有内容的行：先输出之前累积的空行，再添加内容
+          // 注意：第一个空行是段落分隔，从第二个开始才是真正的空行
+          for (let i = 1; i < consecutiveEmptyLines; i++) {
+            result.push('<p><br /></p>');
+          }
+          consecutiveEmptyLines = 0;
           paragraphBuffer.push(document.createTextNode(line));
+        } else {
+          // 空行：累计计数
+          consecutiveEmptyLines++;
         }
 
-        // 如果不是最后一行，刷新当前段落并开始新段落
+        // 如果不是最后一行，刷新当前段落
         if (index < lines.length - 1) {
-          flushParagraph();
+          if (paragraphBuffer.length > 0) {
+            flushParagraph();
+          }
         }
       });
+
+      // 处理末尾的空行（在块级元素之前）
+      if (consecutiveEmptyLines > 0 && nextIsBlock) {
+        for (let i = 1; i < consecutiveEmptyLines; i++) {
+          result.push('<p><br /></p>');
+        }
+      }
 
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
