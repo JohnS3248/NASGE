@@ -15,10 +15,12 @@ import TitleEditor from "./components/TitleEditor";
 import { extractTitleText, createTitleFromText, createEmptyTitle } from "./utils/titleHelpers";
 import { loggers } from "../shared/logger";
 import { ImageFloatingPanel } from "./components/ImageFloatingPanel";
+import { useEditorConfigStore } from "./stores/useEditorConfigStore";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
+  const editorAlignment = useEditorConfigStore((s) => s.editorAlignment);
   const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
@@ -141,6 +143,8 @@ const App: React.FC = () => {
         <main
           style={{
             flex: 1,
+            maxWidth: "720px", // 适配 Steam 指南宽度 (638px 内容 + padding)
+            margin: editorAlignment === 'center' ? '0 auto' : undefined,
             borderRadius: "1.05rem",
             background: "rgba(13, 23, 36, 0.9)",
             border: "1px solid rgba(102, 192, 244, 0.25)",

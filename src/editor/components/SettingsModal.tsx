@@ -3,7 +3,8 @@ import {
   useEditorConfigStore,
   ShortcutConfig,
   SHORTCUT_LABELS,
-  DEFAULT_SHORTCUTS
+  DEFAULT_SHORTCUTS,
+  EditorAlignment
 } from "../stores/useEditorConfigStore";
 import {
   useImagePanelStore,
@@ -101,6 +102,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const setSmartLayoutHeightThreshold = useEditorConfigStore(
     (state) => state.setSmartLayoutHeightThreshold
+  );
+
+  // 编辑器布局设置
+  const editorAlignment = useEditorConfigStore(
+    (state) => state.editorAlignment
+  );
+  const setEditorAlignment = useEditorConfigStore(
+    (state) => state.setEditorAlignment
   );
 
   if (!visible) return null;
@@ -403,6 +412,41 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 />
               ))}
             </div>
+
+            {/* 分隔线 */}
+            <div
+              style={{
+                height: "1px",
+                background: "rgba(102, 192, 244, 0.15)",
+                margin: "0.5rem 0"
+              }}
+            />
+
+            {/* 编辑器布局分组 */}
+            <div
+              style={{
+                fontSize: "0.8rem",
+                fontWeight: 600,
+                color: "rgba(173, 205, 244, 0.8)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: "-0.5rem"
+              }}
+            >
+              编辑器布局
+            </div>
+
+            {/* 编辑器对齐方式 */}
+            <SelectOption
+              label="编辑器对齐"
+              description="编辑器区域在页面中的水平对齐方式"
+              value={editorAlignment}
+              options={[
+                { value: "center", label: "居中" },
+                { value: "left", label: "靠左" }
+              ]}
+              onChange={(v) => setEditorAlignment(v as EditorAlignment)}
+            />
 
             {/* 分隔线 */}
             <div

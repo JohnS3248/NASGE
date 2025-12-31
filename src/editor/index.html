@@ -16,18 +16,29 @@
         color: #e3edf9;
       }
 
+      /* ===== 编辑器基础样式 ===== */
       .ProseMirror {
         min-height: 200px;
         outline: none;
+        /* 对齐 Steam 指南预览: 内容宽度 638px */
+        max-width: 638px;
+        margin: 0 auto;
+        /* 对齐 Steam 正文样式 */
+        font-size: 14px;
+        line-height: 20px;
       }
 
+      /* 段落样式: Steam 使用 <br> 换行，段落间距较小 */
       .ProseMirror p {
-        margin: 0 0 0.75rem;
+        margin: 0 0 0.5em;
       }
 
       .ProseMirror ul,
       .ProseMirror ol {
         padding-left: 1.5rem;
+        margin: 0 0 0.5em;
+        font-size: 14px;
+        line-height: 20px;
       }
 
       .ProseMirror code {
@@ -35,33 +46,40 @@
         padding: 0.1rem 0.25rem;
         border-radius: 0.35rem;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
+        font-size: 11px;
       }
 
+      /* ===== 标题样式: 对齐 Steam bb_h1/bb_h2 ===== */
       .ProseMirror h1,
       .ProseMirror h2,
       .ProseMirror h3 {
-        color: #66c0f4;
+        /* Steam 标题颜色: rgb(90, 169, 214) */
+        color: #5aa9d6;
         font-weight: 700;
         letter-spacing: 0.01em;
       }
 
+      /* H1: Steam bb_h1 = 20px, line-height 23px */
       .ProseMirror h1 {
-        font-size: 1.85rem;
-        margin: 1.8rem 0 1rem;
-        border-bottom: 1px solid rgba(102, 192, 244, 0.25);
-        padding-bottom: 0.4rem;
+        font-size: 20px;
+        line-height: 23px;
+        margin: 0.8em 0 0.4em;
+        border-bottom: 1px dotted #666666;
+        padding-bottom: 0.3em;
       }
 
+      /* H2: Steam bb_h2 = 18px, line-height 21px */
       .ProseMirror h2 {
-        font-size: 1.45rem;
-        margin: 1.4rem 0 0.9rem;
-        color: #74c6ff;
+        font-size: 18px;
+        line-height: 21px;
+        margin: 0.7em 0 0.35em;
       }
 
+      /* H3: Steam 无 bb_h3，复用 bb_h2 样式 */
       .ProseMirror h3 {
-        font-size: 1.2rem;
-        margin: 1.2rem 0 0.75rem;
-        color: #8dd4ff;
+        font-size: 18px;
+        line-height: 21px;
+        margin: 0.6em 0 0.3em;
       }
 
       .ProseMirror pre {

@@ -75,6 +75,11 @@ export function matchShortcut(e: KeyboardEvent, shortcut: string): boolean {
   return false;
 }
 
+/**
+ * 编辑器对齐方式
+ */
+export type EditorAlignment = 'left' | 'center';
+
 export type EditorConfig = {
   autoUploadOnPaste: boolean;   // 编辑器：粘贴自动上传
   autoUploadOnDrop: boolean;    // 编辑器：拖放自动上传
@@ -87,6 +92,8 @@ export type EditorConfig = {
   smartLayoutEnabled: boolean;        // 智能布局开关
   smartLayoutWidthThreshold: number;  // 大图宽度阈值 (px)
   smartLayoutHeightThreshold: number; // 大图高度阈值 (px)
+  // 编辑器布局配置
+  editorAlignment: EditorAlignment;   // 编辑器对齐方式：靠左/居中
 };
 
 type EditorConfigState = EditorConfig & {
@@ -103,6 +110,8 @@ type EditorConfigState = EditorConfig & {
   setSmartLayoutEnabled: (enabled: boolean) => void;
   setSmartLayoutWidthThreshold: (value: number) => void;
   setSmartLayoutHeightThreshold: (value: number) => void;
+  // 编辑器布局相关
+  setEditorAlignment: (alignment: EditorAlignment) => void;
   reset: () => void;
 };
 
@@ -117,7 +126,9 @@ const DEFAULT_CONFIG: EditorConfig = {
   // 智能布局默认值
   smartLayoutEnabled: false,       // 默认关闭
   smartLayoutWidthThreshold: 800,  // 默认 800px
-  smartLayoutHeightThreshold: 600  // 默认 600px
+  smartLayoutHeightThreshold: 600, // 默认 600px
+  // 编辑器布局默认值
+  editorAlignment: 'center'        // 默认居中
 };
 
 export const useEditorConfigStore = create<EditorConfigState>()(
@@ -176,6 +187,10 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         loggers.config.info("设置智能布局高度阈值:", value);
         set({ smartLayoutHeightThreshold: Math.max(200, Math.min(2000, value)) });
       },
+      setEditorAlignment: (alignment) => {
+        loggers.config.info("设置编辑器对齐方式:", alignment);
+        set({ editorAlignment: alignment });
+      },
       reset: () => {
         loggers.config.info("重置配置");
         set(DEFAULT_CONFIG);
@@ -199,7 +214,9 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           // 确保智能布局字段有默认值
           smartLayoutEnabled: persisted?.smartLayoutEnabled ?? DEFAULT_CONFIG.smartLayoutEnabled,
           smartLayoutWidthThreshold: persisted?.smartLayoutWidthThreshold ?? DEFAULT_CONFIG.smartLayoutWidthThreshold,
-          smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold
+          smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold,
+          // 确保编辑器布局字段有默认值
+          editorAlignment: persisted?.editorAlignment ?? DEFAULT_CONFIG.editorAlignment
         };
       },
       onRehydrateStorage: () => {
