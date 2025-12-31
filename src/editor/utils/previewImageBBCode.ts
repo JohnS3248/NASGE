@@ -105,5 +105,10 @@ function sanitizeFileName(fileName: string): string {
   if (!fileName) {
     return "image.jpg";
   }
-  return fileName.replace(/[;\r\n]/g, "_");
+  // 清理文件大小后缀，如 "(242.403 kb)"、"(1.5 MB)" 等
+  // Steam DOM 的 .preview_title 元素可能包含这些信息
+  let cleaned = fileName.replace(/\s*\(\d+(\.\d+)?\s*(b|kb|mb|gb)\)\s*$/i, "");
+  // 清理 BBCode 非法字符
+  cleaned = cleaned.replace(/[;\r\n]/g, "_");
+  return cleaned.trim() || "image.jpg";
 }
