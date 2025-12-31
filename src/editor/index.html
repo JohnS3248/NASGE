@@ -49,45 +49,60 @@
         font-size: 11px;
       }
 
-      /* ===== 标题样式: 对齐 Steam bb_h1/bb_h2 ===== */
-      .ProseMirror h1,
-      .ProseMirror h2,
-      .ProseMirror h3 {
-        /* Steam 标题颜色: rgb(90, 169, 214) */
-        color: #5aa9d6;
-        font-weight: 700;
-        letter-spacing: 0.01em;
+      /* 删除线: Steam span.bb_strike */
+      .ProseMirror s {
+        text-decoration: line-through;
       }
 
-      /* H1: Steam bb_h1 = 20px, line-height 23px */
+      /* ===== 标题样式: 完全对齐 Steam bb_h1/bb_h2/bb_h3 ===== */
+      /* H1: Steam div.bb_h1 */
       .ProseMirror h1 {
         font-size: 20px;
         line-height: 23px;
-        margin: 0.8em 0 0.4em;
+        color: #5aa9d6;
+        font-weight: normal;
+        margin-bottom: 10px;
+        margin-top: 0;
+        clear: both;
+        /* NASGE 额外: 分隔线 */
         border-bottom: 1px dotted #666666;
         padding-bottom: 0.3em;
       }
 
-      /* H2: Steam bb_h2 = 18px, line-height 21px */
+      /* H2: Steam div.bb_h2 */
       .ProseMirror h2 {
+        color: #5aa9d6;
+        margin-bottom: 6px;
+        margin-top: 8px;
         font-size: 18px;
         line-height: 21px;
-        margin: 0.7em 0 0.35em;
+        font-weight: 400;
+        clear: both;
       }
 
-      /* H3: Steam 无 bb_h3，复用 bb_h2 样式 */
+      /* H3: Steam div.bb_h3 */
       .ProseMirror h3 {
-        font-size: 18px;
-        line-height: 21px;
-        margin: 0.6em 0 0.3em;
+        color: #5aa9d6;
+        margin-bottom: 6px;
+        margin-top: 8px;
+        font-size: 16px;
+        line-height: 19px;
+        font-weight: 300;
+        clear: both;
       }
 
+      /* 代码块: Steam div.bb_code */
       .ProseMirror pre {
-        background: rgba(6, 14, 25, 0.92);
-        padding: 0.95rem 1.1rem;
-        border-radius: 0.75rem;
+        border: 1px solid #535354;
+        border-radius: 3px;
+        padding: 12px;
+        margin: 8px;
+        font-size: 11px;
+        font-family: Consolas, monospace;
+        white-space: pre;
+        white-space: pre-wrap;
         overflow-x: auto;
-        border: 1px solid rgba(80, 130, 180, 0.45);
+        background: rgba(6, 14, 25, 0.92);
       }
 
       .ProseMirror a {
@@ -96,49 +111,48 @@
         text-underline-offset: 3px;
       }
 
+      /* Spoiler: Steam span.bb_spoiler */
       .nasge-spoiler {
-        background: linear-gradient(90deg, #0c1523, #102035);
-        color: transparent;
-        border-radius: 0.35rem;
-        padding: 0.05rem 0.3rem;
-        transition: color 0.2s ease, background 0.2s ease;
+        color: #000000;
+        background-color: #000000;
+        padding: 0px 8px;
       }
 
       .nasge-spoiler:hover {
-        background: rgba(102, 192, 244, 0.12);
-        color: #d7e8ff;
+        color: #ffffff;
       }
 
+      .nasge-spoiler > span {
+        visibility: hidden;
+      }
+
+      .nasge-spoiler:hover > span {
+        visibility: visible;
+      }
+
+      /* 表格: Steam div.bb_table */
       .nasge-table {
-        width: auto;
-        max-width: 100%;
-        border-collapse: collapse;
-        table-layout: auto;
+        display: table;
+        font-size: 12px;
         margin: 0.6rem 0;
-        background: rgba(8, 15, 26, 0.82);
-      }
-
-      .nasge-table td,
-      .nasge-table th {
-        border: 1px solid rgba(102, 192, 244, 0.18);
-        padding: 0.6rem 0.75rem;
-        background: rgba(8, 15, 26, 0.88);
-        color: #d7e8ff;
-        white-space: nowrap;
       }
 
       .nasge-table th {
-        background: rgba(14, 29, 46, 0.95);
-        font-weight: 600;
-        text-align: left;
+        display: table-cell;
+        font-weight: bold;
+        border: 1px solid #4d4d4d;
+        padding: 4px;
+      }
+
+      .nasge-table tr {
+        display: table-row;
       }
 
       .nasge-table td {
-        font-weight: 500;
-      }
-
-      .nasge-table tr:nth-child(odd) td {
-        background: rgba(10, 20, 33, 0.88);
+        display: table-cell;
+        vertical-align: middle;
+        border: 1px solid #4d4d4d;
+        padding: 4px;
       }
 
       .nasge-image {
@@ -158,12 +172,15 @@
       .nasge-image-node + p {
         margin-top: 0;
       }
+      /* 引用块: Steam blockquote.bb_blockquote */
       .nasge-quote {
-        border: 1px solid rgba(102, 192, 244, 0.28);
-        border-radius: 0.75rem;
-        padding: 0.85rem 1rem;
-        background: rgba(10, 18, 30, 0.78);
-        margin: 0.8rem 0;
+        border: 1px solid #56707f;
+        border-radius: 3px;
+        padding: 12px;
+        margin: 8px;
+        font-size: 92%;
+        display: table;
+        word-break: break-word;
       }
 
       .nasge-quote[data-author]:not([data-author=""]) p:first-child {
