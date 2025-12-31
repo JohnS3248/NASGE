@@ -147,6 +147,8 @@ export interface ImportFromSteamPoolParams {
   fileName: string;
   thumbnailUrl?: string;
   originalUrl?: string;
+  /** 可选的显示设置，用于保留 BBCode 导入时的预设 */
+  display?: Partial<ImageDisplaySettings>;
 }
 
 /**

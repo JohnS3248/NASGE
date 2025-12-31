@@ -254,7 +254,10 @@ export const useImageStore = create<ImageStoreState>()(
             thumbnailUrl: params.thumbnailUrl,
             originalUrl: params.originalUrl
           },
-          display: DEFAULT_DISPLAY_SETTINGS,
+          // 使用传入的 display 设置（如果有），保留 BBCode 导入时的预设
+          display: params.display
+            ? { ...DEFAULT_DISPLAY_SETTINGS, ...params.display }
+            : DEFAULT_DISPLAY_SETTINGS,
           source: "steam-pool",
           createdAt: now
         };

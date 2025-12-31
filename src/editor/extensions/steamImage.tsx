@@ -15,6 +15,10 @@ import { useImageStore } from "../stores/useImageStore";
 import type { ImageEntity, ImageSource, ImageSizePreset, ImageAlignment } from "../types/image";
 import { loggers } from "../../shared/logger";
 
+// Steam 尺寸常量 (来自 Steam 实际测量 2025-12-31)
+const STEAM_CONTENT_WIDTH = 638;
+const STEAM_THUMB_WIDTH = 311;
+
 /**
  * 从新 Store 获取图片实体
  * 优先通过 sourceNodeId 查找（本地上传的图片）
@@ -48,7 +52,8 @@ function useImageFromNewStore(
 function syncToNewStore(
   imageNode: EditorImageNode | undefined,
   steamPoolImage: { previewId: string; fileName: string; thumbnailUrl?: string; originalUrl?: string } | undefined,
-  attrPreviewId: string | null
+  attrPreviewId: string | null,
+  displaySettings?: { preset?: string; alignment?: string }
 ): void {
   const newStore = useImageStore.getState();
 
@@ -116,11 +121,17 @@ function syncToNewStore(
         steamPreviewId: steamPoolImage.previewId,
         fileName: steamPoolImage.fileName,
         thumbnailUrl: steamPoolImage.thumbnailUrl,
-        originalUrl: steamPoolImage.originalUrl
+        originalUrl: steamPoolImage.originalUrl,
+        // 传递显示设置，保留 BBCode 导入时的预设
+        display: displaySettings ? {
+          preset: displaySettings.preset as ImageSizePreset,
+          alignment: displaySettings.alignment as ImageAlignment
+        } : undefined
       });
       loggers.image.verbose("SteamImage 同步到新 Store (from steamPool)", {
         previewId: steamPoolImage.previewId,
-        newImageId: newImage.id
+        newImageId: newImage.id,
+        display: displaySettings
       });
     }
     return;
@@ -178,14 +189,17 @@ const SteamImage = Node.create({
           renderHTML: (attributes) => ({
             "data-size-preset": attributes.sizePreset
           }),
-          parseHTML: (element) => element.getAttribute("data-size-preset") || DEFAULT_IMAGE_PRESET
+          // 必须定义 parseHTML：TipTap 不会自动从 getAttrs 继承值
+          // 如果不定义，属性会回退到 default 值
+          parseHTML: (element) => element.getAttribute("data-size-preset")
         },
         alignment: {
           default: DEFAULT_IMAGE_ALIGNMENT,
           renderHTML: (attributes) => ({
             "data-alignment": attributes.alignment
           }),
-          parseHTML: (element) => element.getAttribute("data-alignment") || DEFAULT_IMAGE_ALIGNMENT
+          // 必须定义 parseHTML：TipTap 不会自动从 getAttrs 继承值
+          parseHTML: (element) => element.getAttribute("data-alignment")
         },
         fileName: {
           default: null,
@@ -305,8 +319,12 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (!imageNode && !steamPoolImage && !attrPreviewId) return;
 
     hasSyncedRef.current = true;
-    syncToNewStore(imageNode, steamPoolImage, attrPreviewId);
-  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId]);
+    // 传递 node.attrs 中的显示设置，保留 BBCode 导入时的预设
+    syncToNewStore(imageNode, steamPoolImage, attrPreviewId, {
+      preset: node.attrs.sizePreset as string,
+      alignment: node.attrs.alignment as string
+    });
+  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, node.attrs.sizePreset, node.attrs.alignment]);
   // === END 双写模式 ===
 
   useEffect(() => {
@@ -347,8 +365,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       uploadId: imageNode?.uploadId ?? null,
       // 新 Store 优先：确保上传成功后 previewId 能正确同步到 TipTap 节点
       previewId: effectivePreviewId,
-      sizePreset: imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
-      alignment: imageEntity?.display.alignment ?? imageNode?.display.alignment ?? "inline",
+      // node.attrs 优先：BBCode 解析的值不应被 store 的默认值覆盖
+      // 只有当 node.attrs 没有值时才使用 store 的值
+      sizePreset: node.attrs.sizePreset ?? imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
+      alignment: node.attrs.alignment ?? imageEntity?.display.alignment ?? imageNode?.display.alignment ?? "inline",
       fileName: imageNode?.fileName ?? imageNode?.originalName ?? imageEntity?.fileName ?? null,
       previewDataUrl: imageNode?.metadata.previewDataUrl ?? imageEntity?.localPreviewUrl ?? null
     };
@@ -374,30 +394,27 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (!imageNode) {
       // 如果有 steamPoolImage，说明是从 Steam 导入的图片，应该正常显示
       if (steamPoolImage) {
+        const { containerStyle, imageStyle } = computeDisplayStyles(attrSizePreset, attrAlignment);
         return {
-          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
-          imageStyle: {
-            display: "block",
-            width: "100%",
-            height: "auto",
-            maxWidth: "100%",
-            userSelect: "none" as const,
-            pointerEvents: "none" as const,
-            objectFit: "contain" as const,
-            margin: "0 !important" as any
-          },
+          containerStyle,
+          imageStyle,
           placeholderStyle: placeholderImageStyle(),
           statusStyle: undefined,
-          statusLabel: undefined // 已上传的图片不需要状态标签
+          statusLabel: undefined
         };
       }
 
       // 如果有 imageEntity（从新 Store），根据状态显示
       if (imageEntity) {
+        // 使用 imageEntity 的 display 设置，或回退到 node.attrs
+        const preset = imageEntity.display?.preset ?? attrSizePreset;
+        const align = imageEntity.display?.alignment ?? attrAlignment;
+        const { containerStyle, imageStyle } = computeDisplayStyles(preset, align);
+
         // orphaned 状态：图片在 Steam 被删除
         if (imageEntity.status === "orphaned") {
           return {
-            containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+            containerStyle,
             imageStyle: placeholderImageStyle(),
             placeholderStyle: orphanedPlaceholderStyle(),
             statusStyle: statusOverlayStyle("#ff8080"),
@@ -412,7 +429,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
                           imageEntity.localPreviewUrl;
         if (imageEntity.source === "bbcode" && !hasAnyUrl) {
           return {
-            containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+            containerStyle,
             imageStyle: placeholderImageStyle(),
             placeholderStyle: orphanedPlaceholderStyle(),
             statusStyle: statusOverlayStyle("#ff8080"),
@@ -420,10 +437,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
           };
         }
 
-        // 其他状态（uploaded/synced）但没有 URL 时
+        // 正常状态（有 URL）：应用正确的尺寸和对齐
         return {
-          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
-          imageStyle: placeholderImageStyle(),
+          containerStyle,
+          imageStyle,
           placeholderStyle: placeholderImageStyle(),
           statusStyle: undefined,
           statusLabel: undefined
@@ -432,8 +449,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
       // 只有 previewId 但没有任何数据（等待验证）
       if (attrPreviewId) {
+        const { containerStyle } = computeDisplayStyles(attrSizePreset, attrAlignment);
         return {
-          containerStyle: baseContainerStyle(attrAlignment, undefined, "inline-auto"),
+          containerStyle,
           imageStyle: placeholderImageStyle(),
           placeholderStyle: orphanedPlaceholderStyle(),
           statusStyle: statusOverlayStyle("#808080"),
@@ -441,8 +459,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         };
       }
 
+      // 默认 fallback
+      const { containerStyle } = computeDisplayStyles(DEFAULT_IMAGE_PRESET, DEFAULT_IMAGE_ALIGNMENT);
       return {
-        containerStyle: baseContainerStyle(DEFAULT_IMAGE_ALIGNMENT, undefined, "inline-auto"),
+        containerStyle,
         imageStyle: placeholderImageStyle(),
         placeholderStyle: placeholderImageStyle(),
         statusStyle: undefined,
@@ -720,6 +740,74 @@ const StateIndicator: React.FC<{ state: string; error?: string }> = ({ state, er
 
 type WidthMode = "natural" | "fixed" | "full" | "inline-auto";
 
+/**
+ * 统一的显示样式计算函数
+ * 根据 sizePreset 和 alignment 计算正确的容器和图片样式
+ * 用于 steamPoolImage 和 imageEntity 路径
+ */
+function computeDisplayStyles(
+  sizePreset: string,
+  alignment: string
+): { containerStyle: React.CSSProperties; imageStyle: React.CSSProperties } {
+  const isFloat = alignment === "floatLeft" || alignment === "floatRight";
+  const isThumb = sizePreset === "thumb" || sizePreset === "half";
+  const isFull = sizePreset === "full";
+
+  // 容器样式
+  const containerStyle: React.CSSProperties = {
+    position: "relative",
+    overflow: "hidden",
+    padding: 0,
+    verticalAlign: "top",
+  };
+
+  if (isFull) {
+    // sizeFull: 占满宽度，float 无效
+    containerStyle.display = "block";
+    containerStyle.width = "100%";
+    containerStyle.margin = "1rem 0";
+  } else if (isThumb) {
+    // sizeThumb/half: 最大 311px
+    // 使用 display: block 让 float 生效
+    containerStyle.display = isFloat ? "block" : "inline-block";
+    containerStyle.maxWidth = `${STEAM_THUMB_WIDTH}px`;
+    if (isFloat) {
+      containerStyle.float = alignment === "floatLeft" ? "left" : "right";
+      containerStyle.margin = alignment === "floatLeft"
+        ? "0 1rem 0.5rem 0"
+        : "0 0 0.5rem 1rem";
+    } else {
+      containerStyle.margin = "0.5rem 0";
+    }
+  } else {
+    // sizeOriginal: 保持原尺寸，不超过容器宽度
+    containerStyle.display = isFloat ? "block" : "inline-block";
+    containerStyle.maxWidth = "100%";
+    if (isFloat) {
+      containerStyle.float = alignment === "floatLeft" ? "left" : "right";
+      containerStyle.margin = alignment === "floatLeft"
+        ? "0 1rem 0.5rem 0"
+        : "0 0 0.5rem 1rem";
+    } else {
+      containerStyle.margin = "0.5rem 0";
+    }
+  }
+
+  // 图片样式
+  const imageStyle: React.CSSProperties = {
+    display: "block",
+    width: "100%",
+    height: "auto",
+    maxWidth: "100%",
+    userSelect: "none",
+    pointerEvents: "none",
+    objectFit: "contain",
+    margin: 0,
+  };
+
+  return { containerStyle, imageStyle };
+}
+
 function baseContainerStyle(
   alignment: string,
   widthPx?: number,
@@ -752,6 +840,7 @@ function baseContainerStyle(
   if (alignment === "floatLeft") {
     return {
       ...base,
+      display: "block", // 使用 block 让 float 正常工作
       float: "left"
     };
   }
@@ -759,6 +848,7 @@ function baseContainerStyle(
   if (alignment === "floatRight") {
     return {
       ...base,
+      display: "block", // 使用 block 让 float 正常工作
       float: "right",
       margin: "0.75rem 0 0.75rem 1rem"
     };
@@ -870,8 +960,9 @@ function resolveRenderDimensions(imageNode: EditorImageNode): RenderDimensions {
         mode: "full"
       };
     case "half": {
-      const widthPx = Math.max(1, Math.round(intrinsicWidth / 2));
-      const heightPx = Math.max(1, Math.round(intrinsicHeight / 2));
+      // half 等同于 Steam sizeThumb: max-width 311px，小图不放大
+      const widthPx = Math.min(intrinsicWidth, STEAM_THUMB_WIDTH);
+      const heightPx = Math.max(1, Math.round((intrinsicHeight / intrinsicWidth) * widthPx));
       return {
         mode: "fixed",
         imageWidthPx: widthPx,
@@ -880,7 +971,8 @@ function resolveRenderDimensions(imageNode: EditorImageNode): RenderDimensions {
       };
     }
     case "thumb": {
-      const widthPx = 260;
+      // Steam sizeThumb: max-width 311px，小图不放大
+      const widthPx = Math.min(intrinsicWidth, STEAM_THUMB_WIDTH);
       const heightPx = Math.max(1, Math.round((intrinsicHeight / intrinsicWidth) * widthPx));
       return {
         mode: "fixed",
