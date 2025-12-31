@@ -83,6 +83,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     warning: false,
     limit: CONTENT_CHARACTER_LIMIT
   }));
+  // 选择变化计数器 - 用于强制工具栏重新渲染
+  const [selectionKey, setSelectionKey] = useState(0);
 
   const editor = useEditor({
     extensions,
@@ -104,6 +106,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       });
       // 更新字符数信息
       setCharacterInfo(checkCharacterLimit(editor, CONTENT_CHARACTER_LIMIT));
+    },
+    onSelectionUpdate: () => {
+      // 选择变化时触发重新渲染，确保工具栏状态正确更新
+      setSelectionKey(k => k + 1);
     }
   });
 
