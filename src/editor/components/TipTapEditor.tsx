@@ -13,6 +13,7 @@ import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } fr
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 import { loggers } from "../../shared/logger";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
+import TableControls from "./TableControls";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -74,6 +75,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 }) => {
   const extensions = useMemo(() => createEditorExtensions(), []);
   const ignoreNextUpdateRef = useRef(false);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
   // 字符数限制信息
   const [characterInfo, setCharacterInfo] = useState(() => ({
@@ -237,14 +239,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   const insertTable = useCallback(() => {
     if (!editor) return;
-    const rows = Number(window.prompt("输入表格行数", "2") ?? "0");
-    const cols = Number(window.prompt("输入表格列数", "2") ?? "0");
-
-    if (!rows || !cols) return;
+    // 默认插入 2×2 表格，用户可通过拓展条添加更多行列
     editor
       .chain()
       .focus()
-      .insertTable({ rows, cols, withHeaderRow: true })
+      .insertTable({ rows: 2, cols: 2, withHeaderRow: true })
       .run();
   }, [editor]);
 
@@ -669,6 +668,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       </div>
 
       <div
+        ref={editorContainerRef}
         style={{
           minHeight: "260px",
           background: "rgba(10, 18, 30, 0.78)",
@@ -726,6 +726,9 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }}
       >
         <EditorContent editor={editor} />
+
+        {/* 表格控制条 */}
+        <TableControls editor={editor} containerRef={editorContainerRef} />
 
         {/* 字符数统计 - 固定在编辑器右下角 */}
         <div
