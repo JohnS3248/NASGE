@@ -566,6 +566,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             height: auto !important;
             display: block !important;
           }
+
+          /* 图片选中状态样式 */
+          .nasge-editor-container .ProseMirror-selectednode .nasge-image-node,
+          .nasge-editor-container .node-steamImage.ProseMirror-selectednode .nasge-image-node {
+            outline: 2px solid rgba(102, 192, 244, 0.8);
+            outline-offset: 2px;
+          }
         `}
       </style>
       <div
