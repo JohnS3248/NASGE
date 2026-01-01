@@ -47,6 +47,9 @@ type TipTapEditorProps = {
 
 type ImageContextPayload = {
   imageNodeId: string;
+  pos: number | null; // 图片节点在文档中的位置
+  sizePreset: ImageDisplayPreset; // 被点击图片的尺寸预设
+  alignment: ImageAlignment; // 被点击图片的对齐方式
 };
 
 type ContextMenuMode = "selection" | "empty" | "image";
@@ -183,11 +186,15 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const removeImageNodeLegacy = useEditorImageNodeStore((state) => state.removeNode);
   const removeImageNew = useImageStore((state) => state.removeImage);
 
-  // 合并的更新方法
+  // 合并的更新方法（保留用于其他场景）
   const updateImageDisplay = useCallback(
     (nodeId: string, patch: Partial<{ preset: ImageDisplayPreset; alignment: ImageAlignment; customWidthPx?: number }>) => {
-      // 先尝试更新新 Store
-      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      // 先尝试用 sourceNodeId 查找，再尝试用 steamPreviewId 查找
+      let imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      if (!imageEntity) {
+        // BBCode 导入的图片可能只有 previewId，没有 sourceNodeId
+        imageEntity = useImageStore.getState().getImageBySteamPreviewId(nodeId);
+      }
       if (imageEntity) {
         updateImageDisplayNew(imageEntity.id, patch);
       }
@@ -270,31 +277,65 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     setContextMenu(INITIAL_CONTEXT_MENU);
   }, []);
 
+  // 查找图片节点的辅助函数
+  // data-image-node-id 可能是 imageNodeId 或 previewId，需要都检查
+  const findImageNodeByDataId = useCallback((targetId: string): number | null => {
+    if (!editor) return null;
+    let foundPos: number | null = null;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "steamImage") {
+        console.log('[DEBUG] steamImage node attrs:', node.attrs, 'targetId:', targetId);
+        // 检查 imageNodeId 或 previewId 是否匹配
+        if (node.attrs.imageNodeId === targetId || node.attrs.previewId === targetId) {
+          foundPos = pos;
+          return false; // 停止遍历
+        }
+      }
+      return true;
+    });
+    return foundPos;
+  }, [editor]);
+
   const applyImagePreset = useCallback(
     (preset: ImageDisplayPreset) => {
-      if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+      if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
         return;
       }
-      editor?.commands.focus();
-      updateImageDisplay(contextMenu.payload.imageNodeId, {
-        preset,
-        customWidthPx: undefined
-      });
+      // 优先使用存储的位置（精确定位被点击的图片）
+      // 回退到按 ID 搜索（兼容旧逻辑）
+      const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
+      const nodeId = contextMenu.payload.imageNodeId;
+      if (pos !== null) {
+        // 1. 更新 TipTap 节点属性
+        editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+          sizePreset: preset
+        }).run();
+        // 2. 同步更新 Store（双写）
+        updateImageDisplay(nodeId, { preset });
+      }
     },
-    [contextMenu, editor, updateImageDisplay]
+    [contextMenu, editor, findImageNodeByDataId, updateImageDisplay]
   );
 
   const applyImageAlignment = useCallback(
     (alignment: ImageAlignment) => {
-      if (contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
+      if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
         return;
       }
-      editor?.commands.focus();
-      updateImageDisplay(contextMenu.payload.imageNodeId, {
-        alignment
-      });
+      // 优先使用存储的位置（精确定位被点击的图片）
+      // 回退到按 ID 搜索（兼容旧逻辑）
+      const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
+      const nodeId = contextMenu.payload.imageNodeId;
+      if (pos !== null) {
+        // 1. 更新 TipTap 节点属性
+        editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+          alignment
+        }).run();
+        // 2. 同步更新 Store（双写）
+        updateImageDisplay(nodeId, { alignment });
+      }
     },
-    [contextMenu, editor, updateImageDisplay]
+    [contextMenu, editor, findImageNodeByDataId, updateImageDisplay]
   );
 
   const handleDeleteImage = useCallback(() => {
@@ -774,6 +815,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 left: event.clientX,
                 top: event.clientY
               });
+
+              // 直接从 DOM 元素的 data 属性读取当前设置（最可靠的方式）
+              const nodeSizePreset = (imageElement.dataset.sizePreset as ImageDisplayPreset) || "original";
+              const nodeAlignment = (imageElement.dataset.alignment as ImageAlignment) || "inline";
+
+              console.log('[DEBUG 右键菜单] 从 DOM 读取:', { nodeSizePreset, nodeAlignment, imageNodeId });
+
               if (coords?.pos != null) {
                 editor
                   .chain()
@@ -789,7 +837,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 x: event.clientX,
                 y: event.clientY,
                 mode: "image",
-                payload: { imageNodeId }
+                payload: {
+                  imageNodeId,
+                  pos: coords?.pos ?? null,
+                  sizePreset: nodeSizePreset,
+                  alignment: nodeAlignment
+                }
               });
               return;
             }
@@ -881,13 +934,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                         if (!def) return null;
 
                         // 根据 id 确定 onClick 和 active 状态
+                        // 使用 payload 中的值（从被点击的 TipTap 节点读取），而非 Store 数据
                         if (group.groupId === 'preset') {
                           const preset = item.id.replace('preset-', '') as ImageSizePreset;
                           return (
                             <MenuItem
                               key={item.id}
                               label={def.label}
-                              active={contextMenuImageNode.display.preset === preset}
+                              active={contextMenu.payload?.sizePreset === preset}
                               onClick={() => applyImagePreset(preset)}
                               onComplete={closeContextMenu}
                             />
@@ -898,7 +952,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                             <MenuItem
                               key={item.id}
                               label={def.label}
-                              active={contextMenuImageNode.display.alignment === alignment}
+                              active={contextMenu.payload?.alignment === alignment}
                               onClick={() => applyImageAlignment(alignment)}
                               onComplete={closeContextMenu}
                             />

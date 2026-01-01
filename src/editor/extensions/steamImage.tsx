@@ -283,8 +283,17 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   node,
   updateAttributes
 }) => {
+  // 提取所有需要的 node.attrs 属性，避免整个对象作为依赖
   const imageNodeId = node.attrs.imageNodeId as string | null;
   const attrPreviewId = node.attrs.previewId as string | null;
+  const attrSizePreset = node.attrs.sizePreset as string | null;
+  const attrAlignment = node.attrs.alignment as string | null;
+  const attrUploadId = node.attrs.uploadId as string | null;
+  const attrFileName = node.attrs.fileName as string | null;
+  const attrPreviewDataUrl = node.attrs.previewDataUrl as string | null;
+
+  // DEBUG: 检查 NodeView 是否重新渲染以及属性值
+  console.log('[DEBUG NodeView RENDER]', { previewId: attrPreviewId, sizePreset: attrSizePreset, alignment: attrAlignment });
 
   // === 新 Store 读取（主要数据源）===
   const imageEntity = useImageFromNewStore(imageNodeId, attrPreviewId);
@@ -321,10 +330,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     hasSyncedRef.current = true;
     // 传递 node.attrs 中的显示设置，保留 BBCode 导入时的预设
     syncToNewStore(imageNode, steamPoolImage, attrPreviewId, {
-      preset: node.attrs.sizePreset as string,
-      alignment: node.attrs.alignment as string
+      preset: attrSizePreset as string,
+      alignment: attrAlignment as string
     });
-  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, node.attrs.sizePreset, node.attrs.alignment]);
+  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, attrSizePreset, attrAlignment]);
   // === END 双写模式 ===
 
   useEffect(() => {
@@ -337,14 +346,14 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       return;
     }
 
-    if (!node.attrs.previewDataUrl && !attrPreviewId) {
+    if (!attrPreviewDataUrl && !attrPreviewId) {
       loggers.image.warn("steamImage 节点缺少关联数据", {
         imageNodeId,
         attrPreviewId,
         nodes: useEditorImageNodeStore.getState().nodes
       });
     }
-  }, [imageNode, imageNodeId, node.attrs.previewDataUrl, attrPreviewId, steamPoolImage]);
+  }, [imageNode, imageNodeId, attrPreviewDataUrl, attrPreviewId, steamPoolImage]);
 
   // 移除自动清理逻辑：节点的删除应该由编辑器的 deleteSelection 命令触发
   // 不应该在组件卸载时自动删除 store 数据，因为 TipTap 会在内容更新时重新挂载组件
@@ -367,15 +376,26 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       previewId: effectivePreviewId,
       // node.attrs 优先：BBCode 解析的值不应被 store 的默认值覆盖
       // 只有当 node.attrs 没有值时才使用 store 的值
-      sizePreset: node.attrs.sizePreset ?? imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
-      alignment: node.attrs.alignment ?? imageEntity?.display.alignment ?? imageNode?.display.alignment ?? "inline",
+      sizePreset: attrSizePreset ?? imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
+      alignment: attrAlignment ?? imageEntity?.display.alignment ?? imageNode?.display.alignment ?? "inline",
       fileName: imageNode?.fileName ?? imageNode?.originalName ?? imageEntity?.fileName ?? null,
       previewDataUrl: imageNode?.metadata.previewDataUrl ?? imageEntity?.localPreviewUrl ?? null
     };
 
+    // 使用提取的属性进行比较，避免对象引用问题
+    const currentAttrs = {
+      imageNodeId,
+      uploadId: attrUploadId,
+      previewId: attrPreviewId,
+      sizePreset: attrSizePreset,
+      alignment: attrAlignment,
+      fileName: attrFileName,
+      previewDataUrl: attrPreviewDataUrl
+    };
+
     let changed = false;
     for (const key of Object.keys(nextAttrs) as Array<keyof typeof nextAttrs>) {
-      if (node.attrs[key] !== nextAttrs[key]) {
+      if (currentAttrs[key as keyof typeof currentAttrs] !== nextAttrs[key]) {
         changed = true;
         break;
       }
@@ -384,17 +404,27 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     if (changed) {
       updateAttributes(nextAttrs);
     }
-  }, [imageNode, imageEntity, node.attrs, updateAttributes]);
+  }, [imageNode, imageEntity, imageNodeId, attrUploadId, attrPreviewId, attrSizePreset, attrAlignment, attrFileName, attrPreviewDataUrl, updateAttributes]);
 
   const { containerStyle, imageStyle, placeholderStyle, statusStyle, statusLabel } = useMemo(() => {
-    // 获取节点属性中的对齐和尺寸设置
-    const attrAlignment = (node.attrs.alignment as string) || DEFAULT_IMAGE_ALIGNMENT;
-    const attrSizePreset = (node.attrs.sizePreset as string) || DEFAULT_IMAGE_PRESET;
+    // 使用已提取的属性（带默认值）
+    const effectiveSizePreset = attrSizePreset || DEFAULT_IMAGE_PRESET;
+    const effectiveAlignment = attrAlignment || DEFAULT_IMAGE_ALIGNMENT;
+
+    // DEBUG: 检查 useMemo 计算时使用的值
+    console.log('[DEBUG useMemo STYLES]', { attrPreviewId, effectiveSizePreset, effectiveAlignment, hasImageNode: !!imageNode, hasSteamPoolImage: !!steamPoolImage, hasImageEntity: !!imageEntity });
 
     if (!imageNode) {
       // 如果有 steamPoolImage，说明是从 Steam 导入的图片，应该正常显示
       if (steamPoolImage) {
-        const { containerStyle, imageStyle } = computeDisplayStyles(attrSizePreset, attrAlignment);
+        const { containerStyle, imageStyle } = computeDisplayStyles(effectiveSizePreset, effectiveAlignment);
+        console.log('[DEBUG useMemo] steamPoolImage branch, container:', {
+          display: containerStyle.display,
+          width: containerStyle.width,
+          maxWidth: containerStyle.maxWidth,
+          float: containerStyle.float,
+          margin: containerStyle.margin
+        });
         return {
           containerStyle,
           imageStyle,
@@ -406,10 +436,8 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
       // 如果有 imageEntity（从新 Store），根据状态显示
       if (imageEntity) {
-        // 使用 imageEntity 的 display 设置，或回退到 node.attrs
-        const preset = imageEntity.display?.preset ?? attrSizePreset;
-        const align = imageEntity.display?.alignment ?? attrAlignment;
-        const { containerStyle, imageStyle } = computeDisplayStyles(preset, align);
+        // 使用已提取的属性（用户通过右键菜单修改的值优先）
+        const { containerStyle, imageStyle } = computeDisplayStyles(effectiveSizePreset, effectiveAlignment);
 
         // orphaned 状态：图片在 Steam 被删除
         if (imageEntity.status === "orphaned") {
@@ -449,7 +477,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
       // 只有 previewId 但没有任何数据（等待验证）
       if (attrPreviewId) {
-        const { containerStyle } = computeDisplayStyles(attrSizePreset, attrAlignment);
+        const { containerStyle } = computeDisplayStyles(effectiveSizePreset, effectiveAlignment);
         return {
           containerStyle,
           imageStyle: placeholderImageStyle(),
@@ -470,8 +498,17 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       };
     }
 
-    const dims = resolveRenderDimensions(imageNode);
-    const container = baseContainerStyle(imageNode.display.alignment, dims.containerWidthPx, dims.mode);
+    // 使用 node.attrs 的值覆盖 imageNode.display（用户通过右键菜单修改的优先）
+    const effectiveImageNode = {
+      ...imageNode,
+      display: {
+        ...imageNode.display,
+        preset: effectiveSizePreset as ImageSizePreset,
+        alignment: effectiveAlignment as ImageAlignment
+      }
+    };
+    const dims = resolveRenderDimensions(effectiveImageNode);
+    const container = baseContainerStyle(effectiveAlignment, dims.containerWidthPx, dims.mode);
     const image = resolveImageStyle(dims);
     const placeholder = placeholderImageStyle(dims.containerWidthPx, dims.estimatedHeightPx);
 
@@ -484,7 +521,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       statusStyle: statusConfig?.style,
       statusLabel: statusConfig?.label
     };
-  }, [imageNode, imageEntity, steamPoolImage, attrPreviewId, node.attrs.alignment, node.attrs.sizePreset]);
+  }, [imageNode, imageEntity, steamPoolImage, attrPreviewId, attrAlignment, attrSizePreset]);
 
   // 跟踪 CDN URL 是否加载失败，用于 fallback 到本地预览
   const [cdnUrlLoadFailed, setCdnUrlLoadFailed] = useState(false);
@@ -495,7 +532,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   }, [imageNode?.cdnUrl]);
 
   const src = useMemo(() => {
-    const attrPreview = (node.attrs.previewDataUrl as string | null) ?? undefined;
+    const attrPreview = attrPreviewDataUrl ?? undefined;
 
     // === 优先使用新 Store 的 imageEntity ===
     if (imageEntity) {
@@ -534,7 +571,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
     // 情况3：没有任何数据源
     return attrPreview;
-  }, [imageEntity, imageNode, steamPoolImage, node.attrs.previewDataUrl, cdnUrlLoadFailed]);
+  }, [imageEntity, imageNode, steamPoolImage, attrPreviewDataUrl, cdnUrlLoadFailed]);
 
   // 处理图片加载成功
   const handleImageLoad = useCallback(() => {
@@ -560,7 +597,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     // 如果图片从 BBCode 导入且没有本地预览，加载失败说明引用失效
     if (imageEntity && imageEntity.status === "uploaded" && imageEntity.source === "bbcode") {
       // 检查是否还有本地预览可用
-      const hasLocalPreview = imageEntity.localPreviewUrl || node.attrs.previewDataUrl;
+      const hasLocalPreview = imageEntity.localPreviewUrl || attrPreviewDataUrl;
       if (!hasLocalPreview) {
         loggers.image.warn('BBCode 导入图片加载失败，标记为 orphaned', {
           imageId: imageEntity.id,
@@ -569,9 +606,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         useImageStore.getState().markOrphaned(imageEntity.id);
       }
     }
-  }, [imageNode?.cdnUrl, cdnUrlLoadFailed, imageEntity, node.attrs.previewDataUrl]);
+  }, [imageNode?.cdnUrl, cdnUrlLoadFailed, imageEntity, attrPreviewDataUrl]);
 
-  const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? (node.attrs.fileName as string) ?? "NASGE 图片";
+  const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? attrFileName ?? "NASGE 图片";
 
   // 获取图片状态（用于状态指示器）
   const imageState = useMemo(() => {
@@ -621,44 +658,47 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   return (
     <NodeViewWrapper
       as="div"
-      className="nasge-image-node"
+      className="nasge-image-node-wrapper"
       data-preview-id={attrPreviewId ?? imageNode?.previewId}
       data-upload-id={imageNode?.uploadId}
-      data-image-node-id={imageNode?.nodeId ?? (node.attrs.imageNodeId as string | null) ?? attrPreviewId ?? undefined}
-      style={containerStyle}
+      data-image-node-id={imageNode?.nodeId ?? imageNodeId ?? attrPreviewId ?? undefined}
+      data-size-preset={attrSizePreset || "original"}
+      data-alignment={attrAlignment || "inline"}
     >
-      {src ? (
-        <>
-          <img
-            src={src}
-            alt={alt}
-            style={imageStyle}
-            draggable={false}
-            onLoad={handleImageLoad}
-            onError={handleImageLoadError}
-          />
-          {statusStyle && statusLabel ? (
-            <div style={statusStyle}>{statusLabel}</div>
-          ) : null}
-        </>
-      ) : (
-        <div style={{
-          ...placeholderStyle,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexDirection: "column",
-          gap: "8px"
-        }}>
-          {statusLabel ? (
-            <>
-              <span style={{ fontSize: "24px" }}>🖼️</span>
-              <span style={{
-                color: imageEntity?.status === "orphaned" ? "#ff8080" : "#808080",
-                fontSize: "0.85rem",
-                textAlign: "center",
-                padding: "0 12px"
-              }}>
+      {/* 内部 div 用于应用样式，React 可以正确更新 */}
+      <div className="nasge-image-node" style={containerStyle}>
+        {src ? (
+          <>
+            <img
+              src={src}
+              alt={alt}
+              style={imageStyle}
+              draggable={false}
+              onLoad={handleImageLoad}
+              onError={handleImageLoadError}
+            />
+            {statusStyle && statusLabel ? (
+              <div style={statusStyle}>{statusLabel}</div>
+            ) : null}
+          </>
+        ) : (
+          <div style={{
+            ...placeholderStyle,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: "8px"
+          }}>
+            {statusLabel ? (
+              <>
+                <span style={{ fontSize: "24px" }}>🖼️</span>
+                <span style={{
+                  color: imageEntity?.status === "orphaned" ? "#ff8080" : "#808080",
+                  fontSize: "0.85rem",
+                  textAlign: "center",
+                  padding: "0 12px"
+                }}>
                 {statusLabel}
               </span>
             </>
@@ -668,8 +708,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         </div>
       )}
 
-      {/* 状态指示器（圆形图标） */}
-      {imageState && <StateIndicator state={imageState} error={imageError} />}
+        {/* 状态指示器（圆形图标） */}
+        {imageState && <StateIndicator state={imageState} error={imageError} />}
+      </div>
     </NodeViewWrapper>
   );
 };
