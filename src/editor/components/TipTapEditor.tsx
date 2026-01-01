@@ -816,21 +816,39 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 top: event.clientY
               });
 
-              // 直接从 DOM 元素的 data 属性读取当前设置（最可靠的方式）
-              const nodeSizePreset = (imageElement.dataset.sizePreset as ImageDisplayPreset) || "original";
-              const nodeAlignment = (imageElement.dataset.alignment as ImageAlignment) || "inline";
-
-              console.log('[DEBUG 右键菜单] 从 DOM 读取:', { nodeSizePreset, nodeAlignment, imageNodeId });
+              // 用 coords.pos 找到被点击的 steamImage 节点
+              let nodeSizePreset: ImageDisplayPreset = "original";
+              let nodeAlignment: ImageAlignment = "inline";
+              let targetPos: number | null = null;
 
               if (coords?.pos != null) {
+                // 从点击位置向前搜索最近的 steamImage 节点
+                const clickPos = coords.pos;
+                editor.state.doc.descendants((node, pos) => {
+                  if (node.type.name === "steamImage") {
+                    // 检查点击位置是否在这个节点范围内
+                    const nodeEnd = pos + node.nodeSize;
+                    if (clickPos >= pos && clickPos <= nodeEnd) {
+                      nodeSizePreset = (node.attrs.sizePreset as ImageDisplayPreset) || "original";
+                      nodeAlignment = (node.attrs.alignment as ImageAlignment) || "inline";
+                      targetPos = pos;
+                      return false; // 找到后停止遍历
+                    }
+                  }
+                  return true;
+                });
+
+                // 设置选择（用找到的位置或原始位置）
                 editor
                   .chain()
                   .focus()
-                  .setNodeSelection(coords.pos)
+                  .setNodeSelection(targetPos ?? clickPos)
                   .run();
               } else {
                 editor.commands.focus();
               }
+
+              console.log('[DEBUG 右键菜单] 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
 
               setContextMenu({
                 visible: true,
@@ -839,7 +857,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 mode: "image",
                 payload: {
                   imageNodeId,
-                  pos: coords?.pos ?? null,
+                  pos: targetPos ?? coords?.pos ?? null, // 优先使用找到的精确位置
                   sizePreset: nodeSizePreset,
                   alignment: nodeAlignment
                 }
