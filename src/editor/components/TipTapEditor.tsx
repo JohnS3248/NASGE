@@ -284,7 +284,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     let foundPos: number | null = null;
     editor.state.doc.descendants((node, pos) => {
       if (node.type.name === "steamImage") {
-        console.log('[DEBUG] steamImage node attrs:', node.attrs, 'targetId:', targetId);
         // 检查 imageNodeId 或 previewId 是否匹配
         if (node.attrs.imageNodeId === targetId || node.attrs.previewId === targetId) {
           foundPos = pos;

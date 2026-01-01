@@ -292,9 +292,6 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const attrFileName = node.attrs.fileName as string | null;
   const attrPreviewDataUrl = node.attrs.previewDataUrl as string | null;
 
-  // DEBUG: 检查 NodeView 是否重新渲染以及属性值
-  console.log('[DEBUG NodeView RENDER]', { previewId: attrPreviewId, sizePreset: attrSizePreset, alignment: attrAlignment });
-
   // === 新 Store 读取（主要数据源）===
   const imageEntity = useImageFromNewStore(imageNodeId, attrPreviewId);
 
@@ -411,20 +408,10 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     const effectiveSizePreset = attrSizePreset || DEFAULT_IMAGE_PRESET;
     const effectiveAlignment = attrAlignment || DEFAULT_IMAGE_ALIGNMENT;
 
-    // DEBUG: 检查 useMemo 计算时使用的值
-    console.log('[DEBUG useMemo STYLES]', { attrPreviewId, effectiveSizePreset, effectiveAlignment, hasImageNode: !!imageNode, hasSteamPoolImage: !!steamPoolImage, hasImageEntity: !!imageEntity });
-
     if (!imageNode) {
       // 如果有 steamPoolImage，说明是从 Steam 导入的图片，应该正常显示
       if (steamPoolImage) {
         const { containerStyle, imageStyle } = computeDisplayStyles(effectiveSizePreset, effectiveAlignment);
-        console.log('[DEBUG useMemo] steamPoolImage branch, container:', {
-          display: containerStyle.display,
-          width: containerStyle.width,
-          maxWidth: containerStyle.maxWidth,
-          float: containerStyle.float,
-          margin: containerStyle.margin
-        });
         return {
           containerStyle,
           imageStyle,

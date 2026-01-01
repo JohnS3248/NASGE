@@ -290,12 +290,6 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
   const isManageGuidePage = window.location.href.includes("/manageguide/");
   const isEditSubsectionPage = window.location.href.includes("/editguidesubsection/");
 
-  console.log('[NASGE DEBUG] fetchGuideImagePool 调用', {
-    currentUrl: window.location.href,
-    isManageGuidePage,
-    isEditSubsectionPage
-  });
-
   // manageguide 页面：使用 gPreviewImages 桥接数据
   // 注意：AJAX API (userfilesforguide) 返回的是用户截图，不是指南图片池
   if (isManageGuidePage) {
@@ -572,8 +566,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
   let globalVar: any = null;
 
   try {
-    console.log('[NASGE Content Script] 请求刷新 gPreviewImages 桥接数据...');
-
     // 通过 postMessage 请求 MAIN world 刷新数据
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
@@ -587,7 +579,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
 
         clearTimeout(timeout);
         window.removeEventListener('message', handler);
-        console.log('[NASGE Content Script] 收到刷新确认，图片数:', event.data.count);
         resolve();
       };
 
@@ -599,7 +590,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     const attr = document.documentElement.getAttribute('data-nasge-gpreview-bridge');
     if (attr && attr !== 'null') {
       globalVar = JSON.parse(attr);
-      console.log('[NASGE Content Script] ✅ 读取到 gPreviewImages，共', globalVar?.length, '张图片');
     } else {
       console.warn('[NASGE Content Script] ❌ gPreviewImages 不存在或为空');
     }
@@ -609,7 +599,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
 
   if (Array.isArray(globalVar) && globalVar.length > 0) {
     console.info('[NASGE] ✅ 从全局变量 gPreviewImages 解析图片池');
-    console.log('[NASGE DEBUG] gPreviewImages 原始数据:', JSON.stringify(globalVar, null, 2));
 
     for (const item of globalVar) {
       if (item.previewid) {
@@ -620,22 +609,12 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
           originalUrl: item.url  // 完整的透明背景 URL
         };
 
-        console.log('[NASGE DEBUG] 处理图片:', {
-          previewId: item.previewid,
-          originalUrl: item.url,
-          urlHasLetterbox: item.url?.includes('Letterbox'),
-          urlHasImcolor: item.url?.includes('imcolor')
-        });
-
         images.set(item.previewid, imageData);
       }
     }
 
-    console.info('[NASGE DEBUG] 图片池解析完成，共', images.size, '张图片');
-    console.log('[NASGE DEBUG] 解析后的图片池:', Array.from(images.values()));
-
     // 成功使用 gPreviewImages，直接返回
-    console.info(`[NASGE] 从 gPreviewImages 解析到 ${images.size} 张图片`, Array.from(images.values()));
+    console.info(`[NASGE] 从 gPreviewImages 解析到 ${images.size} 张图片`);
     return Array.from(images.values());
   }
 
@@ -662,14 +641,12 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     const img = container.querySelector('img') || (container instanceof HTMLImageElement ? container : null);
     if (img) {
       const src = img.getAttribute('src') || '';
-      console.log('[NASGE DEBUG] DOM解析图片src:', src);
       const match = /UGC\/(\d+)|ugc\/(\d+)/i.exec(src);
       if (match && !previewId) {
         previewId = match[1] || match[2];
       }
       if (src) {
         thumbnailUrl = absoluteUrl(src);
-        console.log('[NASGE DEBUG] 转换后的thumbnailUrl:', thumbnailUrl);
       }
       fileName = img.getAttribute('alt') || img.getAttribute('title') || fileName;
     }
@@ -729,7 +706,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
 
     if (attr && attr !== 'null') {
       globalVarFinal = JSON.parse(attr);
-      console.log('[NASGE Content Script] ✅ 最终检查成功，共', globalVarFinal?.length, '张图片');
     }
   } catch (error) {
     console.warn('[NASGE] 最终检查失败:', error);
@@ -743,11 +719,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
         if (existing) {
           existing.originalUrl = item.url;  // 使用透明背景URL覆盖
           existing.fileName = item.filename || existing.fileName;
-          console.log('[NASGE DEBUG] 更新图片URL:', {
-            previewId: item.previewid,
-            oldUrl: existing.thumbnailUrl,
-            newOriginalUrl: item.url
-          });
         } else {
           // 如果DOM中没有找到，直接添加
           images.set(item.previewid, {
@@ -761,7 +732,7 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     }
   }
 
-  console.info(`[NASGE] 从 DOM 解析到 ${images.size} 张图片`, Array.from(images.values()));
+  console.info(`[NASGE] 从 DOM 解析到 ${images.size} 张图片`);
   return Array.from(images.values());
 }
 
