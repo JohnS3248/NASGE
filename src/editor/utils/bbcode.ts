@@ -166,9 +166,10 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     const alignment = node.getAttribute("data-alignment") ?? "floatLeft";
 
     // 将内部格式转换回 BBCode 格式
+    // Steam BBCode: 半宽 = sizeThumb（不是 sizeHalf）
     const sizeToken = sizePreset === "original" ? "sizeOriginal"
       : sizePreset === "full" ? "sizeFull"
-      : sizePreset === "half" ? "sizeHalf"
+      : sizePreset === "half" ? "sizeThumb"
       : "sizeOriginal";
 
     const alignToken = alignment === "floatLeft" ? "floatLeft"

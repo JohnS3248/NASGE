@@ -16,7 +16,7 @@ export type PreviewImageBBCode = {
 const SIZE_TOKENS: Record<ImageDisplayPreset, string> = {
   original: "sizeOriginal",
   full: "sizeFull",
-  half: "sizeHalf",
+  half: "sizeThumb",  // Steam BBCode: 半宽 = sizeThumb
   thumb: "sizeThumb"
 };
 

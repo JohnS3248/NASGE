@@ -28,7 +28,7 @@ describe("encodePreviewImage", () => {
         fileName: "Screenshot 01.png"
       })
     ).toBe(
-      "[previewimg=10000004;sizeHalf,floatRight;Screenshot 01.png][/previewimg]"
+      "[previewimg=10000004;sizeThumb,floatRight;Screenshot 01.png][/previewimg]"
     );
   });
 
