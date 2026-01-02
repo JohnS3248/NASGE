@@ -13,3 +13,6 @@ html/
 htmls/
 notes/
 docs/
+
+# 打包输出
+zips/
