@@ -35,7 +35,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     focusedId,
     selectImage,
     selectRange,
-    selectAll,
     clearSelection,
     getThumbnailSizePixels,
     setCurrentPage
@@ -253,13 +252,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
         return;
       }
 
-      // 全选快捷键 (默认 Ctrl+A)
-      if (matchShortcut(e, shortcuts.selectAll)) {
-        e.preventDefault();
-        loggers.image.info("快捷键触发全选", { count: allImageIds.length });
-        selectAll(allImageIds);
-        return;
-      }
     };
 
     document.addEventListener("keydown", handleKeyDown);
@@ -269,12 +261,10 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     editingImageId,
     images,
     selectedIds,
-    allImageIds,
     onEditingChange,
     shortcuts,
     doDeleteLocalImage,
     doDeleteSteamImage,
-    selectAll,
     clearSelection
   ]);
 

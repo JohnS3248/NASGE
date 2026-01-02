@@ -1,4 +1,5 @@
 import { Mark, mergeAttributes } from "@tiptap/core";
+import { useEditorConfigStore, DEFAULT_SHORTCUTS } from "../stores/useEditorConfigStore";
 
 export interface SpoilerOptions {
   HTMLAttributes: Record<string, any>;
@@ -58,8 +59,19 @@ export const Spoiler = Mark.create<SpoilerOptions>({
     };
   },
   addKeyboardShortcuts() {
+    // 从 store 获取配置
+    const shortcuts = useEditorConfigStore.getState().shortcuts || DEFAULT_SHORTCUTS;
+    const shortcut = shortcuts.toggleSpoiler || "Mod+H";
+
+    // 转换格式: "Mod+H" -> "Mod-h"
+    const tiptapKey = shortcut
+      .replace(/\+/g, "-")
+      .replace(/Ctrl/gi, "Mod")
+      .replace(/Meta/gi, "Mod")
+      .replace(/-([A-Z])$/i, (_, key) => `-${key.toLowerCase()}`);
+
     return {
-      "Mod-h": () => this.editor.commands.toggleSpoiler()
+      [tiptapKey]: () => this.editor.commands.toggleSpoiler()
     };
   }
 });

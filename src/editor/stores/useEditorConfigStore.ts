@@ -11,25 +11,60 @@ export type ShortcutConfig = {
   // 图片池操作
   renameImage: string;        // 重命名图片
   deleteImage: string;        // 删除图片
-  selectAll: string;          // 全选图片
+  // 编辑器格式快捷键
+  toggleBold: string;         // 加粗
+  toggleItalic: string;       // 斜体
+  toggleUnderline: string;    // 下划线
+  toggleStrike: string;       // 删除线
+  setParagraph: string;       // 正文段落
+  setHeading1: string;        // 一级标题
+  setHeading2: string;        // 二级标题
+  setHeading3: string;        // 三级标题
+  toggleCodeBlock: string;    // 代码块
+  toggleSpoiler: string;      // 折叠/剧透
+  clearFormat: string;        // 清除格式
 };
 
 /**
  * 默认快捷键配置
  */
 export const DEFAULT_SHORTCUTS: ShortcutConfig = {
+  // 图片池操作
   renameImage: "F2",
   deleteImage: "Delete",
-  selectAll: "Ctrl+A"
+  // 编辑器格式快捷键
+  toggleBold: "Mod+B",
+  toggleItalic: "Mod+I",
+  toggleUnderline: "Mod+U",
+  toggleStrike: "Mod+Shift+S",
+  setParagraph: "Mod+0",
+  setHeading1: "Mod+1",
+  setHeading2: "Mod+2",
+  setHeading3: "Mod+3",
+  toggleCodeBlock: "Mod+K",
+  toggleSpoiler: "Mod+H",
+  clearFormat: "Mod+\\"
 };
 
 /**
  * 快捷键显示名称映射
  */
 export const SHORTCUT_LABELS: Record<keyof ShortcutConfig, string> = {
+  // 图片池操作
   renameImage: "重命名图片",
   deleteImage: "删除图片",
-  selectAll: "全选图片"
+  // 编辑器格式快捷键
+  toggleBold: "加粗",
+  toggleItalic: "斜体",
+  toggleUnderline: "下划线",
+  toggleStrike: "删除线",
+  setParagraph: "正文段落",
+  setHeading1: "一级标题",
+  setHeading2: "二级标题",
+  setHeading3: "三级标题",
+  toggleCodeBlock: "代码块",
+  toggleSpoiler: "折叠/剧透",
+  clearFormat: "清除格式"
 };
 
 /**
