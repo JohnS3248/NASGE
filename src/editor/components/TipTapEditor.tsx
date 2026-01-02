@@ -701,10 +701,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           alignItems: "center",
           gap: "0.25rem",
           flexWrap: "wrap",
-          background: "rgba(15, 26, 41, 0.82)",
+          background: "rgba(15, 26, 41, 0.95)",
           borderRadius: "0.75rem",
           padding: "0.4rem 0.5rem",
-          border: "1px solid rgba(102, 192, 244, 0.18)"
+          border: "1px solid rgba(102, 192, 244, 0.18)",
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          marginBottom: "0.5rem"
         }}
       >
         <ToolbarIcon
