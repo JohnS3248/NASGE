@@ -77,12 +77,6 @@ export const KeyboardShortcuts = Extension.create<KeyboardShortcutsOptions>({
         this.editor.commands.toggleCodeBlock();
     }
 
-    // 清除格式
-    if (shortcuts.clearFormat) {
-      keymap[convertShortcutFormat(shortcuts.clearFormat)] = () =>
-        this.editor.commands.unsetAllMarks();
-    }
-
     return keymap;
   }
 });

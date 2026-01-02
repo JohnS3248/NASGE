@@ -22,7 +22,6 @@ export type ShortcutConfig = {
   setHeading3: string;        // 三级标题
   toggleCodeBlock: string;    // 代码块
   toggleSpoiler: string;      // 折叠/剧透
-  clearFormat: string;        // 清除格式
 };
 
 /**
@@ -42,8 +41,7 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   setHeading2: "Mod+2",
   setHeading3: "Mod+3",
   toggleCodeBlock: "Mod+K",
-  toggleSpoiler: "Mod+H",
-  clearFormat: "Mod+\\"
+  toggleSpoiler: "Mod+H"
 };
 
 /**
@@ -63,8 +61,7 @@ export const SHORTCUT_LABELS: Record<keyof ShortcutConfig, string> = {
   setHeading2: "二级标题",
   setHeading3: "三级标题",
   toggleCodeBlock: "代码块",
-  toggleSpoiler: "折叠/剧透",
-  clearFormat: "清除格式"
+  toggleSpoiler: "折叠/剧透"
 };
 
 /**
