@@ -8,6 +8,7 @@ import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import Image from "@tiptap/extension-image";
 
 import Spoiler from "../extensions/spoiler";
+import KeyboardShortcuts from "../extensions/keyboardShortcuts";
 import SteamBlockquote from "../extensions/steamBlockquote";
 import SteamImage from "../extensions/steamImage";
 import { Table } from "@tiptap/extension-table";
@@ -35,6 +36,7 @@ export const createEditorExtensions = (): Extensions => [
     autolink: true
   }),
   Spoiler,
+  KeyboardShortcuts,
   HorizontalRule,
   Image.configure({
     HTMLAttributes: {

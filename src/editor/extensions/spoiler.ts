@@ -59,7 +59,7 @@ export const Spoiler = Mark.create<SpoilerOptions>({
   },
   addKeyboardShortcuts() {
     return {
-      "Mod-Shift-S": () => this.editor.commands.toggleSpoiler()
+      "Mod-h": () => this.editor.commands.toggleSpoiler()
     };
   }
 });
