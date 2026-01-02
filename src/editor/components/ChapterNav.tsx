@@ -173,6 +173,7 @@ const ChapterTitleImage: React.FC<{
 const ChapterItem = React.memo<{
   chapter: { sectionId: string; title: string };
   isLinked: boolean;
+  isModified: boolean;
   isLoading: boolean;
   isDragging: boolean;
   isDragOver: boolean;
@@ -189,6 +190,7 @@ const ChapterItem = React.memo<{
 }>(({
   chapter,
   isLinked,
+  isModified,
   isLoading,
   isDragging,
   isDragOver,
@@ -218,10 +220,18 @@ const ChapterItem = React.memo<{
         flexWrap: 'wrap',
         borderLeft: isDragOver
           ? '3px solid rgba(102, 192, 244, 0.8)'
-          : isLinked ? '3px solid #66c0f4' : '3px solid transparent',
+          : isModified
+            ? '3px solid #FFC107'    // 黄色 - 有修改未提交
+            : isLinked
+              ? '3px solid #66c0f4'  // 蓝色 - 已拉取
+              : '3px solid transparent',
         background: isBindingMode
           ? 'rgba(102, 192, 244, 0.08)'
-          : isLinked ? 'rgba(102, 192, 244, 0.1)' : 'transparent',
+          : isModified
+            ? 'rgba(255, 193, 7, 0.1)'    // 淡黄色
+            : isLinked
+              ? 'rgba(102, 192, 244, 0.1)' // 淡蓝色
+              : 'transparent',
         transition: 'all 0.15s ease',
         opacity: isDragging ? 0.5 : 1,
         cursor: isBindingMode ? 'pointer' : isDragging ? 'grabbing' : 'grab'
@@ -759,6 +769,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           chapters.map((chapter) => {
             const linkedDraft = getChapterDraft(chapter.sectionId);
             const isLinked = !!linkedDraft;
+            // 判断是否有修改但未提交：已拉取 && 更新时间 > 同步时间 + 100ms容差
+            // 容差是为了避免拉取时两个时间戳的微小差异（几毫秒）被误判为修改
+            const isModified = isLinked && linkedDraft?.lastSyncedAt != null &&
+              (linkedDraft.updatedAt - linkedDraft.lastSyncedAt) > 100;
             const status = syncStatus[chapter.sectionId] || 'idle';
             const isLoading = status === 'loading';
             const isDragging = draggedId === chapter.sectionId;
@@ -769,6 +783,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
                 key={chapter.sectionId}
                 chapter={chapter}
                 isLinked={isLinked}
+                isModified={isModified}
                 isLoading={isLoading}
                 isDragging={isDragging}
                 isDragOver={isDragOver}
