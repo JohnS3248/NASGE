@@ -101,6 +101,9 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   // 选择变化计数器 - 用于强制工具栏重新渲染
   const [selectionKey, setSelectionKey] = useState(0);
 
+  // === 工具栏位置配置 ===
+  const toolbarPosition = useEditorConfigStore(state => state.toolbarPosition);
+
   // === 右键菜单配置 ===
   const imageMenuConfig = useEditorConfigStore(state => state.imageMenuConfig);
   const selectionMenuConfig = useEditorConfigStore(state => state.selectionMenuConfig);
@@ -686,7 +689,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         style={{
           position: "relative",
           display: "flex",
-          flexDirection: "column",
+          flexDirection: toolbarPosition === "left" ? "row" : "column",
           gap: "0.85rem",
           background: "rgba(9, 15, 25, 0.55)",
           border: "1px solid rgba(102, 192, 244, 0.25)",
@@ -698,17 +701,22 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       <div
         style={{
           display: "flex",
-          alignItems: "center",
+          flexDirection: toolbarPosition === "left" ? "column" : "row",
+          alignItems: toolbarPosition === "left" ? "stretch" : "center",
           gap: "0.25rem",
-          flexWrap: "wrap",
+          flexWrap: toolbarPosition === "left" ? "nowrap" : "wrap",
           background: "rgba(15, 26, 41, 0.95)",
           borderRadius: "0.75rem",
-          padding: "0.4rem 0.5rem",
+          padding: toolbarPosition === "left" ? "0.5rem 0.4rem" : "0.4rem 0.5rem",
           border: "1px solid rgba(102, 192, 244, 0.18)",
           position: "sticky",
-          top: 0,
+          top: toolbarPosition === "left" ? "1rem" : 0,
+          left: toolbarPosition === "left" ? 0 : undefined,
           zIndex: 100,
-          marginBottom: "0.5rem"
+          marginBottom: toolbarPosition === "left" ? 0 : "0.5rem",
+          marginRight: toolbarPosition === "left" ? "0.5rem" : 0,
+          alignSelf: toolbarPosition === "left" ? "flex-start" : undefined,
+          flexShrink: 0
         }}
       >
         <ToolbarIcon
@@ -790,6 +798,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       <div
         ref={editorContainerRef}
         style={{
+          flex: 1,
           minHeight: "260px",
           background: "rgba(10, 18, 30, 0.78)",
           borderRadius: "0.9rem",
