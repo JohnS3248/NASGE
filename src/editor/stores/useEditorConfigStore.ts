@@ -115,6 +115,13 @@ export function matchShortcut(e: KeyboardEvent, shortcut: string): boolean {
  */
 export type EditorAlignment = 'left' | 'center' | 'full';
 
+/**
+ * 工具栏位置
+ * - top: 顶部（横向）
+ * - left: 左侧（纵向）
+ */
+export type ToolbarPosition = 'top' | 'left';
+
 // ==================== 右键菜单配置 ====================
 
 /**
@@ -319,6 +326,7 @@ export type EditorConfig = {
   smartLayoutHeightThreshold: number; // 大图高度阈值 (px)
   // 编辑器布局配置
   editorAlignment: EditorAlignment;   // 编辑器对齐方式：靠左/居中
+  toolbarPosition: ToolbarPosition;   // 工具栏位置：顶部/左侧
   // 图片池配置（旧版，保留兼容）
   imageContextMenuEnabled: boolean;   // 图片池右键菜单开关（已废弃，使用 imagePoolMenuConfig.enabled）
   // 右键菜单配置
@@ -344,6 +352,7 @@ type EditorConfigState = EditorConfig & {
   setSmartLayoutHeightThreshold: (value: number) => void;
   // 编辑器布局相关
   setEditorAlignment: (alignment: EditorAlignment) => void;
+  setToolbarPosition: (position: ToolbarPosition) => void;
   // 图片池相关（旧版）
   setImageContextMenuEnabled: (enabled: boolean) => void;
   // 右键菜单配置相关
@@ -368,6 +377,7 @@ const DEFAULT_CONFIG: EditorConfig = {
   smartLayoutHeightThreshold: 600, // 默认 600px
   // 编辑器布局默认值
   editorAlignment: 'center',        // 默认居中
+  toolbarPosition: 'top',           // 默认顶部
   // 图片池默认值（旧版兼容）
   imageContextMenuEnabled: true,    // 默认开启右键菜单
   // 右键菜单配置默认值
@@ -436,6 +446,10 @@ export const useEditorConfigStore = create<EditorConfigState>()(
       setEditorAlignment: (alignment) => {
         loggers.config.info("设置编辑器对齐方式:", alignment);
         set({ editorAlignment: alignment });
+      },
+      setToolbarPosition: (position) => {
+        loggers.config.info("设置工具栏位置:", position);
+        set({ toolbarPosition: position });
       },
       setImageContextMenuEnabled: (enabled) => {
         loggers.config.info("设置图片池右键菜单:", enabled ? "开启" : "关闭");
@@ -569,6 +583,7 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold,
           // 确保编辑器布局字段有默认值
           editorAlignment: persisted?.editorAlignment ?? DEFAULT_CONFIG.editorAlignment,
+          toolbarPosition: persisted?.toolbarPosition ?? DEFAULT_CONFIG.toolbarPosition,
           // 确保图片池字段有默认值
           imageContextMenuEnabled: persisted?.imageContextMenuEnabled ?? DEFAULT_CONFIG.imageContextMenuEnabled,
           // 深度合并右键菜单配置

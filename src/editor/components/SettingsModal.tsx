@@ -5,6 +5,7 @@ import {
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
   EditorAlignment,
+  ToolbarPosition,
   // 右键菜单配置
   ContextMenuType,
   MenuItemConfig,
@@ -121,6 +122,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
   const setEditorAlignment = useEditorConfigStore(
     (state) => state.setEditorAlignment
+  );
+  const toolbarPosition = useEditorConfigStore(
+    (state) => state.toolbarPosition
+  );
+  const setToolbarPosition = useEditorConfigStore(
+    (state) => state.setToolbarPosition
   );
 
   // 图片池右键菜单（旧版兼容）
@@ -550,6 +557,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 { value: "full", label: "全屏" }
               ]}
               onChange={(v) => setEditorAlignment(v as EditorAlignment)}
+            />
+
+            {/* 工具栏位置 */}
+            <SelectOption
+              label="工具栏位置"
+              description="工具栏在编辑器中的位置"
+              value={toolbarPosition}
+              options={[
+                { value: "top", label: "顶部（横向）" },
+                { value: "left", label: "左侧（纵向）" }
+              ]}
+              onChange={(v) => setToolbarPosition(v as ToolbarPosition)}
             />
 
             {/* 分隔线 */}
