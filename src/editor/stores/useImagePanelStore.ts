@@ -206,6 +206,35 @@ const DEFAULT_RUNTIME_STATE: ImagePanelRuntimeState = {
   pendingUploadAfterRename: []
 };
 
+/**
+ * 确保位置在视口内，超出则重置到左上角
+ * 解决半屏时图片池超出视口不可见的问题
+ */
+function ensureInViewport(position: PanelPosition, size: PanelSize): PanelPosition {
+  // 在 SSR 环境或 store 初始化时 window 可能不存在
+  if (typeof window === "undefined") return position;
+
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const margin = 16; // 边距
+
+  const { x, y } = position;
+
+  // 检查是否超出视口（至少要显示 100px 宽度和标题栏）
+  const isOutOfBounds =
+    x + 100 > viewportWidth ||
+    y + 50 > viewportHeight ||
+    x < 0 ||
+    y < 0;
+
+  // 超出视口则重置到左上角
+  if (isOutOfBounds) {
+    return { x: margin, y: 80 }; // 80px 避开顶部工具栏
+  }
+
+  return position;
+}
+
 // ============ Store 创建 ============
 
 export const useImagePanelStore = create<ImagePanelState>()(
@@ -218,7 +247,10 @@ export const useImagePanelStore = create<ImagePanelState>()(
       // ============ 窗口控制 Actions ============
       open: () => {
         loggers.image.verbose("打开图片悬浮窗");
-        set({ isOpen: true, isMinimized: false });
+        const { position, size } = get();
+        // 检查位置是否在视口内，超出则调整
+        const adjustedPosition = ensureInViewport(position, size);
+        set({ isOpen: true, isMinimized: false, position: adjustedPosition });
       },
 
       close: () => {
@@ -242,7 +274,10 @@ export const useImagePanelStore = create<ImagePanelState>()(
 
       restore: () => {
         loggers.image.verbose("恢复图片悬浮窗");
-        set({ isMinimized: false, isCollapsed: false });
+        const { position, size } = get();
+        // 检查位置是否在视口内，超出则调整
+        const adjustedPosition = ensureInViewport(position, size);
+        set({ isMinimized: false, isCollapsed: false, position: adjustedPosition });
       },
 
       collapse: () => {
