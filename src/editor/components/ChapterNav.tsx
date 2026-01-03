@@ -551,8 +551,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       if (onRefresh) {
         await onRefresh();
       }
-
-      window.alert('新章节创建成功！');
+      // 不弹窗，新章节会自动出现在列表中
     } catch (error) {
       loggers.editor.error('创建章节失败', error);
       window.alert('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
