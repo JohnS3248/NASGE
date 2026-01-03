@@ -201,7 +201,6 @@ export const SELECTION_MENU_ITEMS: MenuItemDefinition[] = [
 ];
 
 export const EMPTY_MENU_ITEMS: MenuItemDefinition[] = [
-  { id: 'insertImage', label: '插入图片' },
   { id: 'codeBlock', label: '插入代码块' },
   { id: 'quote', label: '插入引用' },
   { id: 'table', label: '插入表格' }
