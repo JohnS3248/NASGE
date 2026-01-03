@@ -4,6 +4,7 @@ import Underline from "@tiptap/extension-underline";
 import Strike from "@tiptap/extension-strike";
 import Heading from "@tiptap/extension-heading";
 import Link from "@tiptap/extension-link";
+import { mergeAttributes } from "@tiptap/core";
 import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import Image from "@tiptap/extension-image";
 
@@ -30,7 +31,18 @@ export const createEditorExtensions = (): Extensions => [
   Heading.configure({
     levels: [1, 2, 3]
   }),
-  Link.configure({
+  Link.extend({
+    // 扩展 renderHTML 以添加 title 属性，悬停时显示链接地址
+    renderHTML({ HTMLAttributes }) {
+      return [
+        "a",
+        mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+          title: HTMLAttributes.href // 将 href 设为 title，悬停显示
+        }),
+        0
+      ];
+    }
+  }).configure({
     openOnClick: false,
     linkOnPaste: true,
     autolink: true
