@@ -69,6 +69,39 @@ const INITIAL_CONTEXT_MENU: ContextMenuState = {
   mode: "empty"
 };
 
+/**
+ * 计算右键菜单位置，确保菜单不会超出视口边界
+ * @param clientX 鼠标点击的 X 坐标
+ * @param clientY 鼠标点击的 Y 坐标
+ * @param menuWidth 菜单预估宽度
+ * @param menuHeight 菜单预估高度
+ */
+function calcMenuPosition(
+  clientX: number,
+  clientY: number,
+  menuWidth = 180,
+  menuHeight = 280
+): { x: number; y: number } {
+  let x = clientX;
+  let y = clientY;
+
+  // 右侧边界检测
+  if (x + menuWidth > window.innerWidth) {
+    x = clientX - menuWidth;
+  }
+
+  // 底部边界检测
+  if (y + menuHeight > window.innerHeight) {
+    y = clientY - menuHeight;
+  }
+
+  // 确保不会超出左边界和上边界
+  if (x < 0) x = 0;
+  if (y < 0) y = 0;
+
+  return { x, y };
+}
+
 const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
   { label: "原尺寸", value: "original" },
   { label: "半宽", value: "half" },
@@ -862,10 +895,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
               console.log('[DEBUG 右键菜单] 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
 
+              // 计算菜单位置（图片菜单较高，预估 320px）
+              const imageMenuPos = calcMenuPosition(event.clientX, event.clientY, 180, 320);
               setContextMenu({
                 visible: true,
-                x: event.clientX,
-                y: event.clientY,
+                x: imageMenuPos.x,
+                y: imageMenuPos.y,
                 mode: "image",
                 payload: {
                   imageNodeId,
@@ -887,10 +922,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           }
 
           event.preventDefault();
+          // 计算菜单位置（选中菜单有更多选项，预估 350px 高）
+          const menuPos = calcMenuPosition(event.clientX, event.clientY, 180, 350);
           setContextMenu({
             visible: true,
-            x: event.clientX,
-            y: event.clientY,
+            x: menuPos.x,
+            y: menuPos.y,
             mode
           });
         }}

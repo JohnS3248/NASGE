@@ -323,8 +323,26 @@ const ImageCard: React.FC<ImageCardProps> = ({
     }
     e.preventDefault();
     e.stopPropagation();
-    // 计算菜单位置（相对于视口）
-    setContextMenu({ x: e.clientX, y: e.clientY });
+
+    // 计算菜单位置，确保不超出视口边界
+    const menuWidth = 180;
+    const menuHeight = 280;
+    let x = e.clientX;
+    let y = e.clientY;
+
+    // 右侧边界检测
+    if (x + menuWidth > window.innerWidth) {
+      x = e.clientX - menuWidth;
+    }
+    // 底部边界检测
+    if (y + menuHeight > window.innerHeight) {
+      y = e.clientY - menuHeight;
+    }
+    // 确保不超出左/上边界
+    if (x < 0) x = 0;
+    if (y < 0) y = 0;
+
+    setContextMenu({ x, y });
   }, [imagePoolMenuConfig.enabled]);
 
   // 关闭右键菜单
