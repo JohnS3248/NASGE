@@ -489,7 +489,7 @@ export function bbcodeToHtml(bbcode: string): string {
       if (buffer.length > 0) {
         paragraphs.push(buffer);
         buffer = "";
-        const extraBlankCount = Math.max(0, count - 2);
+        const extraBlankCount = Math.max(0, count - 1);
         if (extraBlankCount > 0) {
           for (let blankIndex = 0; blankIndex < extraBlankCount; blankIndex++) {
             paragraphs.push("");
