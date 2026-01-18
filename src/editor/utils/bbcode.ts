@@ -76,8 +76,7 @@ export function htmlToBBCode(html: string): string {
       })
     )
     .join("")
-    .replace(/\n{3,}/g, "\n\n")
-    .replace(/\s+$/, "");
+    .replace(/\s+$/, "");  // 只去除末尾空白，不压缩换行
 }
 
 function serializeNode(node: HTMLElement | Text, context: SerializeContext): string {
@@ -179,8 +178,15 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
 
     // 根据对齐方式选择标签类型
     const tagType = alignment === "inline" ? "previewicon" : "previewimg";
+    const bbcode = `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
 
-    return block(`[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`, context);
+    // inline 图片不添加换行，与文字保持同行
+    if (alignment === "inline") {
+      return bbcode;
+    }
+
+    // 浮动图片使用 block() 添加换行
+    return block(bbcode, context);
   }
 
   if (tagName === "img") {
@@ -194,11 +200,15 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "td") {
-    return `[td]${serializeChildren(node)}[/td]`;
+    // 去除单元格内容末尾的换行（由内部 <p> 元素产生）
+    const body = serializeChildren(node).replace(/\n+$/, "");
+    return `[td]${body}[/td]`;
   }
 
   if (tagName === "th") {
-    return `[th]${serializeChildren(node)}[/th]`;
+    // 去除单元格内容末尾的换行（由内部 <p> 元素产生）
+    const body = serializeChildren(node).replace(/\n+$/, "");
+    return `[th]${body}[/th]`;
   }
 
   // inline marks
@@ -278,15 +288,20 @@ function wrapTextInParagraphs(html: string): string {
       const lines = text.split('\n');
       // 跟踪连续空行数量
       let consecutiveEmptyLines = 0;
+      // 标记是否已经输出过内容（用于区分第一组空行和后续空行）
+      let hasOutputContent = false;
 
       lines.forEach((line, index) => {
         if (line) {
           // 有内容的行：先输出之前累积的空行，再添加内容
-          // 注意：第一个空行是段落分隔，从第二个开始才是真正的空行
-          for (let i = 1; i < consecutiveEmptyLines; i++) {
-            result.push('<p></p>');  // 空段落不加 br，让 TipTap 自己处理
+          // 第一组空行（紧跟块级元素后）：减1，因为块级元素后的第一个换行是隐含的
+          // 后续空行：不减，直接输出
+          const startIndex = hasOutputContent ? 0 : 1;
+          for (let i = startIndex; i < consecutiveEmptyLines; i++) {
+            result.push('<p></p>');
           }
           consecutiveEmptyLines = 0;
+          hasOutputContent = true;
           paragraphBuffer.push(document.createTextNode(line));
         } else {
           // 空行：累计计数
@@ -429,8 +444,8 @@ export function bbcodeToHtml(bbcode: string): string {
   // 分隔线
   html = html.replace(/\[hr]/gi, "<hr />");
 
-  // 表格
-  html = html.replace(/\[table]/gi, "<table>").replace(/\[\/table]/gi, "</table>");
+  // 表格（支持带属性的标签，如 [table noborder=1] [table equalcells=1]）
+  html = html.replace(/\[table(?:\s+[^\]]*)?]/gi, "<table>").replace(/\[\/table]/gi, "</table>");
   html = html.replace(/\[tr]/gi, "<tr>").replace(/\[\/tr]/gi, "</tr>");
   html = html.replace(/\[td]/gi, "<td>").replace(/\[\/td]/gi, "</td>");
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
