@@ -176,8 +176,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
       : alignment === "inline" ? "inline"
       : "floatLeft";
 
-    // 根据对齐方式选择标签类型
-    const tagType = alignment === "inline" ? "previewicon" : "previewimg";
+    // SteamImage (figure) 总是使用 previewimg 标签
+    const tagType = "previewimg";
     const bbcode = `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
 
     // inline 图片不添加换行，与文字保持同行
@@ -194,6 +194,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     const previewId = node.getAttribute("data-preview-id") ?? "";
     const fileName = node.getAttribute("data-file-name") ?? "image.png";
     const sizePreset = node.getAttribute("data-size-preset") ?? "original";
+    const alignment = node.getAttribute("data-alignment") ?? "inline";
 
     // 将内部格式转换回 BBCode 格式
     const sizeToken = sizePreset === "original" ? "sizeOriginal"
@@ -201,8 +202,13 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
       : sizePreset === "half" ? "sizeThumb"
       : "sizeOriginal";
 
-    // 内联图片不加换行，直接返回
-    return `[previewicon=${previewId};${sizeToken},inline;${fileName}][/previewicon]`;
+    // 转换 alignment 为 BBCode token
+    const alignToken = alignment === "floatLeft" ? "floatLeft"
+      : alignment === "floatRight" ? "floatRight"
+      : "inline";
+
+    // SteamImageInline (span) 总是使用 previewicon 标签
+    return `[previewicon=${previewId};${sizeToken},${alignToken};${fileName}][/previewicon]`;
   }
 
   if (tagName === "img") {
@@ -469,13 +475,13 @@ export function bbcodeToHtml(bbcode: string): string {
   // Steam 内联图片标签 [previewicon] - 使用 span 标签，支持与文字混排
   // [previewicon=id;size,align;filename.png][/previewicon]
   html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
-    const [sizeToken] = styleStr.split(',').map((s: string) => s.trim());
-    // 解析 size，alignment 固定为 inline
+    const [sizeToken, alignToken] = styleStr.split(',').map((s: string) => s.trim());
     const preset = parseSizeToken(sizeToken);
+    const alignment = parseAlignmentToken(alignToken);  // 保留原始 alignment
 
     // 使用 span 标签，标记为 inline 类型，由 SteamImageInline 节点处理
-    const spanTag = `<span data-nasge-image="inline" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="inline"></span>`;
-    loggers.editor.verbose('bbcodeToHtml previewicon 转换:', { id, styleStr, filename, preset, spanTag });
+    const spanTag = `<span data-nasge-image="inline" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></span>`;
+    loggers.editor.verbose('bbcodeToHtml previewicon 转换:', { id, styleStr, filename, preset, alignment, spanTag });
     return spanTag;
   });
 

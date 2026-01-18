@@ -209,7 +209,7 @@ const SteamImageInline = Node.create({
             previewId: el.getAttribute("data-preview-id") || null,
             fileName: el.getAttribute("data-file-name") || null,
             sizePreset: el.getAttribute("data-size-preset") || DEFAULT_IMAGE_PRESET,
-            alignment: "inline",
+            alignment: el.getAttribute("data-alignment") || "inline",
             imageNodeId: el.getAttribute("data-image-node-id") || null
           };
         }
@@ -246,6 +246,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
   const imageNodeId = node.attrs.imageNodeId as string | null;
   const attrPreviewId = node.attrs.previewId as string | null;
   const attrSizePreset = node.attrs.sizePreset as string | null;
+  const attrAlignment = node.attrs.alignment as string | null;
   const attrUploadId = node.attrs.uploadId as string | null;
   const attrFileName = node.attrs.fileName as string | null;
   const attrPreviewDataUrl = node.attrs.previewDataUrl as string | null;
@@ -280,9 +281,9 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
     hasSyncedRef.current = true;
     syncToNewStore(imageNode, steamPoolImage, attrPreviewId, {
       preset: attrSizePreset as string,
-      alignment: "inline"
+      alignment: attrAlignment as string
     });
-  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, attrSizePreset]);
+  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, attrSizePreset, attrAlignment]);
 
   // 同步属性
   useEffect(() => {
@@ -298,7 +299,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       uploadId: imageNode?.uploadId ?? null,
       previewId: effectivePreviewId,
       sizePreset: attrSizePreset ?? imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
-      alignment: "inline",
+      alignment: attrAlignment ?? imageNode?.display.alignment ?? imageEntity?.display.alignment ?? "inline",
       fileName: imageNode?.fileName ?? imageNode?.originalName ?? imageEntity?.fileName ?? null,
       previewDataUrl: imageNode?.metadata.previewDataUrl ?? imageEntity?.localPreviewUrl ?? null
     };
@@ -308,7 +309,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       uploadId: attrUploadId,
       previewId: attrPreviewId,
       sizePreset: attrSizePreset,
-      alignment: "inline",
+      alignment: attrAlignment,
       fileName: attrFileName,
       previewDataUrl: attrPreviewDataUrl
     };
@@ -324,7 +325,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
     if (changed) {
       updateAttributes(nextAttrs);
     }
-  }, [imageNode, imageEntity, imageNodeId, attrUploadId, attrPreviewId, attrSizePreset, attrFileName, attrPreviewDataUrl, updateAttributes]);
+  }, [imageNode, imageEntity, imageNodeId, attrUploadId, attrPreviewId, attrSizePreset, attrAlignment, attrFileName, attrPreviewDataUrl, updateAttributes]);
 
   // 计算样式
   const { containerStyle, imageStyle, statusLabel } = useMemo(() => {
