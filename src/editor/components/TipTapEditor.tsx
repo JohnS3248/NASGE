@@ -90,14 +90,25 @@ function calcMenuPosition(
     x = clientX - menuWidth;
   }
 
-  // 底部边界检测
-  if (y + menuHeight > window.innerHeight) {
-    y = clientY - menuHeight;
+  // 底部边界检测：优先在点击位置下方显示
+  // 如果下方空间不足，尝试在上方显示
+  // 如果上方空间也不足，确保菜单底部不超出视口
+  const spaceBelow = window.innerHeight - clientY;
+  const spaceAbove = clientY;
+
+  if (spaceBelow < menuHeight) {
+    // 下方空间不足
+    if (spaceAbove >= menuHeight) {
+      // 上方空间足够，向上翻转
+      y = clientY - menuHeight;
+    } else {
+      // 上下空间都不足，确保菜单底部不超出视口底部
+      y = Math.max(0, window.innerHeight - menuHeight);
+    }
   }
 
-  // 确保不会超出左边界和上边界
+  // 确保不会超出左边界
   if (x < 0) x = 0;
-  if (y < 0) y = 0;
 
   return { x, y };
 }
