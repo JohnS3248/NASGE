@@ -12,6 +12,7 @@ import Spoiler from "../extensions/spoiler";
 import KeyboardShortcuts from "../extensions/keyboardShortcuts";
 import SteamBlockquote from "../extensions/steamBlockquote";
 import SteamImage from "../extensions/steamImage";
+import SteamImageInline from "../extensions/steamImageInline";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
@@ -56,6 +57,7 @@ export const createEditorExtensions = (): Extensions => [
     }
   }),
   SteamImage,
+  SteamImageInline,
   Table.configure({
     resizable: false,
     HTMLAttributes: {

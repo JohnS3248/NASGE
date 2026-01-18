@@ -659,7 +659,14 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
             <img
               src={src}
               alt={alt}
-              style={imageStyle}
+              style={{
+                ...imageStyle,
+                // 未上传状态：降低亮度
+                ...(imageState && imageState !== "success" ? {
+                  opacity: 0.5,
+                  filter: "grayscale(30%)"
+                } : {})
+              }}
               draggable={false}
               onLoad={handleImageLoad}
               onError={handleImageLoadError}
@@ -695,74 +702,8 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
         </div>
       )}
 
-        {/* 状态指示器（圆形图标） */}
-        {imageState && <StateIndicator state={imageState} error={imageError} />}
       </div>
     </NodeViewWrapper>
-  );
-};
-
-/**
- * 状态指示器组件（圆形图标）
- */
-const StateIndicator: React.FC<{ state: string; error?: string }> = ({ state, error }) => {
-  const config = useMemo(() => {
-    switch (state) {
-      case "pending":
-        return {
-          color: "#808080", // 灰色
-          label: "未上传",
-          icon: "○"
-        };
-      case "uploading":
-        return {
-          color: "#FFC107", // 黄色
-          label: "上传中...",
-          icon: "◐"
-        };
-      case "success":
-        return {
-          color: "#4CAF50", // 绿色
-          label: "已上传",
-          icon: "●"
-        };
-      case "error":
-        return {
-          color: "#F44336", // 红色
-          label: error || "上传失败",
-          icon: "✕"
-        };
-      default:
-        return null;
-    }
-  }, [state, error]);
-
-  if (!config) return null;
-
-  return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: "8px",
-        right: "8px",
-        width: "24px",
-        height: "24px",
-        borderRadius: "50%",
-        backgroundColor: config.color,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        color: "#fff",
-        fontSize: "14px",
-        fontWeight: "bold",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
-        cursor: "help",
-        zIndex: 10
-      }}
-      title={config.label}
-    >
-      {config.icon}
-    </div>
   );
 };
 

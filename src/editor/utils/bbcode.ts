@@ -189,6 +189,22 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     return block(bbcode, context);
   }
 
+  // 处理 SteamImageInline 节点：<span data-nasge-image="inline">
+  if (tagName === "span" && node.getAttribute("data-nasge-image") === "inline") {
+    const previewId = node.getAttribute("data-preview-id") ?? "";
+    const fileName = node.getAttribute("data-file-name") ?? "image.png";
+    const sizePreset = node.getAttribute("data-size-preset") ?? "original";
+
+    // 将内部格式转换回 BBCode 格式
+    const sizeToken = sizePreset === "original" ? "sizeOriginal"
+      : sizePreset === "full" ? "sizeFull"
+      : sizePreset === "half" ? "sizeThumb"
+      : "sizeOriginal";
+
+    // 内联图片不加换行，直接返回
+    return `[previewicon=${previewId};${sizeToken},inline;${fileName}][/previewicon]`;
+  }
+
   if (tagName === "img") {
     const src = node.getAttribute("src") ?? "";
     return src ? `[img]${src}[/img]` : "";
@@ -450,18 +466,17 @@ export function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\[td]/gi, "<td>").replace(/\[\/td]/gi, "</td>");
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
 
-  // Steam 特殊图片标签（用于章节标题等）
-  // 转换为 SteamImage 节点可识别的 figure 标签
+  // Steam 内联图片标签 [previewicon] - 使用 span 标签，支持与文字混排
   // [previewicon=id;size,align;filename.png][/previewicon]
   html = html.replace(/\[previewicon=(\d+);([^;]+);([^\]]+)]\[\/previewicon]/gi, (_, id, styleStr, filename) => {
-    const [sizeToken, alignToken] = styleStr.split(',').map((s: string) => s.trim());
-    // 解析 size 和 alignment
+    const [sizeToken] = styleStr.split(',').map((s: string) => s.trim());
+    // 解析 size，alignment 固定为 inline
     const preset = parseSizeToken(sizeToken);
-    const alignment = parseAlignmentToken(alignToken);
 
-    const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
-    loggers.editor.verbose('bbcodeToHtml previewicon 转换:', { id, styleStr, filename, preset, alignment, figureTag });
-    return figureTag;
+    // 使用 span 标签，标记为 inline 类型，由 SteamImageInline 节点处理
+    const spanTag = `<span data-nasge-image="inline" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="inline"></span>`;
+    loggers.editor.verbose('bbcodeToHtml previewicon 转换:', { id, styleStr, filename, preset, spanTag });
+    return spanTag;
   });
 
   // [previewimg=id;size,align;filename.png][/previewimg]

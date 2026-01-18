@@ -319,7 +319,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     if (!editor) return null;
     let foundPos: number | null = null;
     editor.state.doc.descendants((node, pos) => {
-      if (node.type.name === "steamImage") {
+      if (node.type.name === "steamImage" || node.type.name === "steamImageInline") {
         // 检查 imageNodeId 或 previewId 是否匹配
         if (node.attrs.imageNodeId === targetId || node.attrs.previewId === targetId) {
           foundPos = pos;
@@ -341,8 +341,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
       const nodeId = contextMenu.payload.imageNodeId;
       if (pos !== null) {
+        // 获取节点类型以确定使用哪个节点名称
+        const resolvedPos = editor.state.doc.resolve(pos);
+        const node = resolvedPos.nodeAfter;
+        const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
         // 1. 更新 TipTap 节点属性
-        editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+        editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
           sizePreset: preset
         }).run();
         // 2. 同步更新 Store（双写）
@@ -362,8 +366,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
       const nodeId = contextMenu.payload.imageNodeId;
       if (pos !== null) {
+        // 获取节点类型以确定使用哪个节点名称
+        const resolvedPos = editor.state.doc.resolve(pos);
+        const node = resolvedPos.nodeAfter;
+        const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
         // 1. 更新 TipTap 节点属性
-        editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+        editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
           alignment
         }).run();
         // 2. 同步更新 Store（双写）
@@ -716,6 +724,14 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             outline: 2px solid rgba(102, 192, 244, 0.8);
             outline-offset: 2px;
           }
+
+          /* 内联图片选中状态样式 */
+          .nasge-editor-container .ProseMirror-selectednode .nasge-image-inline-wrapper,
+          .nasge-editor-container .node-steamImageInline.ProseMirror-selectednode .nasge-image-inline-wrapper {
+            outline: 2px solid rgba(102, 192, 244, 0.8);
+            outline-offset: 2px;
+            border-radius: 4px;
+          }
         `}
       </style>
       <div
@@ -867,10 +883,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
               let targetPos: number | null = null;
 
               if (coords?.pos != null) {
-                // 从点击位置向前搜索最近的 steamImage 节点
+                // 从点击位置向前搜索最近的 steamImage 或 steamImageInline 节点
                 const clickPos = coords.pos;
                 editor.state.doc.descendants((node, pos) => {
-                  if (node.type.name === "steamImage") {
+                  if (node.type.name === "steamImage" || node.type.name === "steamImageInline") {
                     // 检查点击位置是否在这个节点范围内
                     const nodeEnd = pos + node.nodeSize;
                     if (clickPos >= pos && clickPos <= nodeEnd) {
