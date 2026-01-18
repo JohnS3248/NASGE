@@ -262,6 +262,13 @@ function wrap(tag: string, content: string): string {
   return `${tag}${content}${close}`;
 }
 
+/**
+ * 将混合内容（块级元素 + 行内元素 + 文本）包装成正确的段落结构
+ *
+ * 核心算法：使用 lastWasBlock 状态机追踪上一个输出类型
+ * - 块级元素后的第1个换行：跳过（隐含换行）
+ * - 其他换行：如果有内容则刷新段落，否则输出空段落
+ */
 function wrapTextInParagraphs(html: string): string {
   const parser = new DOMParser();
   const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
@@ -270,11 +277,13 @@ function wrapTextInParagraphs(html: string): string {
 
   const result: string[] = [];
   const paragraphBuffer: ChildNode[] = [];
+  // 状态机：追踪上一个输出是否是块级元素
+  // 初始设为 true，表示文档开头（不需要前导空行）
+  let lastWasBlock = true;
 
   const flushParagraph = () => {
     if (paragraphBuffer.length === 0) return;
 
-    // 创建临时容器来渲染段落内容
     const tempDiv = document.createElement('div');
     paragraphBuffer.forEach(node => {
       tempDiv.appendChild(node.cloneNode(true));
@@ -288,84 +297,50 @@ function wrapTextInParagraphs(html: string): string {
     paragraphBuffer.length = 0;
   };
 
+  const isBlockTag = (tagName: string) =>
+    /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test(tagName);
+
   const processNode = (node: ChildNode) => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent || "";
+      const parts = text.split('\n');
 
-      // 检查是否在块级元素之间的空白
-      const prevSibling = node.previousSibling;
-      const nextSibling = node.nextSibling;
+      parts.forEach((part, index) => {
+        const isLastPart = index === parts.length - 1;
 
-      const prevIsBlock = prevSibling?.nodeType === Node.ELEMENT_NODE &&
-        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((prevSibling as Element).tagName);
-      const nextIsBlock = nextSibling?.nodeType === Node.ELEMENT_NODE &&
-        /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((nextSibling as Element).tagName);
-
-      // 块级元素之间的空白：不直接跳过，而是为空行创建空段落
-      if (prevIsBlock && nextIsBlock && !text.trim()) {
-        const newlineCount = (text.match(/\n/g) || []).length;
-        // 块级元素之间：第1个换行是前一个块级元素的隐含换行
-        // 从第2个换行开始，每个换行代表1个空行
-        for (let i = 1; i < newlineCount; i++) {
-          result.push('<p></p>');
-        }
-        return;
-      }
-
-      // 按换行符分割文本，每个换行符创建新段落
-      const lines = text.split('\n');
-      // 跟踪连续空行数量
-      let consecutiveEmptyLines = 0;
-      // 标记是否已经输出过内容（用于区分第一组空行和后续空行）
-      let hasOutputContent = false;
-
-      lines.forEach((line, index) => {
-        if (line) {
-          // 有内容的行：先输出之前累积的空行，再添加内容
-          // 第一组空行（紧跟块级元素后）：减1，因为块级元素后的第一个换行是隐含的
-          // 后续空行：不减，直接输出
-          const startIndex = hasOutputContent ? 0 : 1;
-          for (let i = startIndex; i < consecutiveEmptyLines; i++) {
-            result.push('<p></p>');
-          }
-          consecutiveEmptyLines = 0;
-          hasOutputContent = true;
-          paragraphBuffer.push(document.createTextNode(line));
-        } else {
-          // 空行：累计计数
-          consecutiveEmptyLines++;
+        if (part) {
+          // 有内容：加入缓冲区
+          paragraphBuffer.push(document.createTextNode(part));
         }
 
-        // 如果不是最后一行，刷新当前段落
-        if (index < lines.length - 1) {
+        if (!isLastPart) {
+          // 遇到换行符（不是最后一段）
           if (paragraphBuffer.length > 0) {
+            // 有内容待输出：刷新段落
             flushParagraph();
+            lastWasBlock = false;
+          } else if (!lastWasBlock) {
+            // 无内容，且上一个不是块级：输出空段落
+            result.push('<p></p>');
+            // lastWasBlock 保持 false
+          } else {
+            // 无内容，上一个是块级：跳过（隐含换行）
+            lastWasBlock = false;
           }
         }
       });
-
-      // 处理末尾的空行
-      // split('\n') 后：空字符串数 = 换行符数 + 1
-      // 空行数 = 换行符数 - 1 = 空字符串数 - 2 = consecutiveEmptyLines - 2
-      if (consecutiveEmptyLines > 2) {
-        for (let i = 2; i < consecutiveEmptyLines; i++) {
-          result.push('<p></p>');
-        }
-      }
 
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
       const tagName = element.tagName.toLowerCase();
 
-      const isBlock = /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/.test(tagName);
-
-      if (isBlock) {
-        // 遇到块级元素，先刷新当前段落
+      if (isBlockTag(tagName)) {
+        // 块级元素：先刷新缓冲区，然后输出块级元素
         flushParagraph();
-        // 添加块级元素本身
         result.push(element.outerHTML);
+        lastWasBlock = true;
       } else {
-        // 行内元素，添加到当前段落缓冲区
+        // 行内元素：加入缓冲区
         paragraphBuffer.push(element.cloneNode(true) as ChildNode);
       }
     }
