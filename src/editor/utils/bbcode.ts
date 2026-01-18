@@ -301,8 +301,14 @@ function wrapTextInParagraphs(html: string): string {
       const nextIsBlock = nextSibling?.nodeType === Node.ELEMENT_NODE &&
         /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test((nextSibling as Element).tagName);
 
-      // 只在前后都是块级元素时才跳过空白，保留单侧相邻的换行
+      // 块级元素之间的空白：不直接跳过，而是为空行创建空段落
       if (prevIsBlock && nextIsBlock && !text.trim()) {
+        const newlineCount = (text.match(/\n/g) || []).length;
+        // 块级元素之间：第1个换行是前一个块级元素的隐含换行
+        // 从第2个换行开始，每个换行代表1个空行
+        for (let i = 1; i < newlineCount; i++) {
+          result.push('<p></p>');
+        }
         return;
       }
 
@@ -338,10 +344,12 @@ function wrapTextInParagraphs(html: string): string {
         }
       });
 
-      // 处理末尾的空行（在块级元素之前）
-      if (consecutiveEmptyLines > 0 && nextIsBlock) {
-        for (let i = 1; i < consecutiveEmptyLines; i++) {
-          result.push('<p></p>');  // 空段落不加 br，让 TipTap 自己处理
+      // 处理末尾的空行
+      // split('\n') 后：空字符串数 = 换行符数 + 1
+      // 空行数 = 换行符数 - 1 = 空字符串数 - 2 = consecutiveEmptyLines - 2
+      if (consecutiveEmptyLines > 2) {
+        for (let i = 2; i < consecutiveEmptyLines; i++) {
+          result.push('<p></p>');
         }
       }
 
