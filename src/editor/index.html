@@ -23,9 +23,11 @@
         /* 对齐 Steam 指南预览: 内容宽度 638px */
         max-width: 638px;
         margin: 0 auto;
-        /* 对齐 Steam 正文样式 */
+        /* Steam-confirmed values (2026-03-08 DevTools) */
+        font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
         font-size: 14px;
-        line-height: 20px;
+        line-height: 20px !important;
+        color: #969696;
       }
 
       /* 段落样式: Steam 使用 <br> 换行，段落间距较小 */
@@ -35,17 +37,38 @@
 
       .ProseMirror ul,
       .ProseMirror ol {
-        padding-left: 1.5rem;
+        padding-left: 20px;
         margin: 0 0 0.5em;
         font-size: 14px;
         line-height: 20px;
       }
 
+      /* 确保列表有标记（移除 prose 后需要显式声明） */
+      .ProseMirror ul {
+        list-style-type: disc;
+      }
+
+      .ProseMirror ol {
+        list-style-type: decimal;
+      }
+
+      /* 水平线 */
+      .ProseMirror hr {
+        border: none;
+        border-top: 1px solid #666;
+        margin: 8px 0;
+      }
+
+      /* 图片最大宽度 */
+      .ProseMirror img {
+        max-width: 100%;
+      }
+
       .ProseMirror code {
-        background: rgba(102, 192, 244, 0.12);
+        background: transparent;
         padding: 0.1rem 0.25rem;
-        border-radius: 0.35rem;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
+        border-radius: 0;
+        font-family: Consolas, monospace;
         font-size: 11px;
       }
 
@@ -66,7 +89,7 @@
         clear: both;
         /* NASGE 额外: 分隔线 */
         border-bottom: 1px dotted #666666;
-        padding-bottom: 0.3em;
+        padding-bottom: 0;
       }
 
       /* H2: Steam div.bb_h2 */
@@ -139,9 +162,9 @@
       }
 
       .nasge-table th {
-        font-weight: normal;
+        font-weight: bold;
         border: 1px solid #4d4d4d;
-        padding: 4px 8px;
+        padding: 4px;
         background: transparent;
         min-width: 1.5em;
       }
@@ -153,15 +176,13 @@
       .nasge-table td {
         vertical-align: middle;
         border: 1px solid #4d4d4d;
-        padding: 4px 8px;
+        padding: 4px;
         background: transparent;
         min-width: 1.5em;
       }
 
       .nasge-image {
         max-width: 100%;
-        border-radius: 0.75rem;
-        border: 1px solid rgba(102, 192, 244, 0.18);
         margin: 0.5rem 0;
       }
 
@@ -178,7 +199,6 @@
       /* 引用块: Steam blockquote.bb_blockquote */
       .nasge-quote {
         border: 1px solid #56707f;
-        border-radius: 3px;
         padding: 12px;
         margin: 8px;
         font-size: 92%;
@@ -187,8 +207,8 @@
       }
 
       .nasge-quote[data-author]:not([data-author=""]) p:first-child {
-        font-size: 0.85rem;
-        color: #9eb4d4;
+        font-size: 12px;
+        color: #898989;
         margin-bottom: 0.5rem;
       }
 

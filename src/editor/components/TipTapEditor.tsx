@@ -158,8 +158,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     content: externalDoc ?? EMPTY_DOC,
     editorProps: {
       attributes: {
-        class:
-          "nasge-editor prose prose-invert focus:outline-none text-[15px] leading-relaxed"
+        class: "nasge-editor focus:outline-none"
       }
     },
     onUpdate: ({ editor }) => {

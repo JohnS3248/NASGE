@@ -743,8 +743,8 @@ function computeDisplayStyles(
     if (isFloat) {
       containerStyle.float = alignment === "floatLeft" ? "left" : "right";
       containerStyle.margin = alignment === "floatLeft"
-        ? "0 1rem 0.5rem 0"
-        : "0 0 0.5rem 1rem";
+        ? "0 10px 5px 0"
+        : "0 0 5px 10px";
     } else {
       containerStyle.margin = "0.5rem 0";
     }
@@ -755,8 +755,8 @@ function computeDisplayStyles(
     if (isFloat) {
       containerStyle.float = alignment === "floatLeft" ? "left" : "right";
       containerStyle.margin = alignment === "floatLeft"
-        ? "0 1rem 0.5rem 0"
-        : "0 0 0.5rem 1rem";
+        ? "0 10px 5px 0"
+        : "0 0 5px 10px";
     } else {
       containerStyle.margin = "0.5rem 0";
     }
@@ -810,7 +810,8 @@ function baseContainerStyle(
     return {
       ...base,
       display: "block", // 使用 block 让 float 正常工作
-      float: "left"
+      float: "left",
+      margin: "0 10px 5px 0"
     };
   }
 
@@ -819,7 +820,7 @@ function baseContainerStyle(
       ...base,
       display: "block", // 使用 block 让 float 正常工作
       float: "right",
-      margin: "0.75rem 0 0.75rem 1rem"
+      margin: "0 0 5px 10px"
     };
   }
 
