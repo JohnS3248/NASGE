@@ -287,3 +287,96 @@ export async function reorderChaptersOnSteam(
 
   loggers.sync.info('章节排序保存成功');
 }
+
+/**
+ * 使用 Steam 的官方 API 预览 BBCode 内容
+ * @param guideId 指南 ID
+ * @param sectionId 章节 ID
+ * @param title 章节标题
+ * @param description BBCode 格式内容
+ * @returns 渲染后的 HTML
+ */
+export async function previewChapterFromSteam(
+  guideId: string,
+  sectionId: string,
+  title: string,
+  description: string
+): Promise<string> {
+  loggers.sync.verbose('请求 Steam 预览', { guideId, sectionId, title });
+
+  // 获取 sessionId
+  const sessionId = await getSessionId();
+
+  // 查询指南管理页面的标签页
+  const tabs = await chrome.tabs.query({
+    url: "https://steamcommunity.com/sharedfiles/manageguide/*"
+  });
+
+  if (tabs.length === 0) {
+    throw new Error("未找到指南管理页面，无法使用预览功能");
+  }
+
+  const tab = tabs[0];
+  if (!tab.id) {
+    throw new Error("无法获取标签页 ID");
+  }
+
+  // 构造请求参数
+  const params = new URLSearchParams();
+  params.set('id', guideId);
+  params.set('sectionid', sectionId);
+  params.set('sessionid', sessionId);
+  params.set('title', title);
+  params.set('description', description);
+
+  // 通过注入脚本发送预览请求
+  const results = await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    world: "MAIN",
+    func: (url: string, data: string) => {
+      return new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.setRequestHeader('X-Prototype-Version', '1.7');
+
+        xhr.onload = function() {
+          if (xhr.status === 200) {
+            // Steam 预览 API 返回 JSON: {"success":1,"title":"...","description":"<html>"}
+            try {
+              const json = JSON.parse(xhr.responseText);
+              if (json.success === 1 && json.description) {
+                resolve(json.description);
+              } else {
+                reject(new Error('预览响应格式错误'));
+              }
+            } catch (e) {
+              // 如果解析失败，可能是直接返回 HTML
+              resolve(xhr.responseText);
+            }
+          } else {
+            reject(new Error(`预览请求失败: ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = function() {
+          reject(new Error('网络错误'));
+        };
+
+        xhr.send(data);
+      });
+    },
+    args: ['https://steamcommunity.com/sharedfiles/previewguidesubsection', params.toString()]
+  });
+
+  const html = results[0]?.result as string;
+
+  if (!html) {
+    throw new Error('预览返回为空');
+  }
+
+  loggers.sync.verbose('Steam 预览成功', { htmlLength: html.length });
+
+  return html;
+}
