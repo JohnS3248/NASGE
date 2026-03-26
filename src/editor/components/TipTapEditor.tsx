@@ -28,21 +28,11 @@ import TableControls from "./TableControls";
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
 
-const toolbarButton: React.CSSProperties = {
-  border: "none",
-  background: "transparent",
-  color: "#d7e8ff",
-  padding: "0.35rem 0.75rem",
-  borderRadius: "0.6rem",
-  fontSize: "0.85rem",
-  cursor: "pointer",
-  fontWeight: 600
-};
-
 type TipTapEditorProps = {
   initialContent?: string;
   externalDoc?: JSONContent;
   onUpdate?: (payload: { html: string; json: JSONContent }) => void;
+  onEditorReady?: (editor: import("@tiptap/core").Editor) => void;
 };
 
 type ImageContextPayload = {
@@ -128,7 +118,8 @@ const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> =
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   initialContent = "<p>欢迎使用 NASGE。这里是 Sprint 1 的 Tiptap 最小可行版本。</p>",
   externalDoc,
-  onUpdate
+  onUpdate,
+  onEditorReady
 }) => {
   const extensions = useMemo(() => createEditorExtensions(), []);
   const ignoreNextUpdateRef = useRef(false);
@@ -142,12 +133,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     warning: false,
     limit: CONTENT_CHARACTER_LIMIT
   }));
-  // 选择变化计数器 - 用于强制工具栏重新渲染
-  const [selectionKey, setSelectionKey] = useState(0);
-
-  // === 工具栏位置配置 ===
-  const toolbarPosition = useEditorConfigStore(state => state.toolbarPosition);
-
   // === 右键菜单配置 ===
   const imageMenuConfig = useEditorConfigStore(state => state.imageMenuConfig);
   const selectionMenuConfig = useEditorConfigStore(state => state.selectionMenuConfig);
@@ -172,10 +157,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       });
       // 更新字符数信息
       setCharacterInfo(checkCharacterLimit(editor, CONTENT_CHARACTER_LIMIT));
-    },
-    onSelectionUpdate: () => {
-      // 选择变化时触发重新渲染，确保工具栏状态正确更新
-      setSelectionKey(k => k + 1);
     }
   });
 
@@ -303,10 +284,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   const toggleSpoiler = useCallback(() => {
     editor?.chain().focus().toggleSpoiler().run();
-  }, [editor]);
-
-  const insertHorizontalRule = useCallback(() => {
-    editor?.chain().focus().setHorizontalRule().run();
   }, [editor]);
 
   const insertTable = useCallback(() => {
@@ -457,21 +434,16 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     editor?.chain().focus().toggleCodeBlock().run();
   }, [editor]);
 
-  const clearFormatting = useCallback(() => {
-    editor
-      ?.chain()
-      .focus()
-      .unsetAllMarks()
-      .clearNodes()
-      .setParagraph()
-      .run();
-  }, [editor]);
-
   useEffect(() => {
     const listener = () => closeContextMenu();
     window.addEventListener("click", listener);
     return () => window.removeEventListener("click", listener);
   }, [closeContextMenu]);
+
+  // 向父组件暴露 editor 实例
+  useEffect(() => {
+    if (editor) onEditorReady?.(editor);
+  }, [editor, onEditorReady]);
 
   useEffect(() => {
     return () => editor?.destroy();
@@ -704,23 +676,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   if (!editor) return null;
 
-  const headingButtons = useMemo(
-    () =>
-      [
-        { label: "H1", level: 1 as const },
-        { label: "H2", level: 2 as const },
-        { label: "H3", level: 3 as const }
-      ] as const,
-    []
-  );
-
   return (
     <>
       <style>
         {`
-          /* 覆盖 prose 类对图片的影响，确保图片容器和图片本身能正确显示 */
-          /* 注意：不要在容器上设置 max-width !important，否则会覆盖内联样式的尺寸设置 */
-
           .nasge-editor-container .nasge-image-node img {
             margin: 0 !important;
             max-width: 100% !important;
@@ -728,14 +687,12 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             display: block !important;
           }
 
-          /* 图片选中状态样式 */
           .nasge-editor-container .ProseMirror-selectednode .nasge-image-node,
           .nasge-editor-container .node-steamImage.ProseMirror-selectednode .nasge-image-node {
             outline: 2px solid rgba(102, 192, 244, 0.8);
             outline-offset: 2px;
           }
 
-          /* 内联图片选中状态样式 */
           .nasge-editor-container .ProseMirror-selectednode .nasge-image-inline-wrapper,
           .nasge-editor-container .node-steamImageInline.ProseMirror-selectednode .nasge-image-inline-wrapper {
             outline: 2px solid rgba(102, 192, 244, 0.8);
@@ -745,124 +702,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         `}
       </style>
       <div
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: toolbarPosition === "left" ? "row" : "column",
-          gap: "0.85rem",
-          background: "rgba(9, 15, 25, 0.55)",
-          border: "1px solid rgba(102, 192, 244, 0.25)",
-          borderRadius: "1rem",
-          padding: "1.25rem",
-          boxShadow: "0 18px 30px rgba(7, 11, 19, 0.45)"
-        }}
-      >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: toolbarPosition === "left" ? "column" : "row",
-          alignItems: toolbarPosition === "left" ? "stretch" : "center",
-          gap: "0.25rem",
-          flexWrap: toolbarPosition === "left" ? "nowrap" : "wrap",
-          background: "rgba(15, 26, 41, 0.95)",
-          borderRadius: "0.75rem",
-          padding: toolbarPosition === "left" ? "0.5rem 0.4rem" : "0.4rem 0.5rem",
-          border: "1px solid rgba(102, 192, 244, 0.18)",
-          position: "sticky",
-          top: toolbarPosition === "left" ? "1rem" : 0,
-          left: toolbarPosition === "left" ? 0 : undefined,
-          zIndex: 100,
-          marginBottom: toolbarPosition === "left" ? 0 : "0.5rem",
-          marginRight: toolbarPosition === "left" ? "0.5rem" : 0,
-          alignSelf: toolbarPosition === "left" ? "flex-start" : undefined,
-          flexShrink: 0
-        }}
-      >
-        <ToolbarIcon
-          label="B"
-          active={editor.isActive("bold")}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        />
-        <ToolbarIcon
-          label="𝑰"
-          active={editor.isActive("italic")}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        />
-        <ToolbarIcon
-          label="U"
-          active={editor.isActive("underline")}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-        />
-        <ToolbarIcon
-          label={
-            <span
-              style={{
-                position: "relative",
-                paddingInline: "0.05rem",
-                fontWeight: 600
-              }}
-            >
-              S
-              <span
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: "45%",
-                  borderBottom: "2px solid currentColor",
-                  transform: "rotate(-12deg)"
-                }}
-              />
-            </span>
-          }
-          title="删除线"
-          active={editor.isActive("strike")}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        />
-        <ToolbarIcon
-          label="🙈"
-          title="隐藏文本"
-          active={editor.isActive("spoiler")}
-          onClick={toggleSpoiler}
-        />
-        <ToolbarIcon
-          label="<>"
-          active={editor.isActive("codeBlock")}
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-        />
-        <ToolbarIcon label="—" onClick={insertHorizontalRule} />
-        {headingButtons.map(({ label, level }) => (
-          <ToolbarIcon
-            key={label}
-            label={label}
-            active={editor.isActive("heading", { level })}
-            onClick={() => editor.chain().focus().toggleHeading({ level }).run()}
-          />
-        ))}
-        <ToolbarIcon
-          label="•"
-          title="项目符号列表"
-          active={editor.isActive("bulletList")}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        />
-        <ToolbarIcon
-          label="1."
-          title="有序列表"
-          active={editor.isActive("orderedList")}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        />
-        <ToolbarIcon label="Tx" title="清除格式" onClick={clearFormatting} />
-      </div>
-
-      <div
         ref={editorContainerRef}
         style={{
           flex: 1,
           minHeight: "260px",
-          background: "rgba(10, 18, 30, 0.78)",
-          borderRadius: "0.9rem",
-          padding: "1.1rem",
-          border: "1px solid rgba(102, 192, 244, 0.18)",
           overflowY: "auto",
           position: "relative"
         }}
@@ -990,9 +833,9 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             position: "fixed",
             top: contextMenu.y,
             left: contextMenu.x,
-            background: "rgba(13, 21, 34, 0.95)",
+            background: "var(--bg-toolbar, rgba(13, 21, 34, 0.95))",
             border: "1px solid rgba(102, 192, 244, 0.3)",
-            borderRadius: "0.75rem",
+            borderRadius: "var(--radius-md, 0.75rem)",
             padding: "0.35rem",
             display: "flex",
             flexDirection: "column",
@@ -1144,7 +987,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           )}
         </div>
       ) : null}
-      </div>
     </>
   );
 };
@@ -1208,29 +1050,6 @@ const MenuDivider: React.FC = () => (
       background: "rgba(102, 192, 244, 0.18)"
     }}
   />
-);
-
-type ToolbarIconProps = {
-  label: React.ReactNode;
-  onClick: () => void;
-  active?: boolean;
-  title?: string;
-};
-
-const ToolbarIcon: React.FC<ToolbarIconProps> = ({ label, onClick, active, title }) => (
-  <button
-    type="button"
-    title={title}
-    style={{
-      ...toolbarButton,
-      fontWeight: 600,
-      fontSize: "0.9rem",
-      background: active ? "rgba(102, 192, 244, 0.2)" : "transparent"
-    }}
-    onClick={onClick}
-  >
-    {label}
-  </button>
 );
 
 export default TipTapEditor;

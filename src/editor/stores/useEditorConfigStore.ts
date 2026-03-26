@@ -116,9 +116,8 @@ export function matchShortcut(e: KeyboardEvent, shortcut: string): boolean {
 export type EditorAlignment = 'left' | 'center' | 'full';
 
 /**
- * 工具栏位置
- * - top: 顶部（横向）
- * - left: 左侧（纵向）
+ * 工具栏位置（已废弃，保留类型兼容迁移）
+ * @deprecated 使用 toolbarPos 代替
  */
 export type ToolbarPosition = 'top' | 'left';
 
@@ -319,13 +318,17 @@ export type EditorConfig = {
   promptRenameOnDrop: boolean;  // 悬浮窗：拖拽时启用内联重命名
   debugMode: boolean;           // 调试模式开关
   shortcuts: ShortcutConfig;    // 快捷键配置
+  // 主题
+  theme: string;                      // 主题名称
   // 智能布局配置（全屏模式）
   smartLayoutEnabled: boolean;        // 智能布局开关
   smartLayoutWidthThreshold: number;  // 大图宽度阈值 (px)
   smartLayoutHeightThreshold: number; // 大图高度阈值 (px)
   // 编辑器布局配置
   editorAlignment: EditorAlignment;   // 编辑器对齐方式：靠左/居中
-  toolbarPosition: ToolbarPosition;   // 工具栏位置：顶部/左侧
+  toolbarPosition: ToolbarPosition;   // @deprecated 工具栏位置（已废弃）
+  toolbarPos: { x: number; y: number }; // 悬浮工具栏位置
+  showPreview: boolean;               // 实时预览开关
   // 图片池配置（旧版，保留兼容）
   imageContextMenuEnabled: boolean;   // 图片池右键菜单开关（已废弃，使用 imagePoolMenuConfig.enabled）
   // 右键菜单配置
@@ -345,6 +348,8 @@ type EditorConfigState = EditorConfig & {
   // 快捷键相关
   setShortcut: (key: keyof ShortcutConfig, value: string) => void;
   resetShortcuts: () => void;
+  // 主题
+  setTheme: (theme: string) => void;
   // 智能布局相关
   setSmartLayoutEnabled: (enabled: boolean) => void;
   setSmartLayoutWidthThreshold: (value: number) => void;
@@ -352,6 +357,8 @@ type EditorConfigState = EditorConfig & {
   // 编辑器布局相关
   setEditorAlignment: (alignment: EditorAlignment) => void;
   setToolbarPosition: (position: ToolbarPosition) => void;
+  setToolbarPos: (pos: { x: number; y: number }) => void;
+  setShowPreview: (enabled: boolean) => void;
   // 图片池相关（旧版）
   setImageContextMenuEnabled: (enabled: boolean) => void;
   // 右键菜单配置相关
@@ -370,13 +377,17 @@ const DEFAULT_CONFIG: EditorConfig = {
   promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
   debugMode: true, // 默认开启调试模式（开发阶段），发布前改为 false
   shortcuts: DEFAULT_SHORTCUTS,
+  // 主题默认值
+  theme: 'steam-dark',
   // 智能布局默认值
   smartLayoutEnabled: false,       // 默认关闭
   smartLayoutWidthThreshold: 800,  // 默认 800px
   smartLayoutHeightThreshold: 600, // 默认 600px
   // 编辑器布局默认值
   editorAlignment: 'center',        // 默认居中
-  toolbarPosition: 'top',           // 默认顶部
+  toolbarPosition: 'top',           // @deprecated
+  toolbarPos: { x: -1, y: -1 },    // -1 表示使用默认位置
+  showPreview: false,               // 默认关闭实时预览
   // 图片池默认值（旧版兼容）
   imageContextMenuEnabled: true,    // 默认开启右键菜单
   // 右键菜单配置默认值
@@ -430,6 +441,11 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         loggers.config.info("重置快捷键配置");
         set({ shortcuts: DEFAULT_SHORTCUTS });
       },
+      setTheme: (theme) => {
+        loggers.config.info("设置主题:", theme);
+        document.documentElement.dataset.theme = theme;
+        set({ theme });
+      },
       setSmartLayoutEnabled: (enabled) => {
         loggers.config.info("设置智能布局:", enabled ? "开启" : "关闭");
         set({ smartLayoutEnabled: enabled });
@@ -449,6 +465,13 @@ export const useEditorConfigStore = create<EditorConfigState>()(
       setToolbarPosition: (position) => {
         loggers.config.info("设置工具栏位置:", position);
         set({ toolbarPosition: position });
+      },
+      setToolbarPos: (pos) => {
+        set({ toolbarPos: pos });
+      },
+      setShowPreview: (enabled) => {
+        loggers.config.info("设置实时预览:", enabled ? "开启" : "关闭");
+        set({ showPreview: enabled });
       },
       setImageContextMenuEnabled: (enabled) => {
         loggers.config.info("设置图片池右键菜单:", enabled ? "开启" : "关闭");
@@ -580,9 +603,13 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           smartLayoutEnabled: persisted?.smartLayoutEnabled ?? DEFAULT_CONFIG.smartLayoutEnabled,
           smartLayoutWidthThreshold: persisted?.smartLayoutWidthThreshold ?? DEFAULT_CONFIG.smartLayoutWidthThreshold,
           smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold,
+          // 主题
+          theme: persisted?.theme ?? DEFAULT_CONFIG.theme,
           // 确保编辑器布局字段有默认值
           editorAlignment: persisted?.editorAlignment ?? DEFAULT_CONFIG.editorAlignment,
           toolbarPosition: persisted?.toolbarPosition ?? DEFAULT_CONFIG.toolbarPosition,
+          toolbarPos: persisted?.toolbarPos ?? DEFAULT_CONFIG.toolbarPos,
+          showPreview: persisted?.showPreview ?? DEFAULT_CONFIG.showPreview,
           // 确保图片池字段有默认值
           imageContextMenuEnabled: persisted?.imageContextMenuEnabled ?? DEFAULT_CONFIG.imageContextMenuEnabled,
           // 深度合并右键菜单配置

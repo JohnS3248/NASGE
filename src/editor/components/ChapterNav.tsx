@@ -39,9 +39,9 @@ const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
       case "pending":
         return "#808080"; // 灰色
       case "uploading":
-        return "#FFC107"; // 黄色
+        return "var(--color-warning, #FFC107)"; // 黄色
       case "success":
-        return "#4CAF50"; // 绿色
+        return "var(--color-success, #4CAF50)"; // 绿色
       case "error":
         return "#F44336"; // 红色
       default:
@@ -221,9 +221,9 @@ const ChapterItem = React.memo<{
         borderLeft: isDragOver
           ? '3px solid rgba(102, 192, 244, 0.8)'
           : isModified
-            ? '3px solid #FFC107'    // 黄色 - 有修改未提交
+            ? '3px solid var(--color-warning, #FFC107)'    // 黄色 - 有修改未提交
             : isLinked
-              ? '3px solid #66c0f4'  // 蓝色 - 已拉取
+              ? '3px solid var(--color-primary, #66c0f4)'  // 蓝色 - 已拉取
               : '3px solid transparent',
         background: isBindingMode
           ? 'rgba(102, 192, 244, 0.08)'
@@ -264,7 +264,7 @@ const ChapterItem = React.memo<{
         style={{
           border: 'none',
           background: 'transparent',
-          color: isBindingMode ? '#66c0f4' : isLinked ? '#ffffff' : '#c5c5c5',
+          color: isBindingMode ? 'var(--color-primary, #66c0f4)' : isLinked ? '#ffffff' : '#c5c5c5',
           textAlign: 'left',
           padding: '0.9rem 0.8rem',
           fontSize: '0.88rem',
@@ -285,9 +285,9 @@ const ChapterItem = React.memo<{
         <span
           style={{
             fontSize: '0.7rem',
-            color: '#66c0f4',
+            color: 'var(--color-primary, #66c0f4)',
             padding: '0.15rem 0.4rem',
-            background: 'rgba(102, 192, 244, 0.15)',
+            background: 'var(--border-subtle, rgba(102, 192, 244, 0.15))',
             borderRadius: '0.25rem',
             marginRight: '0.5rem',
             whiteSpace: 'nowrap'
@@ -302,7 +302,7 @@ const ChapterItem = React.memo<{
         <span
           style={{
             fontSize: '0.75rem',
-            color: '#66c0f4',
+            color: 'var(--color-primary, #66c0f4)',
             padding: '0.2rem 0.5rem',
             background: 'rgba(102, 192, 244, 0.2)',
             borderRadius: '0.25rem',
@@ -325,7 +325,7 @@ const ChapterItem = React.memo<{
           style={{
             border: 'none',
             background: 'transparent',
-            color: '#66c0f4',
+            color: 'var(--color-primary, #66c0f4)',
             padding: '0.5rem 0.8rem',
             fontSize: '0.85rem',
             cursor: isLoading ? 'wait' : 'pointer',
@@ -669,7 +669,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               margin: 0,
               fontSize: '0.95rem',
               fontWeight: 400,
-              color: isBindingMode ? '#66c0f4' : '#c5c5c5',
+              color: isBindingMode ? 'var(--color-primary, #66c0f4)' : '#c5c5c5',
               letterSpacing: '0.02em',
               display: 'flex',
               alignItems: 'center',
@@ -681,7 +681,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               <span
                 style={{
                   fontSize: '0.65rem',
-                  color: '#FFC107',
+                  color: 'var(--color-warning, #FFC107)',
                   padding: '0.1rem 0.35rem',
                   background: 'rgba(255, 193, 7, 0.15)',
                   borderRadius: '0.2rem',
@@ -692,7 +692,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               </span>
             )}
             {(isSyncing || isRefreshing) && (
-              <span style={{ fontSize: '0.75rem', color: '#66c0f4' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-primary, #66c0f4)' }}>
                 {isSyncing ? '同步中...' : '刷新中...'}
               </span>
             )}
@@ -702,7 +702,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             <span
               style={{
                 fontSize: '0.7rem',
-                color: isOfflineData ? '#FFC107' : '#8b8b8b',
+                color: isOfflineData ? 'var(--color-warning, #FFC107)' : '#8b8b8b',
                 opacity: 0.8
               }}
             >
@@ -722,7 +722,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               border: 'none',
               borderRadius: '0.3rem',
               background: 'rgba(102, 192, 244, 0.15)',
-              color: '#66c0f4',
+              color: 'var(--color-primary, #66c0f4)',
               fontSize: '0.75rem',
               cursor: isRefreshing || isSyncing ? 'not-allowed' : 'pointer',
               opacity: isRefreshing || isSyncing ? 0.5 : 1,
@@ -813,7 +813,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             background: isCreatingChapter
               ? 'rgba(102, 192, 244, 0.1)'
               : 'transparent',
-            color: isBindingMode ? '#6b7f9a' : '#66c0f4',
+            color: isBindingMode ? 'var(--text-muted, #6b7f9a)' : 'var(--color-primary, #66c0f4)',
             fontSize: '0.85rem',
             cursor: isCreatingChapter || isBindingMode ? 'not-allowed' : 'pointer',
             opacity: isBindingMode ? 0.5 : 1,

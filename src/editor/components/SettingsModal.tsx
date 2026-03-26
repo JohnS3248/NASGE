@@ -5,7 +5,6 @@ import {
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
   EditorAlignment,
-  ToolbarPosition,
   // 右键菜单配置
   ContextMenuType,
   MenuItemConfig,
@@ -123,11 +122,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const setEditorAlignment = useEditorConfigStore(
     (state) => state.setEditorAlignment
   );
-  const toolbarPosition = useEditorConfigStore(
-    (state) => state.toolbarPosition
+  const showPreview = useEditorConfigStore(
+    (state) => state.showPreview
   );
-  const setToolbarPosition = useEditorConfigStore(
-    (state) => state.setToolbarPosition
+  const setShowPreview = useEditorConfigStore(
+    (state) => state.setShowPreview
   );
 
   // 图片池右键菜单（旧版兼容）
@@ -168,9 +167,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         {/* 弹窗内容 */}
         <div
           style={{
-            background: "rgba(15, 26, 41, 0.98)",
-            border: "1px solid rgba(102, 192, 244, 0.35)",
-            borderRadius: "1rem",
+            background: "var(--bg-toolbar, rgba(15, 26, 41, 0.98))",
+            border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
+            borderRadius: "var(--radius-lg, 1rem)",
             padding: "1.5rem",
             minWidth: "420px",
             maxWidth: "90vw",
@@ -186,10 +185,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             style={{
               fontSize: "1.15rem",
               fontWeight: 600,
-              color: "#e5f3ff",
+              color: "var(--text-bright, #e5f3ff)",
               marginBottom: "1rem",
               paddingBottom: "0.75rem",
-              borderBottom: "1px solid rgba(102, 192, 244, 0.15)",
+              borderBottom: "1px solid var(--border-subtle, rgba(102, 192, 244, 0.15))",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -287,7 +286,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 padding: "0.85rem 1rem",
                 background: "rgba(102, 192, 244, 0.08)",
                 border: "1px solid rgba(102, 192, 244, 0.2)",
-                borderRadius: "0.6rem",
+                borderRadius: "var(--radius-sm, 0.6rem)",
                 fontSize: "0.8rem",
                 color: "rgba(205, 226, 255, 0.75)",
                 lineHeight: 1.6
@@ -301,7 +300,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div
               style={{
                 height: "1px",
-                background: "rgba(102, 192, 244, 0.15)",
+                background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                 margin: "0.5rem 0"
               }}
             />
@@ -393,7 +392,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div
               style={{
                 height: "1px",
-                background: "rgba(102, 192, 244, 0.15)",
+                background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                 margin: "0.5rem 0"
               }}
             />
@@ -467,7 +466,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div
               style={{
                 height: "1px",
-                background: "rgba(102, 192, 244, 0.15)",
+                background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                 margin: "0.5rem 0"
               }}
             />
@@ -527,7 +526,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div
               style={{
                 height: "1px",
-                background: "rgba(102, 192, 244, 0.15)",
+                background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                 margin: "0.5rem 0"
               }}
             />
@@ -559,23 +558,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               onChange={(v) => setEditorAlignment(v as EditorAlignment)}
             />
 
-            {/* 工具栏位置 */}
-            <SelectOption
-              label="工具栏位置"
-              description="工具栏在编辑器中的位置"
-              value={toolbarPosition}
-              options={[
-                { value: "top", label: "顶部（横向）" },
-                { value: "left", label: "左侧（纵向）" }
-              ]}
-              onChange={(v) => setToolbarPosition(v as ToolbarPosition)}
+            {/* 实时预览 */}
+            <ToggleOption
+              label="实时预览"
+              description="开启后在编辑器旁边显示 Steam 官方渲染的实时预览"
+              checked={showPreview}
+              onChange={setShowPreview}
             />
 
             {/* 分隔线 */}
             <div
               style={{
                 height: "1px",
-                background: "rgba(102, 192, 244, 0.15)",
+                background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                 margin: "0.5rem 0"
               }}
             />
@@ -644,7 +639,7 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
             : "rgba(60, 75, 95, 0.6)",
           border: checked
             ? "1px solid rgba(102, 192, 244, 0.5)"
-            : "1px solid rgba(102, 192, 244, 0.25)",
+            : "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
           borderRadius: "12px",
           cursor: "pointer",
           position: "relative",
@@ -673,7 +668,7 @@ const ToggleOption: React.FC<ToggleOptionProps> = ({
           style={{
             fontSize: "0.9rem",
             fontWeight: 500,
-            color: "#d7e8ff",
+            color: "var(--text-primary, #d7e8ff)",
             marginBottom: "0.25rem"
           }}
         >
@@ -794,14 +789,14 @@ const ShortcutInput: React.FC<ShortcutInputProps> = ({
         style={{
           padding: "6px 10px",
           background: isRecording
-            ? "rgba(102, 192, 244, 0.15)"
+            ? "var(--border-subtle, rgba(102, 192, 244, 0.15))"
             : "rgba(40, 55, 75, 0.6)",
           border: isRecording
             ? "1px solid rgba(102, 192, 244, 0.5)"
             : "1px solid rgba(102, 192, 244, 0.2)",
           borderRadius: "6px",
           fontSize: "0.8rem",
-          color: isRecording ? "#66c0f4" : "#d7e8ff",
+          color: isRecording ? "var(--color-primary, #66c0f4)" : "var(--text-primary, #d7e8ff)",
           cursor: "pointer",
           minHeight: "28px",
           display: "flex",
@@ -858,9 +853,9 @@ const NumberInputOption: React.FC<NumberInputOptionProps> = ({
           width: "70px",
           padding: "6px 8px",
           background: "rgba(40, 55, 75, 0.6)",
-          border: "1px solid rgba(102, 192, 244, 0.25)",
+          border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
           borderRadius: "6px",
-          color: "#d7e8ff",
+          color: "var(--text-primary, #d7e8ff)",
           fontSize: "0.85rem",
           textAlign: "center",
           outline: "none"
@@ -873,7 +868,7 @@ const NumberInputOption: React.FC<NumberInputOptionProps> = ({
           style={{
             fontSize: "0.9rem",
             fontWeight: 500,
-            color: "#d7e8ff",
+            color: "var(--text-primary, #d7e8ff)",
             marginBottom: "0.25rem"
           }}
         >
@@ -925,9 +920,9 @@ const SelectOption: React.FC<SelectOptionProps> = ({
           width: "100px",
           padding: "6px 8px",
           background: "rgba(40, 55, 75, 0.6)",
-          border: "1px solid rgba(102, 192, 244, 0.25)",
+          border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
           borderRadius: "6px",
-          color: "#d7e8ff",
+          color: "var(--text-primary, #d7e8ff)",
           fontSize: "0.8rem",
           cursor: "pointer",
           outline: "none"
@@ -946,7 +941,7 @@ const SelectOption: React.FC<SelectOptionProps> = ({
           style={{
             fontSize: "0.9rem",
             fontWeight: 500,
-            color: "#d7e8ff",
+            color: "var(--text-primary, #d7e8ff)",
             marginBottom: "0.25rem"
           }}
         >
@@ -1020,7 +1015,7 @@ const SliderOption: React.FC<SliderOptionProps> = ({
         <span
           style={{
             fontSize: "0.8rem",
-            color: "#66c0f4",
+            color: "var(--color-primary, #66c0f4)",
             minWidth: "50px",
             textAlign: "right"
           }}
@@ -1124,8 +1119,8 @@ const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
     <div
       style={{
         background: "rgba(40, 55, 75, 0.3)",
-        border: "1px solid rgba(102, 192, 244, 0.15)",
-        borderRadius: "0.6rem",
+        border: "1px solid var(--border-subtle, rgba(102, 192, 244, 0.15))",
+        borderRadius: "var(--radius-sm, 0.6rem)",
         padding: "0.75rem",
         marginTop: "0.5rem"
       }}
@@ -1150,7 +1145,7 @@ const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
             width: "36px",
             height: "20px",
             background: enabled ? "rgba(102, 192, 244, 0.85)" : "rgba(60, 75, 95, 0.6)",
-            border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+            border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
             borderRadius: "10px",
             cursor: "pointer",
             position: "relative",
@@ -1175,7 +1170,7 @@ const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
 
         {/* 标题和描述 */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#d7e8ff" }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text-primary, #d7e8ff)" }}>
             {title}
           </div>
           <div style={{ fontSize: "0.75rem", color: "rgba(205, 226, 255, 0.5)" }}>
@@ -1326,8 +1321,8 @@ const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
     <div
       style={{
         background: "rgba(40, 55, 75, 0.3)",
-        border: "1px solid rgba(102, 192, 244, 0.15)",
-        borderRadius: "0.6rem",
+        border: "1px solid var(--border-subtle, rgba(102, 192, 244, 0.15))",
+        borderRadius: "var(--radius-sm, 0.6rem)",
         padding: "0.75rem",
         marginTop: "0.5rem"
       }}
@@ -1351,7 +1346,7 @@ const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
             width: "36px",
             height: "20px",
             background: config.enabled ? "rgba(102, 192, 244, 0.85)" : "rgba(60, 75, 95, 0.6)",
-            border: config.enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+            border: config.enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
             borderRadius: "10px",
             cursor: "pointer",
             position: "relative",
@@ -1375,7 +1370,7 @@ const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
         </button>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "#d7e8ff" }}>
+          <div style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--text-primary, #d7e8ff)" }}>
             {title}
           </div>
           <div style={{ fontSize: "0.75rem", color: "rgba(205, 226, 255, 0.5)" }}>
@@ -1510,7 +1505,7 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({
         style={{
           flex: 1,
           fontSize: "0.8rem",
-          color: enabled ? "#d7e8ff" : "rgba(205, 226, 255, 0.4)"
+          color: enabled ? "var(--text-primary, #d7e8ff)" : "rgba(205, 226, 255, 0.4)"
         }}
       >
         {label}
@@ -1529,10 +1524,10 @@ const DraggableMenuItem: React.FC<DraggableMenuItemProps> = ({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid rgba(102, 192, 244, 0.25)",
+          border: enabled ? "1px solid rgba(102, 192, 244, 0.5)" : "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
           borderRadius: "3px",
           background: enabled ? "rgba(102, 192, 244, 0.3)" : "transparent",
-          color: enabled ? "#66c0f4" : "rgba(205, 226, 255, 0.3)",
+          color: enabled ? "var(--color-primary, #66c0f4)" : "rgba(205, 226, 255, 0.3)",
           fontSize: "10px",
           cursor: "pointer",
           padding: 0

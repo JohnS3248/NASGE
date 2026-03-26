@@ -11,19 +11,19 @@ export const COLORS = {
   headerBg: "rgba(8, 16, 28, 0.9)",
 
   // 边框
-  border: "rgba(102, 192, 244, 0.25)",
+  border: "var(--border-accent, rgba(102, 192, 244, 0.25))",
   borderHover: "rgba(102, 192, 244, 0.4)",
   borderActive: "rgba(102, 192, 244, 0.6)",
 
   // 文字
-  textPrimary: "#d7e8ff",
-  textSecondary: "#8aa4c7",
+  textPrimary: "var(--text-primary, #d7e8ff)",
+  textSecondary: "var(--text-secondary, #8aa4c7)",
   textMuted: "#5a7a9a",
 
   // 强调色
-  accent: "#66c0f4",
+  accent: "var(--color-primary, #66c0f4)",
   accentHover: "#7dcfff",
-  accentDark: "rgba(102, 192, 244, 0.15)",
+  accentDark: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
 
   // 状态色
   success: "#5ba32b",

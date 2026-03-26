@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="steam-dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NASGE Editor</title>
+    <link rel="stylesheet" href="./styles/tokens.css" />
     <style>
       :root {
         color-scheme: only dark;
@@ -21,7 +22,8 @@
         min-height: 200px;
         outline: none;
         /* 对齐 Steam 指南预览: 内容宽度 638px */
-        max-width: 638px;
+        width: 638px;
+        min-width: 638px;
         margin: 0 auto;
         /* Steam-confirmed values (2026-03-08 DevTools) */
         font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
@@ -30,9 +32,9 @@
         color: #969696;
       }
 
-      /* 段落样式: Steam 使用 <br> 换行，段落间距较小 */
+      /* 段落样式: Steam 使用 <br> 换行，纯靠 line-height 控制间距 */
       .ProseMirror p {
-        margin: 0 0 0.5em;
+        margin: 0;
       }
 
       .ProseMirror ul,

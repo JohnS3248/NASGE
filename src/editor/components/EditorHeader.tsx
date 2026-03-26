@@ -37,11 +37,11 @@ const EditorHeader: React.FC = () => {
     <>
       <header
         style={{
-          borderRadius: '1.05rem',
-          background: 'rgba(13, 23, 36, 0.9)',
-          border: '1px solid rgba(102, 192, 244, 0.25)',
+          borderRadius: 'var(--radius-lg, 1.05rem)',
+          background: 'var(--bg-surface, rgba(13, 23, 36, 0.9))',
+          border: '1px solid var(--border-accent, rgba(102, 192, 244, 0.25))',
           padding: '1.2rem 1.6rem',
-          boxShadow: '0 24px 40px rgba(10, 18, 30, 0.45)',
+          boxShadow: 'var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))',
           display: 'flex',
           alignItems: 'center',
           gap: '1.5rem'
@@ -128,7 +128,7 @@ const EditorHeader: React.FC = () => {
           height: '42px',
           border: '1px solid rgba(102, 192, 244, 0.3)',
           background: 'rgba(20, 35, 55, 0.7)',
-          borderRadius: '0.6rem',
+          borderRadius: 'var(--radius-sm, 0.6rem)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',

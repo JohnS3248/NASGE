@@ -167,9 +167,9 @@ const DraftPanel: React.FC = () => {
   return (
     <section
       style={{
-        borderRadius: '1.05rem',
-        background: 'rgba(13, 23, 36, 0.9)',
-        border: '1px solid rgba(102, 192, 244, 0.25)',
+        borderRadius: 'var(--radius-lg, 1.05rem)',
+        background: 'var(--bg-surface, rgba(13, 23, 36, 0.9))',
+        border: '1px solid var(--border-accent, rgba(102, 192, 244, 0.25))',
         padding: '1rem 1.4rem',
         boxShadow: '0 24px 40px rgba(10, 18, 30, 0.45)',
         display: 'flex',
@@ -184,14 +184,14 @@ const DraftPanel: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '0.5rem',
-          borderRadius: '0.6rem',
+          borderRadius: 'var(--radius-sm, 0.6rem)',
           background: 'rgba(8, 14, 23, 0.6)',
           cursor: 'pointer'
         }}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flex: 1 }}>
-          <span style={{ fontSize: '0.9rem', color: '#d7e8ff', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-primary, #d7e8ff)', fontWeight: 600 }}>
             {isOpen ? '▼' : '▶'} 草稿管理
           </span>
           {activeDraft && (
@@ -203,13 +203,13 @@ const DraftPanel: React.FC = () => {
             }}>
               {/* 第一行：标题 + 绑定信息 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{ color: '#d7e8ff', fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-primary, #d7e8ff)', fontWeight: 500 }}>
                   {getDraftDisplayTitle(activeDraft)}
                 </span>
                 {boundChapter && (
                   <span style={{
                     fontSize: '0.75rem',
-                    color: '#66c0f4',
+                    color: 'var(--color-primary, #66c0f4)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.25rem'
@@ -219,13 +219,13 @@ const DraftPanel: React.FC = () => {
                 )}
               </div>
               {/* 第二行：备注名 */}
-              <span style={{ fontSize: '0.75rem', color: '#8aa4c7', opacity: 0.85 }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #8aa4c7)', opacity: 0.85 }}>
                 {activeDraft.draftName}
               </span>
             </div>
           )}
           {!activeDraft && (
-            <span style={{ fontSize: '0.85rem', color: '#8aa4c7' }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary, #8aa4c7)' }}>
               当前: 未选择
             </span>
           )}
@@ -238,7 +238,7 @@ const DraftPanel: React.FC = () => {
                 <>
                   <span style={{
                     fontSize: '0.8rem',
-                    color: '#66c0f4',
+                    color: 'var(--color-primary, #66c0f4)',
                     fontWeight: 500,
                     animation: 'pulse 1.5s infinite'
                   }}>
@@ -301,7 +301,7 @@ const DraftPanel: React.FC = () => {
                     borderRadius: '0.4rem',
                     border: '1px solid rgba(102, 192, 244, 0.5)',
                     background: 'rgba(102, 192, 244, 0.15)',
-                    color: '#66c0f4',
+                    color: 'var(--color-primary, #66c0f4)',
                     fontWeight: 500,
                     cursor: 'pointer',
                     fontSize: '0.8rem'
@@ -341,7 +341,7 @@ const DraftPanel: React.FC = () => {
             padding: '0.8rem',
             borderRadius: '0.7rem',
             background: 'rgba(8, 14, 23, 0.85)',
-            border: '1px solid rgba(102, 192, 244, 0.18)',
+            border: '1px solid var(--border-input, rgba(102, 192, 244, 0.18))',
             display: 'flex',
             flexDirection: 'column',
             gap: '0.6rem'
@@ -361,7 +361,7 @@ const DraftPanel: React.FC = () => {
                 style={{
                   padding: '2rem 1rem',
                   textAlign: 'center',
-                  color: '#8aa4c7',
+                  color: 'var(--text-secondary, #8aa4c7)',
                   fontSize: '0.85rem',
                   lineHeight: 1.6,
                   gridColumn: '1 / -1'
@@ -402,7 +402,7 @@ const DraftPanel: React.FC = () => {
                       background: isActive
                         ? 'rgba(102, 192, 244, 0.22)'
                         : 'rgba(12, 20, 32, 0.7)',
-                      color: '#d7e8ff',
+                      color: 'var(--text-primary, #d7e8ff)',
                       textAlign: 'left',
                       padding: '0.75rem 0.85rem',
                       fontSize: '0.85rem',
@@ -424,7 +424,7 @@ const DraftPanel: React.FC = () => {
                     <span style={{
                       fontWeight: 600,
                       fontSize: '0.95rem',
-                      color: '#d7e8ff',
+                      color: 'var(--text-primary, #d7e8ff)',
                       lineHeight: 1.3
                     }}>
                       {getDraftDisplayTitle(draft)}
@@ -433,7 +433,7 @@ const DraftPanel: React.FC = () => {
                     {/* 第二行：草稿名（中号灰色） */}
                     <span style={{
                       fontSize: '0.8rem',
-                      color: '#8aa4c7',
+                      color: 'var(--text-secondary, #8aa4c7)',
                       opacity: 0.85,
                       lineHeight: 1.2
                     }}>
@@ -443,7 +443,7 @@ const DraftPanel: React.FC = () => {
                     {/* 第三行：时间戳（小号灰色） */}
                     <span style={{
                       fontSize: '0.7rem',
-                      color: '#6b7f9a',
+                      color: 'var(--text-muted, #6b7f9a)',
                       opacity: 0.7,
                       lineHeight: 1.2
                     }}>
@@ -520,7 +520,7 @@ const subActionButtonStyle: React.CSSProperties = {
   borderRadius: '0.65rem',
   padding: '0.55rem 0.75rem',
   background: 'rgba(20, 33, 52, 0.85)',
-  color: '#d7e8ff',
+  color: 'var(--text-primary, #d7e8ff)',
   cursor: 'pointer',
   fontSize: '0.85rem'
 };

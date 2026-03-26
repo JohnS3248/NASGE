@@ -17,6 +17,9 @@ import("./services/ImageUploadService").then(({ ImageUploadService }) => {
 });
 import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
   (window as any).__editorConfigStore = useEditorConfigStore;
+  // 初始化主题
+  const theme = useEditorConfigStore.getState().theme;
+  document.documentElement.dataset.theme = theme;
 });
 // === END DEBUG ===
 

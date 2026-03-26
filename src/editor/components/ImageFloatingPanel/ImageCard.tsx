@@ -552,7 +552,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
                     minWidth: 0,
                     padding: "1px 2px",
                     fontSize: 10,
-                    background: "rgba(102, 192, 244, 0.15)",
+                    background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
                     border: `1px solid ${COLORS.accent}`,
                     borderRadius: "2px 0 0 2px",
                     color: COLORS.textPrimary,

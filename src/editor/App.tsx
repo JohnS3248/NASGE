@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import type { Editor } from "@tiptap/core";
 import TipTapEditor from "./components/TipTapEditor";
+import EditorToolbar from "./components/EditorToolbar";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
 import { useGuideStore } from "./stores/useGuideStore";
 import { JSONContent } from "@tiptap/core";
-import { EMPTY_DOC, createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
+import { createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
 import UploadStatusHUD from "./components/UploadStatusHUD";
 import { useEditorMode } from "./hooks/useEditorMode";
@@ -12,25 +14,40 @@ import EditorHeader from "./components/EditorHeader";
 import ChapterNav from "./components/ChapterNav";
 import DraftPanel from "./components/DraftPanel";
 import TitleEditor from "./components/TitleEditor";
-import { extractTitleText, createTitleFromText, createEmptyTitle } from "./utils/titleHelpers";
+import { extractTitleText, createEmptyTitle } from "./utils/titleHelpers";
 import { loggers } from "../shared/logger";
 import { ImageFloatingPanel } from "./components/ImageFloatingPanel";
 import { useEditorConfigStore } from "./stores/useEditorConfigStore";
+import { PreviewPanel } from "./components/PreviewPanel";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
   const editorAlignment = useEditorConfigStore((s) => s.editorAlignment);
+  const showPreview = useEditorConfigStore((s) => s.showPreview);
   const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
   const lastAppliedSerializedRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 
   const { drafts, activeDraftId, updateDraft } = useGuideStore();
 
   const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId) ?? drafts[0], [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions(), []);
+
+  // 为预览面板准备的 BBCode（按需计算）
+  const currentBBCode = useMemo(() => {
+    if (!showPreview || !currentHtml) return "";
+    return htmlToBBCode(currentHtml);
+  }, [showPreview, currentHtml]);
+
+  // 为预览面板准备的标题文本
+  const currentTitleText = useMemo(() => {
+    if (!showPreview || !activeDraft?.title) return "";
+    return extractTitleText(activeDraft.title);
+  }, [showPreview, activeDraft?.title]);
 
   const docToHtml = useCallback(
     (doc: JSONContent) => generateHTML(doc, htmlExtensions),
@@ -116,7 +133,7 @@ const App: React.FC = () => {
     <div
       style={{
         minHeight: "100vh",
-        background: "radial-gradient(circle at 20% 0%, rgba(102, 192, 244, 0.2), transparent 55%), linear-gradient(180deg, #101a2b 0%, #0b1522 100%)",
+        background: "radial-gradient(circle at 20% 0%, rgba(102, 192, 244, 0.2), transparent 55%), var(--bg-app, linear-gradient(180deg, #101a2b 0%, #0b1522 100%))",
         padding: "1.5rem",
         boxSizing: "border-box",
         display: "flex",
@@ -130,223 +147,246 @@ const App: React.FC = () => {
       {/* 草稿管理（可折叠） */}
       <DraftPanel />
 
-      {/* 主内容区：中间编辑器 + 右侧章节 */}
+      {/* 主内容区 */}
       <div
         style={{
           display: "flex",
-          gap: "1.5rem",
-          alignItems: "start",
-          flex: 1
+          flexDirection: "column",
+          gap: "1rem",
+          flex: 1,
+          width: "fit-content",
+          margin: "0 auto"
         }}
       >
-        {/* 中间编辑器区域 */}
-        <main
+        {/* 按钮行 - 独立于编辑区 */}
+        <div
           style={{
-            flex: 1,
-            maxWidth: editorAlignment === 'full' ? undefined : "720px",
-            margin: editorAlignment === 'center' ? '0 auto' : undefined,
-            borderRadius: "1.05rem",
-            background: "rgba(13, 23, 36, 0.9)",
-            border: "1px solid rgba(102, 192, 244, 0.25)",
-            padding: "1.6rem",
-            boxShadow: "0 24px 40px rgba(10, 18, 30, 0.45)",
             display: "flex",
-            flexDirection: "column",
-            gap: "1rem"
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "0.6rem"
           }}
         >
-          {/* 工具栏按钮 */}
-          <div
+          <button
+            type="button"
+            onClick={() => {
+              window.alert('导出草稿功能待实现');
+            }}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "0.6rem"
+              padding: "0.45rem 1rem",
+              borderRadius: "var(--radius-sm, 0.6rem)",
+              border: "1px solid rgba(102, 192, 244, 0.5)",
+              background: "rgba(102, 192, 244, 0.15)",
+              color: "var(--color-primary, #66c0f4)",
+              fontWeight: 600,
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              transition: "all 0.15s ease"
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(102, 192, 244, 0.25)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(102, 192, 244, 0.15)";
             }}
           >
-            {/* 左侧：导出草稿按钮 */}
+            导出草稿
+          </button>
+
+          <div style={{ display: "flex", gap: "0.6rem" }}>
             <button
               type="button"
-              onClick={() => {
-                // TODO: 实现导出草稿功能
-                window.alert('导出草稿功能待实现');
-              }}
+              onClick={handleImportBBCode}
               style={{
                 padding: "0.45rem 1rem",
-                borderRadius: "0.6rem",
-                border: "1px solid rgba(102, 192, 244, 0.5)",
-                background: "rgba(102, 192, 244, 0.15)",
-                color: "#66c0f4",
+                borderRadius: "var(--radius-sm, 0.6rem)",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
                 fontWeight: 600,
                 cursor: "pointer",
-                fontSize: "0.85rem",
-                transition: "all 0.15s ease"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(102, 192, 244, 0.25)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "rgba(102, 192, 244, 0.15)";
+                fontSize: "0.85rem"
               }}
             >
-              导出草稿
+              导入 BBCode
             </button>
-
-            {/* 右侧：其他按钮组 */}
-            <div style={{ display: "flex", gap: "0.6rem" }}>
-              <button
-                type="button"
-                onClick={handleImportBBCode}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "0.6rem",
-                  border: "1px solid rgba(102, 192, 244, 0.35)",
-                  background: "rgba(12, 21, 33, 0.85)",
-                  color: "#cfe7ff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "0.85rem"
-                }}
-              >
-                导入 BBCode
-              </button>
-              <button
-                type="button"
-                onClick={handleExportBBCode}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "0.6rem",
-                  border: "1px solid rgba(102, 192, 244, 0.35)",
-                  background: "rgba(12, 21, 33, 0.85)",
-                  color: "#cfe7ff",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "0.85rem"
-                }}
-              >
-                导出 BBCode
-              </button>
-              {activeDraft?.linkedChapterId && (
-                <button
-                  type="button"
-                  onClick={handleUploadToSteam}
-                  disabled={isUploading}
-                  style={{
-                    padding: "0.45rem 1rem",
-                    borderRadius: "0.6rem",
-                    border: "none",
-                    background: isUploading
-                      ? "rgba(102, 192, 244, 0.5)"
-                      : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-                    color: "#06101e",
-                    fontWeight: 600,
-                    cursor: isUploading ? "wait" : "pointer",
-                    fontSize: "0.85rem",
-                    opacity: isUploading ? 0.7 : 1
-                  }}
-                >
-                  {isUploading ? "上传中..." : "上传到 Steam"}
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 标题编辑器 */}
-          <TitleEditor
-            value={activeDraft?.title || createEmptyTitle()}
-            onChange={(newTitle) => {
-              if (activeDraft) {
-                updateDraft(activeDraft.id, { title: newTitle });
-              }
-            }}
-          />
-
-          {/* 编辑器 */}
-          {!activeDraft ? (
-            <div
+            <button
+              type="button"
+              onClick={handleExportBBCode}
               style={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "1.5rem",
-                padding: "4rem 2rem",
-                background: "rgba(8, 14, 23, 0.6)",
-                borderRadius: "1.2rem",
-                border: "2px dashed rgba(102, 192, 244, 0.3)"
+                padding: "0.45rem 1rem",
+                borderRadius: "var(--radius-sm, 0.6rem)",
+                border: "1px solid rgba(102, 192, 244, 0.35)",
+                background: "rgba(12, 21, 33, 0.85)",
+                color: "#cfe7ff",
+                fontWeight: 600,
+                cursor: "pointer",
+                fontSize: "0.85rem"
               }}
             >
-              <div
-                style={{
-                  fontSize: "3rem",
-                  opacity: 0.4
-                }}
-              >
-                📝
-              </div>
-              <div
-                style={{
-                  color: "#8aa4c7",
-                  fontSize: "1.1rem",
-                  textAlign: "center",
-                  lineHeight: 1.6
-                }}
-              >
-                <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem", color: "#d7e8ff" }}>
-                  暂无草稿
-                </div>
-                <div style={{ fontSize: "0.95rem" }}>
-                  请先创建一个新草稿，或从章节导航中拉取现有章节
-                </div>
-              </div>
+              导出 BBCode
+            </button>
+            {activeDraft?.linkedChapterId && (
               <button
                 type="button"
-                onClick={() => {
-                  const store = useGuideStore.getState();
-                  store.addDraft();
-                }}
+                onClick={handleUploadToSteam}
+                disabled={isUploading}
                 style={{
-                  padding: "0.8rem 2rem",
-                  borderRadius: "0.8rem",
+                  padding: "0.45rem 1rem",
+                  borderRadius: "var(--radius-sm, 0.6rem)",
                   border: "none",
-                  background: "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                  background: isUploading
+                    ? "rgba(102, 192, 244, 0.5)"
+                    : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
                   color: "#06101e",
                   fontWeight: 600,
-                  cursor: "pointer",
-                  fontSize: "1rem",
-                  boxShadow: "0 4px 12px rgba(102, 192, 244, 0.3)"
+                  cursor: isUploading ? "wait" : "pointer",
+                  fontSize: "0.85rem",
+                  opacity: isUploading ? 0.7 : 1
                 }}
               >
-                + 创建新草稿
+                {isUploading ? "上传中..." : "上传到 Steam"}
               </button>
-            </div>
-          ) : (
-            <TipTapEditor
-              externalDoc={externalDoc}
-              onUpdate={({ html, json }) => {
-                setCurrentHtml(html);
-                if (activeDraft) {
-                  const nextSerialized = JSON.stringify(json);
-                  lastAppliedSerializedRef.current = nextSerialized;
-                  const currentSerialized = JSON.stringify(activeDraft.content);
-                  if (nextSerialized !== currentSerialized) {
-                    updateDraft(activeDraft.id, { content: json });
-                  }
-                }
-              }}
+            )}
+          </div>
+        </div>
+
+        {/* 标题编辑器 - 独立于编辑区 */}
+        <TitleEditor
+          value={activeDraft?.title || createEmptyTitle()}
+          onChange={(newTitle) => {
+            if (activeDraft) {
+              updateDraft(activeDraft.id, { title: newTitle });
+            }
+          }}
+        />
+
+        {/* 编辑器 + 预览 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "stretch",
+            gap: "1rem",
+            flex: 1
+          }}
+        >
+          {/* 编辑器区域 */}
+          <main
+            style={{
+              borderRadius: "var(--radius-lg, 1.05rem)",
+              background: "var(--bg-surface, rgba(13, 23, 36, 0.9))",
+              border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
+              padding: "1.1rem",
+              boxShadow: "var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))",
+              display: "flex",
+              flexDirection: "column"
+            }}
+          >
+              {!activeDraft ? (
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "1.5rem",
+                    padding: "4rem 2rem",
+                    background: "rgba(8, 14, 23, 0.6)",
+                    borderRadius: "var(--radius-lg, 1.2rem)",
+                    border: "2px dashed rgba(102, 192, 244, 0.3)"
+                  }}
+                >
+                  <div style={{ fontSize: "3rem", opacity: 0.4 }}>
+                    📝
+                  </div>
+                  <div
+                    style={{
+                      color: "var(--text-secondary, #8aa4c7)",
+                      fontSize: "1.1rem",
+                      textAlign: "center",
+                      lineHeight: 1.6
+                    }}
+                  >
+                    <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text-primary, #d7e8ff)" }}>
+                      暂无草稿
+                    </div>
+                    <div style={{ fontSize: "0.95rem" }}>
+                      请先创建一个新草稿，或从章节导航中拉取现有章节
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const store = useGuideStore.getState();
+                      store.addDraft();
+                    }}
+                    style={{
+                      padding: "0.8rem 2rem",
+                      borderRadius: "0.8rem",
+                      border: "none",
+                      background: "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                      color: "#06101e",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontSize: "1rem",
+                      boxShadow: "0 4px 12px rgba(102, 192, 244, 0.3)"
+                    }}
+                  >
+                    + 创建新草稿
+                  </button>
+                </div>
+              ) : (
+                <TipTapEditor
+                  externalDoc={externalDoc}
+                  onEditorReady={setEditorInstance}
+                  onUpdate={({ html, json }) => {
+                    setCurrentHtml(html);
+                    if (activeDraft) {
+                      const nextSerialized = JSON.stringify(json);
+                      lastAppliedSerializedRef.current = nextSerialized;
+                      const currentSerialized = JSON.stringify(activeDraft.content);
+                      if (nextSerialized !== currentSerialized) {
+                        updateDraft(activeDraft.id, { content: json });
+                      }
+                    }
+                  }}
+                />
+              )}
+            </main>
+
+          {/* 实时预览面板 */}
+          {showPreview && (
+            <PreviewPanel
+              bbcode={currentBBCode}
+              title={currentTitleText}
             />
           )}
-        </main>
+        </div>
+      </div>
 
-        {/* 右侧章节导航 */}
+      <UploadStatusHUD />
+
+      {/* 章节导航 - 固定在右侧边缘 */}
+      <div
+        style={{
+          position: "fixed",
+          right: "1rem",
+          top: "14rem",
+          bottom: "1rem",
+          zIndex: 100,
+          overflowY: "auto",
+          pointerEvents: "auto"
+        }}
+      >
         <ChapterNav
           onRefresh={refreshGuideInfo}
           isRefreshing={isRefreshingGuide}
         />
       </div>
 
-      <UploadStatusHUD />
+      {/* 悬浮工具栏 */}
+      {activeDraft && <EditorToolbar editor={editorInstance} />}
 
       {/* 图片悬浮窗 */}
       <ImageFloatingPanel />

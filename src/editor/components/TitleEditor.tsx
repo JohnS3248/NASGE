@@ -295,8 +295,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       position: 'relative',
       display: 'flex',
       flexDirection: 'column',
-      background: 'rgba(9, 15, 25, 0.55)',
-      border: '1px solid rgba(102, 192, 244, 0.25)',
+      background: 'var(--bg-input, rgba(9, 15, 25, 0.55))',
+      border: '1px solid var(--border-accent, rgba(102, 192, 244, 0.25))',
       borderRadius: '1rem',
       padding: '1.25rem',
       boxShadow: '0 18px 30px rgba(7, 11, 19, 0.45)'
@@ -305,7 +305,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       <div
         style={{
           width: '100%',
-          color: '#d7e8ff',
+          color: 'var(--text-primary, #d7e8ff)',
           fontSize: '1.1rem',
           fontWeight: 600,
           outline: 'none'
@@ -404,9 +404,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
             position: "fixed",
             top: contextMenu.y,
             left: contextMenu.x,
-            background: "rgba(13, 21, 34, 0.95)",
-            border: "1px solid rgba(102, 192, 244, 0.3)",
-            borderRadius: "0.75rem",
+            background: "var(--bg-toolbar, rgba(15, 26, 41, 0.95))",
+            border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
+            borderRadius: "var(--radius-md, 0.75rem)",
             padding: "0.35rem",
             display: "flex",
             flexDirection: "column",
@@ -501,7 +501,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         /* 占位符样式 */
         .title-editor-content .ProseMirror p.is-editor-empty:first-child::before {
           content: '章节标题（支持拖拽/粘贴图片）';
-          color: #8aa4c7;
+          color: var(--text-secondary, #8aa4c7);
           opacity: 0.5;
           pointer-events: none;
           position: absolute;
@@ -536,8 +536,8 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active,
       background: active ? "rgba(102, 192, 244, 0.16)" : "transparent",
       textAlign: "left",
       padding: "0.55rem 0.75rem",
-      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "#e5f3ff" : "#cde2ff",
-      borderRadius: "0.6rem",
+      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "var(--text-bright, #e3edf9)" : "var(--text-primary, #d7e8ff)",
+      borderRadius: "var(--radius-sm, 0.6rem)",
       fontSize: "0.85rem",
       cursor: disabled ? "not-allowed" : "pointer",
       fontWeight: active ? 600 : 500
@@ -569,7 +569,7 @@ const MenuDivider: React.FC = () => (
     style={{
       height: "1px",
       margin: "0.25rem 0.5rem",
-      background: "rgba(102, 192, 244, 0.18)"
+      background: "var(--border-input, rgba(102, 192, 244, 0.18))"
     }}
   />
 );

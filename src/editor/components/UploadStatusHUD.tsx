@@ -3,10 +3,10 @@ import { useImageStore } from "../stores/useImageStore";
 import type { ImageLifecycleStatus } from "../types/image";
 
 const statusStyle: Record<string, React.CSSProperties> = {
-  uploading: { color: "#66c0f4" },
-  uploaded: { color: "#8ae68a" },
-  error: { color: "#ff7b7b" },
-  local: { color: "#d7e8ff" }
+  uploading: { color: "var(--color-primary, #66c0f4)" },
+  uploaded: { color: "var(--color-success, #8ae68a)" },
+  error: { color: "var(--color-error, #ff7b7b)" },
+  local: { color: "var(--text-primary, #d7e8ff)" }
 };
 
 const UploadStatusHUD: React.FC = () => {
@@ -45,7 +45,7 @@ const UploadStatusHUD: React.FC = () => {
           style={{
             background: "rgba(10, 18, 30, 0.92)",
             border: "1px solid rgba(102, 192, 244, 0.35)",
-            borderRadius: "0.75rem",
+            borderRadius: "var(--radius-md, 0.75rem)",
             padding: "0.65rem 0.85rem",
             boxShadow: "0 10px 22px rgba(4, 10, 18, 0.55)",
             fontSize: "0.85rem",
