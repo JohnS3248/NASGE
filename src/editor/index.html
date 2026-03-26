@@ -37,12 +37,23 @@
         margin: 0;
       }
 
-      .ProseMirror ul,
-      .ProseMirror ol {
-        padding-left: 20px;
-        margin: 0 0 0.5em;
+      .ProseMirror ul {
+        margin: 14px 0 8px 14px;
+        padding-left: 0;
         font-size: 14px;
-        line-height: 20px;
+        line-height: 19px;
+      }
+
+      .ProseMirror ol {
+        margin: 14px 0 8px 0;
+        padding-left: 40px;
+        font-size: 14px;
+        line-height: 19px;
+      }
+
+      .ProseMirror li {
+        line-height: 19px;
+        padding-right: 14px;
       }
 
       /* 确保列表有标记（移除 prose 后需要显式声明） */
@@ -56,9 +67,8 @@
 
       /* 水平线 */
       .ProseMirror hr {
-        border: none;
-        border-top: 1px solid #666;
-        margin: 8px 0;
+        border: 1px inset rgb(128, 128, 128);
+        margin: 7px 0;
       }
 
       /* 图片最大宽度 */
@@ -121,7 +131,7 @@
         padding: 12px;
         margin: 8px;
         font-size: 11px;
-        font-family: Consolas, monospace;
+        font-family: Consolas, "Courier New", monospace;
         white-space: pre;
         white-space: pre-wrap;
         overflow-x: auto;
@@ -129,9 +139,8 @@
       }
 
       .ProseMirror a {
-        color: #66c0f4;
-        text-decoration: underline;
-        text-underline-offset: 3px;
+        color: #ebebeb;
+        text-decoration: none;
       }
 
       /* Spoiler: Steam span.bb_spoiler */
@@ -157,7 +166,7 @@
       .nasge-table {
         display: table;
         font-size: 12px;
-        margin: 0.6rem 0;
+        margin: 0;
         border-collapse: collapse;
       }
 
@@ -167,6 +176,7 @@
         padding: 4px;
         background: transparent;
         min-width: 1.5em;
+        text-align: start;
       }
 
       .nasge-table tr {

@@ -7,7 +7,7 @@
 
   /* Backgrounds */
   --bg-app: linear-gradient(180deg, #101a2b 0%, #0b1522 100%);
-  --bg-surface: rgba(13, 23, 36, 0.9);
+  --bg-surface: #0d1724;
   --bg-input: rgba(9, 15, 25, 0.55);
   --bg-editor: rgba(10, 18, 30, 0.78);
   --bg-toolbar: rgba(15, 26, 41, 0.95);

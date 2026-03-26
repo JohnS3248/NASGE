@@ -274,7 +274,7 @@ const App: React.FC = () => {
           <main
             style={{
               borderRadius: "var(--radius-lg, 1.05rem)",
-              background: "var(--bg-surface, rgba(13, 23, 36, 0.9))",
+              background: "var(--bg-surface, #0d1724)",
               border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
               padding: "1.1rem",
               boxShadow: "var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))",
