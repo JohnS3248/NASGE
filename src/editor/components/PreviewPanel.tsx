@@ -158,7 +158,7 @@ const STEAM_BBCODE_CSS = `
 /* ===== 表格样式 ===== */
 .steam-preview-content .bb_table,
 .steam-preview-content table {
-  display: table;
+  display: table !important;
   font-size: 12px;
   margin: 0.6rem 0;
   border-collapse: collapse;
@@ -166,6 +166,7 @@ const STEAM_BBCODE_CSS = `
 
 .steam-preview-content .bb_table th,
 .steam-preview-content table th {
+  display: table-cell !important;
   font-weight: bold;
   border: 1px solid #4d4d4d;
   padding: 4px;
@@ -175,15 +176,37 @@ const STEAM_BBCODE_CSS = `
 
 .steam-preview-content .bb_table tr,
 .steam-preview-content table tr {
-  display: table-row;
+  display: table-row !important;
 }
 
 .steam-preview-content .bb_table td,
 .steam-preview-content table td {
+  display: table-cell !important;
   vertical-align: middle;
   border: 1px solid #4d4d4d;
   padding: 4px;
   background: transparent;
+  min-width: 1.5em;
+}
+
+/* Steam 可能使用 div + class 代替原生 table 元素 */
+.steam-preview-content .bb_table_tr {
+  display: table-row !important;
+}
+
+.steam-preview-content .bb_table_th {
+  display: table-cell !important;
+  font-weight: bold;
+  border: 1px solid #4d4d4d;
+  padding: 4px;
+  min-width: 1.5em;
+}
+
+.steam-preview-content .bb_table_td {
+  display: table-cell !important;
+  vertical-align: middle;
+  border: 1px solid #4d4d4d;
+  padding: 4px;
   min-width: 1.5em;
 }
 
