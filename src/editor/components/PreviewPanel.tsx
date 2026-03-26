@@ -124,10 +124,17 @@ const STEAM_BBCODE_CSS = `
   background: transparent;
 }
 
-.steam-preview-content .bb_blockquote_author {
+.steam-preview-content .bb_blockquote_author,
+.steam-preview-content .bb_quoteauthor {
   font-size: 12px;
   color: #898989;
+  font-style: italic;
   margin-bottom: 0.5rem;
+}
+
+.steam-preview-content .bb_quoteauthor b,
+.steam-preview-content .bb_blockquote_author b {
+  font-weight: bold;
 }
 
 /* ===== 剧透/折叠样式 ===== */
