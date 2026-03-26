@@ -224,8 +224,65 @@ const STEAM_BBCODE_CSS = `
   min-width: 1.5em;
 }
 
-/* ===== 图片样式 ===== */
-.steam-preview-content img {
+/* ===== 图片样式 (Steam sharedFilePreviewImage) ===== */
+/* 基础：所有预览图片 */
+.steam-preview-content img.sharedFilePreviewImage {
+  max-width: 100%;
+  vertical-align: baseline;
+  object-fit: fill;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* 浮动 - 左 */
+.steam-preview-content img.sharedFilePreviewImage.floatLeft {
+  display: block;
+  float: left;
+  margin: 4px 6px 4px 0px;
+}
+
+/* 浮动 - 右 */
+.steam-preview-content img.sharedFilePreviewImage.floatRight {
+  display: block;
+  float: right;
+  margin: 4px 0px 4px 6px;
+}
+
+/* 内联 */
+.steam-preview-content img.sharedFilePreviewImage.inline {
+  display: inline;
+  float: none;
+  margin: 0;
+}
+
+/* 尺寸 - 缩略图 (max-width: 311px，小图不放大) */
+.steam-preview-content img.sharedFilePreviewImage.sizeThumb {
+  max-width: 311px;
+}
+
+/* 尺寸 - 全宽 (拉伸至容器宽度，小图也放大) */
+.steam-preview-content img.sharedFilePreviewImage.sizeFull {
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 尺寸 - 原始 */
+.steam-preview-content img.sharedFilePreviewImage.sizeOriginal {
+  max-width: 100%;
+}
+
+/* 父链接 - 不干扰图片布局 */
+.steam-preview-content a.modalContentLink {
+  display: inline;
+  float: none;
+  margin: 0;
+  padding: 0;
+  text-decoration: none;
+}
+
+/* 非 sharedFilePreviewImage 的普通图片 */
+.steam-preview-content img:not(.sharedFilePreviewImage) {
   max-width: 100%;
   height: auto;
 }
@@ -238,19 +295,6 @@ const STEAM_BBCODE_CSS = `
 .steam-preview-content hr {
   border: 1px inset rgb(128, 128, 128);
   margin: 7px 0;
-}
-
-/* ===== 浮动图片样式 ===== */
-.steam-preview-content .bb_float_left {
-  float: left;
-  margin-right: 10px;
-  margin-bottom: 10px;
-}
-
-.steam-preview-content .bb_float_right {
-  float: right;
-  margin-left: 10px;
-  margin-bottom: 10px;
 }
 
 /* ===== 清除浮动 ===== */

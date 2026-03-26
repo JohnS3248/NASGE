@@ -367,6 +367,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // 获取当前存档（用于离线数据）
   const currentArchive = getCurrentArchive();
@@ -630,6 +631,40 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     return titleText || title;
   };
 
+  if (isCollapsed) {
+    return (
+      <aside
+        style={{
+          position: 'sticky',
+          top: '1rem',
+          alignSelf: 'flex-end'
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(false)}
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '0.4rem',
+            background: 'rgba(23, 26, 33, 0.95)',
+            border: '1px solid rgba(69, 75, 87, 0.6)',
+            color: '#8b8b8b',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
+          }}
+          title="展开目录"
+        >
+          {'☰'}
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside
       style={{
@@ -741,6 +776,24 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             ↻ 刷新
           </button>
         )}
+        {/* 折叠按钮 */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(true)}
+          style={{
+            padding: '0.3rem 0.5rem',
+            border: 'none',
+            borderRadius: '0.3rem',
+            background: 'transparent',
+            color: '#8b8b8b',
+            fontSize: '0.75rem',
+            cursor: 'pointer',
+            lineHeight: 1
+          }}
+          title="收起目录"
+        >
+          ✕
+        </button>
       </div>
 
       {/* 章节列表 */}
