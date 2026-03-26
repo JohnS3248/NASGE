@@ -335,18 +335,14 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
     // Steam 实际行为：使用 baseline（默认值），而非文档声称的 middle
     const containerStyle: React.CSSProperties = {
       display: "inline",
-      verticalAlign: "middle",
+      verticalAlign: "baseline",
       position: "relative",
     };
 
-    // 图片样式 - 严格按照 Steam CSS 规则
-    // Steam CSS: .sharedFilePreviewImage { max-width: 100%; }
-    // sizeOriginal = 原始尺寸，不加额外限制
-    // sizeThumb = max-width: 311px (STEAM_THUMB_WIDTH)
-    // sizeFull = max-width: 638px (STEAM_CONTENT_WIDTH)
+    // 图片样式 - 对齐 Steam 官方: display=inline, vAlign=baseline, margin=0
     const imageStyle: React.CSSProperties = {
       display: "inline",
-      verticalAlign: "middle",
+      verticalAlign: "baseline",
     };
 
     // 根据 preset 设置尺寸限制（与 steamImage.tsx 保持一致）
@@ -453,7 +449,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       data-image-node-id={imageNodeId ?? attrPreviewId ?? imageNode?.previewId}
       data-preview-id={attrPreviewId ?? imageNode?.previewId}
       data-size-preset={attrSizePreset || "original"}
-      style={{ display: "inline", verticalAlign: "middle" }}
+      style={{ display: "inline", verticalAlign: "baseline" }}
     >
       <span style={containerStyle}>
         {src ? (

@@ -722,43 +722,43 @@ function computeDisplayStyles(
   const isThumb = sizePreset === "thumb" || sizePreset === "half";
   const isFull = sizePreset === "full";
 
-  // 容器样式
+  // 容器样式 — margin 对齐 Steam 官方 (tests/new/steam-official-image-styles.md)
   const containerStyle: React.CSSProperties = {
     position: "relative",
     overflow: "hidden",
     padding: 0,
-    verticalAlign: "top",
+    verticalAlign: "baseline",
   };
 
+  // Steam float margin: floatLeft="4px 6px 4px 0px", floatRight="4px 0px 4px 6px"
+  // Steam inline margin: "0px"
   if (isFull) {
-    // sizeFull: 占满宽度，float 无效
+    // sizeFull: 占满宽度，Steam 仍带 floatLeft
     containerStyle.display = "block";
     containerStyle.width = "100%";
-    containerStyle.margin = "1rem 0";
+    containerStyle.margin = "4px 6px 4px 0px";
   } else if (isThumb) {
-    // sizeThumb/half: 最大 311px
-    // 使用 display: block 让 float 生效
     containerStyle.display = isFloat ? "block" : "inline-block";
     containerStyle.maxWidth = `${STEAM_THUMB_WIDTH}px`;
     if (isFloat) {
       containerStyle.float = alignment === "floatLeft" ? "left" : "right";
       containerStyle.margin = alignment === "floatLeft"
-        ? "0 10px 5px 0"
-        : "0 0 5px 10px";
+        ? "4px 6px 4px 0px"
+        : "4px 0px 4px 6px";
     } else {
-      containerStyle.margin = "0.5rem 0";
+      containerStyle.margin = "0";
     }
   } else {
-    // sizeOriginal: 保持原尺寸，不超过容器宽度
+    // sizeOriginal
     containerStyle.display = isFloat ? "block" : "inline-block";
     containerStyle.maxWidth = "100%";
     if (isFloat) {
       containerStyle.float = alignment === "floatLeft" ? "left" : "right";
       containerStyle.margin = alignment === "floatLeft"
-        ? "0 10px 5px 0"
-        : "0 0 5px 10px";
+        ? "4px 6px 4px 0px"
+        : "4px 0px 4px 6px";
     } else {
-      containerStyle.margin = "0.5rem 0";
+      containerStyle.margin = "0";
     }
   }
 
@@ -770,7 +770,7 @@ function computeDisplayStyles(
     maxWidth: "100%",
     userSelect: "none",
     // pointerEvents: "none" 已移除 - 允许图片响应点击和右键事件
-    objectFit: "contain",
+    objectFit: "fill",
     margin: 0,
   };
 
@@ -782,19 +782,16 @@ function baseContainerStyle(
   widthPx?: number,
   widthMode: WidthMode = "fixed"
 ): React.CSSProperties {
+  // margin 对齐 Steam 官方
   const base: React.CSSProperties = {
     display: widthMode === "full" ? "block" : "inline-block",
-    margin:
-      widthMode === "full"
-        ? "1rem 0"
-        : widthMode === "inline-auto"
-          ? "0 0.45rem 0.35rem 0"
-          : "0.75rem 1rem 0.75rem 0",
+    margin: widthMode === "full"
+      ? "4px 6px 4px 0px"
+      : "0",
     padding: 0,
     overflow: "hidden",
     position: "relative",
-    verticalAlign: "top",
-    // 添加最大宽度限制，防止图片过大撑破布局
+    verticalAlign: "baseline",
     maxWidth: "100%"
   };
 
@@ -802,25 +799,24 @@ function baseContainerStyle(
     base.width = "100%";
   } else if (typeof widthPx === "number" && widthPx > 0) {
     base.width = `${widthPx}px`;
-    // 确保容器不会超过父容器宽度
     base.maxWidth = "100%";
   }
 
   if (alignment === "floatLeft") {
     return {
       ...base,
-      display: "block", // 使用 block 让 float 正常工作
+      display: "block",
       float: "left",
-      margin: "0 10px 5px 0"
+      margin: "4px 6px 4px 0px"
     };
   }
 
   if (alignment === "floatRight") {
     return {
       ...base,
-      display: "block", // 使用 block 让 float 正常工作
+      display: "block",
       float: "right",
-      margin: "0 0 5px 10px"
+      margin: "4px 0px 4px 6px"
     };
   }
 
@@ -837,8 +833,8 @@ function resolveImageStyle(dimensions: RenderDimensions): React.CSSProperties {
     maxWidth: "100%",
     userSelect: "none",
     // pointerEvents: "none" 已移除 - 允许图片响应点击和右键事件
-    // 确保图片保持原始宽高比
-    objectFit: "contain",
+    // Steam 官方使用 object-fit: fill
+    objectFit: "fill",
     // 覆盖prose等全局样式
     margin: "0 !important" as any,
     // 确保图片宽度不会溢出容器

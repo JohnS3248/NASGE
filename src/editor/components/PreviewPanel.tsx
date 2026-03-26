@@ -399,7 +399,8 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
         boxShadow: "var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))",
         display: "flex",
         flexDirection: "column",
-        overflow: "hidden"
+        overflow: "hidden",
+        minWidth: "638px"
       }}
     >
       {/* 预览内容区域 */}

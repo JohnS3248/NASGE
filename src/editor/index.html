@@ -29,7 +29,9 @@
         font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
         font-size: 14px;
         line-height: 20px !important;
+        font-weight: 400;
         color: #969696;
+        overflow: hidden;
       }
 
       /* 段落样式: Steam 使用 <br> 换行，纯靠 line-height 控制间距 */
@@ -193,18 +195,6 @@
 
       .nasge-image {
         max-width: 100%;
-        margin: 0.5rem 0;
-      }
-
-      /* ===== 图片节点样式: 对齐 Steam 指南预览 ===== */
-      /* 图片节点容器：移除底部 margin，与 Steam 一致 */
-      .nasge-image-node {
-        margin-bottom: 0 !important;
-      }
-
-      /* 图片节点后面紧跟的段落：移除顶部 margin */
-      .nasge-image-node + p {
-        margin-top: 0;
       }
       /* 引用块: Steam blockquote.bb_blockquote */
       .nasge-quote {
