@@ -145,7 +145,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "hr") {
-    return block("[hr]", context);
+    // 自闭合块：不加尾部 \n，由后续 <p></p> 提供换行
+    return "[hr]";
   }
 
   if (tagName === "br") {
@@ -180,13 +181,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     const tagType = "previewimg";
     const bbcode = `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
 
-    // inline 图片不添加换行，与文字保持同行
-    if (alignment === "inline") {
-      return bbcode;
-    }
-
-    // 浮动图片使用 block() 添加换行
-    return block(bbcode, context);
+    // 自闭合块：统一不加尾部 \n，由后续 <p></p> 提供换行
+    return bbcode;
   }
 
   // 处理 SteamImageInline 节点：<span data-nasge-image="inline">
@@ -300,6 +296,11 @@ function wrapTextInParagraphs(html: string): string {
   const isBlockTag = (tagName: string) =>
     /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test(tagName);
 
+  // 自闭合块元素：Steam 不消费后续 \n（每个 \n 都渲染为 <br>）
+  // 容器块元素（heading/blockquote/list/code/table）：Steam 消费隐含的 \n
+  const isSelfClosingBlock = (tagName: string) =>
+    /^(hr|figure)$/i.test(tagName);
+
   const processNode = (node: ChildNode) => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent || "";
@@ -338,7 +339,8 @@ function wrapTextInParagraphs(html: string): string {
         // 块级元素：先刷新缓冲区，然后输出块级元素
         flushParagraph();
         result.push(element.outerHTML);
-        lastWasBlock = true;
+        // 自闭合块不消费后续 \n，容器块消费
+        lastWasBlock = !isSelfClosingBlock(tagName);
       } else {
         // 行内元素：加入缓冲区
         paragraphBuffer.push(element.cloneNode(true) as ChildNode);
