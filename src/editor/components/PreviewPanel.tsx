@@ -17,6 +17,9 @@ const STEAM_BBCODE_CSS = `
   line-height: 20px;
   color: #969696;
   font-family: "Motiva Sans", Arial, Helvetica, sans-serif;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: normal;
 }
 
 /* ===== 段落样式 ===== */
