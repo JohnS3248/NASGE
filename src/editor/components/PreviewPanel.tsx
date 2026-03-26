@@ -80,9 +80,8 @@ const STEAM_BBCODE_CSS = `
 
 /* ===== 链接样式 ===== */
 .steam-preview-content a {
-  color: #66c0f4;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: #ebebeb;
+  text-decoration: none;
 }
 
 .steam-preview-content a:hover {
@@ -102,7 +101,7 @@ const STEAM_BBCODE_CSS = `
   word-wrap: break-word;
   overflow-x: auto;
   background: rgba(6, 14, 25, 0.92);
-  color: #acb2b8;
+  color: #969696;
   display: block;
 }
 
@@ -143,16 +142,24 @@ const STEAM_BBCODE_CSS = `
 }
 
 /* ===== 列表样式 ===== */
-.steam-preview-content ul,
-.steam-preview-content ol {
-  padding-left: 20px;
-  margin: 0 0 0.5em;
+.steam-preview-content ul {
+  margin: 14px 0 8px 14px;
+  padding-left: 0;
   font-size: 14px;
-  line-height: 20px;
+  line-height: 19px;
+}
+
+.steam-preview-content ol {
+  margin: 14px 0 8px 0;
+  padding-left: 40px;
+  font-size: 14px;
+  line-height: 19px;
 }
 
 .steam-preview-content li {
-  margin-bottom: 0.25em;
+  line-height: 19px;
+  padding-right: 14px;
+  margin-bottom: 0;
 }
 
 /* ===== 表格样式 ===== */
@@ -160,7 +167,7 @@ const STEAM_BBCODE_CSS = `
 .steam-preview-content table {
   display: table !important;
   font-size: 12px;
-  margin: 0.6rem 0;
+  margin: 0;
   border-collapse: collapse;
 }
 
@@ -222,9 +229,8 @@ const STEAM_BBCODE_CSS = `
 
 /* ===== 水平线样式 ===== */
 .steam-preview-content hr {
-  border: none;
-  border-top: 1px solid #4d4d4d;
-  margin: 1em 0;
+  border: 1px inset rgb(128, 128, 128);
+  margin: 7px 0;
 }
 
 /* ===== 浮动图片样式 ===== */
