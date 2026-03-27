@@ -181,8 +181,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     const tagType = "previewimg";
     const bbcode = `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
 
-    // 自闭合块：统一不加尾部 \n，由后续 <p></p> 提供换行
-    return bbcode;
+    // figure 等同容器块：添加尾部 \n（与 wrapTextInParagraphs 吸收的 \n 对应）
+    return block(bbcode, context);
   }
 
   // 处理 SteamImageInline 节点：<span data-nasge-image="inline">
@@ -296,10 +296,10 @@ function wrapTextInParagraphs(html: string): string {
   const isBlockTag = (tagName: string) =>
     /^(p|div|h[1-6]|ul|ol|li|table|tr|td|th|blockquote|pre|hr|figure)$/i.test(tagName);
 
-  // 自闭合块元素：Steam 不消费后续 \n（每个 \n 都渲染为 <br>）
-  // 容器块元素（heading/blockquote/list/code/table）：Steam 消费隐含的 \n
+  // 自闭合块元素（hr）：Steam 不消费后续 \n（每个 \n 都渲染为 <br>）
+  // 容器块元素（heading/blockquote/list/code/table/figure）：Steam 消费隐含的 \n
   const isSelfClosingBlock = (tagName: string) =>
-    /^(hr|figure)$/i.test(tagName);
+    /^(hr)$/i.test(tagName);
 
   const processNode = (node: ChildNode) => {
     if (node.nodeType === Node.TEXT_NODE) {
