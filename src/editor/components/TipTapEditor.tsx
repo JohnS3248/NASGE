@@ -42,7 +42,7 @@ type ImageContextPayload = {
   alignment: ImageAlignment; // 被点击图片的对齐方式
 };
 
-type ContextMenuMode = "selection" | "empty" | "image";
+type ContextMenuMode = "selection" | "empty" | "image" | "table";
 
 type ContextMenuState = {
   visible: boolean;
@@ -787,6 +787,25 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             }
           }
 
+          // 检测是否在表格单元格内右键
+          const tableCell = target?.closest<HTMLElement>("td, th");
+          if (tableCell && target?.closest(".nasge-table")) {
+            event.preventDefault();
+            // 将光标移到右键点击的单元格内
+            const coords = editor.view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (coords) {
+              editor.chain().focus().setTextSelection(coords.pos).run();
+            }
+            const menuPos = calcMenuPosition(event.clientX, event.clientY, 180, 380);
+            setContextMenu({
+              visible: true,
+              x: menuPos.x,
+              y: menuPos.y,
+              mode: "table"
+            });
+            return;
+          }
+
           const mode: ContextMenuMode = editor.state.selection.empty ? "empty" : "selection";
 
           // 检查对应菜单的总开关
@@ -932,6 +951,20 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 图片数据暂不可用。
               </div>
             )
+          ) : contextMenu.mode === "table" ? (
+            <>
+              <MenuSectionLabel label="行操作" />
+              <MenuItem label="上方插入行" onClick={() => editor.chain().focus().addRowBefore().run()} onComplete={closeContextMenu} />
+              <MenuItem label="下方插入行" onClick={() => editor.chain().focus().addRowAfter().run()} onComplete={closeContextMenu} />
+              <MenuItem label="删除当前行" onClick={() => editor.chain().focus().deleteRow().run()} onComplete={closeContextMenu} danger />
+              <MenuDivider />
+              <MenuSectionLabel label="列操作" />
+              <MenuItem label="左侧插入列" onClick={() => editor.chain().focus().addColumnBefore().run()} onComplete={closeContextMenu} />
+              <MenuItem label="右侧插入列" onClick={() => editor.chain().focus().addColumnAfter().run()} onComplete={closeContextMenu} />
+              <MenuItem label="删除当前列" onClick={() => editor.chain().focus().deleteColumn().run()} onComplete={closeContextMenu} danger />
+              <MenuDivider />
+              <MenuItem label="删除整个表格" onClick={() => editor.chain().focus().deleteTable().run()} onComplete={closeContextMenu} danger />
+            </>
           ) : contextMenu.mode === "selection" ? (
             <>
               {/* 动态渲染文字选择菜单 */}

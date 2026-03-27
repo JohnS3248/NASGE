@@ -14,9 +14,11 @@ htmls/
 notes/
 docs/
 学习指导/
+htmls/
 
 # 打包输出
 zips/
 
 # 其他实验性内容
 others/
+.mcp.json

@@ -31,6 +31,7 @@
         line-height: 20px !important;
         font-weight: 400;
         color: #969696;
+        caret-color: #66c0f4;
         overflow: hidden;
       }
 
@@ -191,6 +192,16 @@
         padding: 4px;
         background: transparent;
         min-width: 1.5em;
+      }
+
+      /* 选中单元格高亮 */
+      .nasge-table .selectedCell {
+        background: rgba(102, 192, 244, 0.08) !important;
+      }
+
+      /* 表格 hover 行高亮 */
+      .nasge-table tr:hover td {
+        background: rgba(102, 192, 244, 0.03);
       }
 
       .nasge-image {
