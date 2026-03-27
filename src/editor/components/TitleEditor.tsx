@@ -305,9 +305,10 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       <div
         style={{
           width: '100%',
-          color: 'var(--text-primary, #d7e8ff)',
-          fontSize: '1.1rem',
-          fontWeight: 600,
+          color: 'var(--color-primary, #66c0f4)',
+          fontSize: '18px',
+          fontWeight: 400,
+          fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif',
           outline: 'none'
         }}
         onContextMenu={(event) => {
@@ -457,7 +458,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         .title-editor-content {
           outline: none;
           font-family: inherit;
-          line-height: 1.5;
+          line-height: normal;
         }
 
         .title-editor-content p {
@@ -501,8 +502,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         /* 占位符样式 */
         .title-editor-content .ProseMirror p.is-editor-empty:first-child::before {
           content: '章节标题（支持拖拽/粘贴图片）';
-          color: var(--text-secondary, #8aa4c7);
-          opacity: 0.5;
+          color: rgba(102, 192, 244, 0.4);
+          opacity: 1;
           pointer-events: none;
           position: absolute;
         }

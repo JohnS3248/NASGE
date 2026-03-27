@@ -300,6 +300,16 @@ const STEAM_BBCODE_CSS = `
   margin: 7px 0;
 }
 
+/* ===== 章节标题 ===== */
+.steam-preview-content .subSectionTitle {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: normal;
+  color: #66c0f4;
+  padding: 10px 0 0 0;
+  margin: 0 0 10px 0;
+}
+
 /* ===== 清除浮动 ===== */
 .steam-preview-content::after {
   content: "";

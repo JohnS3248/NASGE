@@ -17,8 +17,8 @@
         color: #e3edf9;
       }
 
-      /* ===== 编辑器基础样式 ===== */
-      .ProseMirror {
+      /* ===== 主编辑器基础样式（限定在 .nasge-editor-container 内） ===== */
+      .nasge-editor-container .ProseMirror {
         min-height: 200px;
         outline: none;
         /* 对齐 Steam 指南预览: 内容宽度 638px */
@@ -35,50 +35,50 @@
       }
 
       /* 段落样式: Steam 使用 <br> 换行，纯靠 line-height 控制间距 */
-      .ProseMirror p {
+      .nasge-editor-container .ProseMirror p {
         margin: 0;
       }
 
-      .ProseMirror ul {
+      .nasge-editor-container .ProseMirror ul {
         margin: 14px 0 8px 14px;
         padding-left: 0;
         font-size: 14px;
         line-height: 19px;
       }
 
-      .ProseMirror ol {
+      .nasge-editor-container .ProseMirror ol {
         margin: 14px 0 8px 0;
         padding-left: 40px;
         font-size: 14px;
         line-height: 19px;
       }
 
-      .ProseMirror li {
+      .nasge-editor-container .ProseMirror li {
         line-height: 19px;
         padding-right: 14px;
       }
 
       /* 确保列表有标记（移除 prose 后需要显式声明） */
-      .ProseMirror ul {
+      .nasge-editor-container .ProseMirror ul {
         list-style-type: disc;
       }
 
-      .ProseMirror ol {
+      .nasge-editor-container .ProseMirror ol {
         list-style-type: decimal;
       }
 
       /* 水平线 */
-      .ProseMirror hr {
+      .nasge-editor-container .ProseMirror hr {
         border: 1px inset rgb(128, 128, 128);
         margin: 7px 0;
       }
 
       /* 图片最大宽度 */
-      .ProseMirror img {
+      .nasge-editor-container .ProseMirror img {
         max-width: 100%;
       }
 
-      .ProseMirror code {
+      .nasge-editor-container .ProseMirror code {
         background: transparent;
         padding: 0.1rem 0.25rem;
         border-radius: 0;
@@ -87,13 +87,13 @@
       }
 
       /* 删除线: Steam span.bb_strike */
-      .ProseMirror s {
+      .nasge-editor-container .ProseMirror s {
         text-decoration: line-through;
       }
 
       /* ===== 标题样式: 完全对齐 Steam bb_h1/bb_h2/bb_h3 ===== */
       /* H1: Steam div.bb_h1 */
-      .ProseMirror h1 {
+      .nasge-editor-container .ProseMirror h1 {
         font-size: 20px;
         line-height: 23px;
         color: #5aa9d6;
@@ -105,7 +105,7 @@
       }
 
       /* H2: Steam div.bb_h2 */
-      .ProseMirror h2 {
+      .nasge-editor-container .ProseMirror h2 {
         color: #5aa9d6;
         margin-bottom: 6px;
         margin-top: 8px;
@@ -116,7 +116,7 @@
       }
 
       /* H3: Steam div.bb_h3 */
-      .ProseMirror h3 {
+      .nasge-editor-container .ProseMirror h3 {
         color: #5aa9d6;
         margin-bottom: 6px;
         margin-top: 8px;
@@ -127,7 +127,7 @@
       }
 
       /* 代码块: Steam div.bb_code */
-      .ProseMirror pre {
+      .nasge-editor-container .ProseMirror pre {
         border: 1px solid #535354;
         border-radius: 3px;
         padding: 12px;
@@ -140,7 +140,7 @@
         background: rgba(6, 14, 25, 0.92);
       }
 
-      .ProseMirror a {
+      .nasge-editor-container .ProseMirror a {
         color: #ebebeb;
         text-decoration: none;
       }
