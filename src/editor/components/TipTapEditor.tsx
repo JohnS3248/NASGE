@@ -160,6 +160,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     }
   });
 
+  // DEBUG: 暴露 editor 实例用于控制台测试
+  useEffect(() => {
+    if (editor) (window as any).__editor = editor;
+  }, [editor]);
+
   // === 图片节点状态 (新 Store 优先，旧 Store 兜底) ===
   const contextMenuImageEntity = useImageStore(
     useCallback(

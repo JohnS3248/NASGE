@@ -21,6 +21,10 @@ import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
   const theme = useEditorConfigStore.getState().theme;
   document.documentElement.dataset.theme = theme;
 });
+import("./utils/bbcode").then(({ bbcodeToHtml, htmlToBBCode }) => {
+  (window as any).__bbcodeToHtml = bbcodeToHtml;
+  (window as any).__htmlToBBCode = htmlToBBCode;
+});
 // === END DEBUG ===
 
 const container = document.getElementById("root");
