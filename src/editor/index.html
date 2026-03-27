@@ -35,6 +35,11 @@
         overflow: hidden;
       }
 
+      /* GapCursor: 块级元素间的光标指示线（深色背景适配） */
+      .nasge-editor-container .ProseMirror-gapcursor:after {
+        border-top: 1px solid #66c0f4;
+      }
+
       /* 段落样式: Steam 使用 <br> 换行，纯靠 line-height 控制间距 */
       .nasge-editor-container .ProseMirror p {
         margin: 0;

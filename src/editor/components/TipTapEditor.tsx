@@ -23,7 +23,6 @@ import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } fr
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 import { loggers } from "../../shared/logger";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
-import TableControls from "./TableControls";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -826,9 +825,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         }}
       >
         <EditorContent editor={editor} />
-
-        {/* 表格控制条 */}
-        <TableControls editor={editor} containerRef={editorContainerRef} />
 
         {/* 字符数统计 - 固定在编辑器右下角 */}
         <div
