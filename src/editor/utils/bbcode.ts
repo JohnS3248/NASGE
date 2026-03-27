@@ -130,7 +130,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   if (tagName === "ul" || tagName === "ol") {
     const open = tagName === "ul" ? "[list]" : "[olist]";
     const close = tagName === "ul" ? "[/list]" : "[/olist]";
-    const body = serializeChildren(node).replace(/\n+$/, "\n");
+    const body = serializeChildren(node).replace(/^\n+/, "").replace(/\n+$/, "\n");
     return block(`${open}\n${body}${close}`, context);
   }
 
@@ -154,7 +154,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "table") {
-    const body = serializeChildren(node).replace(/\n+$/, "\n");
+    const body = serializeChildren(node).replace(/^\n+/, "").replace(/\n{2,}/g, "\n").replace(/\n+$/, "\n");
     return block(`[table]\n${body}[/table]`, context);
   }
 
