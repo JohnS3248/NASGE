@@ -10,7 +10,8 @@ import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import ImageGrid from "./ImageGrid";
 import SmartImageGrid from "./SmartImageGrid";
 import SearchBar from "./SearchBar";
-import { COLORS, Z_INDEX } from "./styles";
+import { Z_INDEX } from "./styles";
+import { ImageIcon, XIcon } from "./icons";
 
 interface FullscreenPanelProps {
   images: ImageWithState[];
@@ -76,77 +77,33 @@ const FullscreenPanel: React.FC<FullscreenPanelProps> = ({
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: "rgba(0, 0, 0, 0.85)",
-        zIndex: Z_INDEX.panelActive + 100,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 40
-      }}
+      className="fixed inset-0 bg-black/85 flex flex-col items-center justify-center p-10"
+      style={{ zIndex: Z_INDEX.panelActive + 100 }}
       onClick={handleBackgroundClick}
     >
       {/* 内容容器 */}
       <div
-        style={{
-          width: "100%",
-          maxWidth: 1400,
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          background: COLORS.panelBg,
-          borderRadius: 12,
-          border: `1px solid ${COLORS.border}`,
-          boxShadow: `0 8px 32px ${COLORS.shadow}`,
-          overflow: "hidden"
-        }}
+        className="w-full max-w-[1400px] h-full flex flex-col bg-[rgba(13,23,36,0.95)] rounded-lg border border-border-accent shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px",
-            borderBottom: `1px solid ${COLORS.border}`,
-            background: "rgba(8, 16, 28, 0.8)"
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 18 }}>📷</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-accent bg-bg-app/80">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={18} />
+            <span className="text-sm font-semibold text-text-primary">
               {archiveName || "图片池"}
             </span>
-            <span style={{ fontSize: 12, color: COLORS.textMuted }}>
+            <span className="text-xs text-text-muted">
               ({images.length}/{archiveImages.length})
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              width: 28,
-              height: 28,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-              background: "transparent",
-              color: COLORS.textSecondary,
-              cursor: "pointer",
-              fontSize: 16,
-              borderRadius: 4
-            }}
+            className="w-7 h-7 flex items-center justify-center border-none bg-transparent text-text-secondary cursor-pointer rounded-sm hover:bg-danger/30 hover:text-danger"
             title="退出全屏 (ESC)"
           >
-            ✕
+            <XIcon size={16} />
           </button>
         </div>
 
@@ -165,13 +122,7 @@ const FullscreenPanel: React.FC<FullscreenPanelProps> = ({
         />
 
         {/* 图片网格 */}
-        <div
-          style={{
-            flex: 1,
-            overflow: "auto",
-            padding: 16
-          }}
-        >
+        <div className="flex-1 overflow-auto p-4">
           {smartLayoutEnabled ? (
             <SmartImageGrid
               images={images}

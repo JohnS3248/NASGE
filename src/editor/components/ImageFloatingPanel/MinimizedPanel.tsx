@@ -3,7 +3,8 @@
  * 显示为小型浮动窗口，点击可恢复
  */
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { minimizedStyle, COLORS } from "./styles";
+import { Z_INDEX } from "./styles";
+import { ImageIcon } from "./icons";
 import { useImagePanelStore, PanelPosition } from "../../stores/useImagePanelStore";
 
 interface MinimizedPanelProps {
@@ -18,7 +19,6 @@ const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
   onRestore
 }) => {
   const { position, setPosition } = useImagePanelStore();
-  const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
 
@@ -77,33 +77,21 @@ const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
 
   return (
     <div
+      className="fixed flex items-center gap-2 px-3 py-2 bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-md shadow-lg text-[13px] font-semibold text-text-primary transition-all duration-150 ease-out hover:bg-[rgba(13,23,36,0.98)] hover:border-[rgba(102,192,244,0.4)]"
       style={{
-        ...minimizedStyle,
         left: position.x,
         top: position.y,
-        background: isHovered ? COLORS.panelBgHover : COLORS.panelBg,
-        borderColor: isHovered ? COLORS.borderHover : COLORS.border,
-        cursor: isDragging ? "grabbing" : "pointer"
+        cursor: isDragging ? "grabbing" : "pointer",
+        zIndex: Z_INDEX.minimized
       }}
       onMouseDown={handleMouseDown}
       onClick={handleClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
-      <span style={{ fontSize: 16 }}>📷</span>
-      <span style={{
-        maxWidth: archiveName ? 100 : undefined,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap'
-      }}>
+      <ImageIcon size={16} />
+      <span className={archiveName ? "max-w-[100px] overflow-hidden text-ellipsis whitespace-nowrap" : ""}>
         {archiveName || '图片池'}
       </span>
-      <span style={{
-        fontSize: 12,
-        color: COLORS.textMuted,
-        fontWeight: 400
-      }}>
+      <span className="text-xs text-text-muted font-normal">
         ({imageCount})
       </span>
     </div>

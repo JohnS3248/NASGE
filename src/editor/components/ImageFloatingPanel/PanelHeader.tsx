@@ -2,14 +2,9 @@
  * 悬浮窗标题栏组件
  * 支持拖拽移动和窗口控制按钮
  */
-import React, { useCallback, useState } from "react";
-import {
-  headerStyle,
-  headerTitleStyle,
-  headerButtonsStyle,
-  headerButtonStyle,
-  COLORS
-} from "./styles";
+import React from "react";
+import { SIZES } from "./styles";
+import { ImageIcon, TagIcon, MaximizeIcon, MinimizeIcon, MinusIcon } from "./icons";
 
 interface PanelHeaderProps {
   imageCount: number;
@@ -24,6 +19,10 @@ interface PanelHeaderProps {
   onToggleFullscreen?: () => void;
 }
 
+const btnBase = "w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-secondary rounded-sm cursor-pointer transition-all duration-150 ease-out";
+const btnHover = "hover:bg-accent-subtle hover:text-accent";
+const btnCloseHover = "hover:bg-danger/30 hover:text-danger";
+
 const PanelHeader: React.FC<PanelHeaderProps> = ({
   imageCount,
   archiveName,
@@ -36,88 +35,37 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onOpenTagManager,
   onToggleFullscreen
 }) => {
-  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
-
-  const getButtonStyle = useCallback(
-    (buttonId: string, isClose = false): React.CSSProperties => ({
-      ...headerButtonStyle,
-      background: hoveredButton === buttonId
-        ? (isClose ? "rgba(199, 69, 69, 0.3)" : COLORS.accentDark)
-        : "transparent",
-      color: hoveredButton === buttonId
-        ? (isClose ? COLORS.error : COLORS.accent)
-        : COLORS.textSecondary
-    }),
-    [hoveredButton]
-  );
-
   return (
     <div
-      style={headerStyle}
+      className="flex items-center justify-between bg-bg-app/90 border-b border-border-accent cursor-move"
+      style={{ height: SIZES.headerHeight, padding: `0 ${SIZES.padding}px` }}
       onMouseDown={onDragStart}
     >
       {/* 标题 */}
-      <div style={headerTitleStyle}>
-        <span style={{ fontSize: 16 }}>📷</span>
-        <span style={{
-          maxWidth: archiveName ? 120 : undefined,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
+      <div className="flex items-center gap-2 text-[13px] font-semibold text-text-primary">
+        <ImageIcon size={16} />
+        <span className={archiveName ? "max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap" : ""}>
           {archiveName || '图片池'}
         </span>
-        <span style={{
-          fontSize: 12,
-          color: COLORS.textMuted,
-          fontWeight: 400
-        }}>
+        <span className="text-xs text-text-muted font-normal">
           ({imageCount})
         </span>
       </div>
 
       {/* 控制按钮 */}
       <div
-        style={headerButtonsStyle}
-        onMouseDown={(e) => e.stopPropagation()} // 防止触发拖拽
+        className="flex items-center gap-1"
+        onMouseDown={(e) => e.stopPropagation()}
       >
-        {/*
-         * 刷新按钮 - 已禁用保留
-         * 图片池刷新功能目前存在很大问题，已禁用保留
-         * 问题：刷新后可能导致状态不一致，待后续修复
-         */}
-        {false && (
-          <button
-            type="button"
-            title="刷新图片池"
-            style={{
-              ...getButtonStyle("refresh"),
-              opacity: isRefreshing ? 0.5 : 1,
-              cursor: isRefreshing ? "wait" : "pointer"
-            }}
-            onMouseEnter={() => setHoveredButton("refresh")}
-            onMouseLeave={() => setHoveredButton(null)}
-            onClick={() => {
-              if (!isRefreshing) {
-                onRefresh();
-              }
-            }}
-          >
-            ↻
-          </button>
-        )}
-
         {/* 管理标签按钮 */}
         {onOpenTagManager && (
           <button
             type="button"
             title="管理标签"
-            style={getButtonStyle("tags")}
-            onMouseEnter={() => setHoveredButton("tags")}
-            onMouseLeave={() => setHoveredButton(null)}
+            className={`${btnBase} ${btnHover}`}
             onClick={onOpenTagManager}
           >
-            🏷
+            <TagIcon size={14} />
           </button>
         )}
 
@@ -126,37 +74,31 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           <button
             type="button"
             title={isFullscreen ? "退出全屏" : "全屏模式"}
-            style={getButtonStyle("fullscreen")}
-            onMouseEnter={() => setHoveredButton("fullscreen")}
-            onMouseLeave={() => setHoveredButton(null)}
+            className={`${btnBase} ${btnHover}`}
             onClick={onToggleFullscreen}
           >
-            {isFullscreen ? "⊡" : "⊞"}
+            <MaximizeIcon size={14} />
           </button>
         )}
 
-        {/* 最小化（收到左下角小面板） */}
+        {/* 最小化 */}
         <button
           type="button"
           title="最小化"
-          style={getButtonStyle("minimize")}
-          onMouseEnter={() => setHoveredButton("minimize")}
-          onMouseLeave={() => setHoveredButton(null)}
+          className={`${btnBase} ${btnHover}`}
           onClick={onMinimize}
         >
-          ▼
+          <MinimizeIcon size={14} />
         </button>
 
-        {/* 关闭（收到左下角按钮） */}
+        {/* 关闭 */}
         <button
           type="button"
           title="关闭"
-          style={getButtonStyle("close", true)}
-          onMouseEnter={() => setHoveredButton("close")}
-          onMouseLeave={() => setHoveredButton(null)}
+          className={`${btnBase} ${btnCloseHover}`}
           onClick={onClose}
         >
-          ─
+          <MinusIcon size={14} />
         </button>
       </div>
     </div>

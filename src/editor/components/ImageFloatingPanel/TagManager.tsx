@@ -4,7 +4,7 @@
  */
 import React, { useState, useRef, useEffect } from "react";
 import { useGuideStore, TAG_COLORS, ImageTag } from "../../stores/useGuideStore";
-import { COLORS, SIZES } from "./styles";
+import { PencilIcon, TrashIcon, XIcon, PlusIcon } from "./icons";
 
 interface TagManagerProps {
   visible: boolean;
@@ -23,30 +23,23 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
   const archive = getCurrentArchive();
   const tags = archive?.imageTags || [];
 
-  // 新建标签状态
   const [isCreating, setIsCreating] = useState(false);
   const [newTagName, setNewTagName] = useState("");
   const newTagInputRef = useRef<HTMLInputElement>(null);
 
-  // 编辑标签状态
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
 
-  // 颜色选择器状态
   const [colorPickerTagId, setColorPickerTagId] = useState<string | null>(null);
-
-  // 删除确认状态
   const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
 
-  // 聚焦新建输入框
   useEffect(() => {
     if (isCreating && newTagInputRef.current) {
       newTagInputRef.current.focus();
     }
   }, [isCreating]);
 
-  // 聚焦编辑输入框
   useEffect(() => {
     if (editingTagId && editInputRef.current) {
       editInputRef.current.focus();
@@ -56,7 +49,6 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
 
   if (!visible || !currentArchiveId) return null;
 
-  // 创建标签
   const handleCreate = () => {
     if (!newTagName.trim()) return;
     createTag(currentArchiveId, newTagName.trim());
@@ -64,13 +56,11 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
     setIsCreating(false);
   };
 
-  // 开始编辑
   const startEditing = (tag: ImageTag) => {
     setEditingTagId(tag.id);
     setEditingName(tag.name);
   };
 
-  // 保存编辑
   const saveEditing = () => {
     if (!editingTagId || !editingName.trim()) {
       setEditingTagId(null);
@@ -80,13 +70,11 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
     setEditingTagId(null);
   };
 
-  // 更改颜色
   const handleColorChange = (tagId: string, color: string) => {
     updateTag(currentArchiveId, tagId, { color });
     setColorPickerTagId(null);
   };
 
-  // 删除标签
   const handleDelete = (tagId: string) => {
     deleteTag(currentArchiveId, tagId);
     setDeletingTagId(null);
@@ -94,89 +82,31 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
 
   return (
     <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0, 0, 0, 0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2000
-      }}
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[2000]"
       onClick={onClose}
     >
       <div
-        style={{
-          width: 420,
-          maxHeight: "80vh",
-          background: COLORS.panelBg,
-          border: `1px solid ${COLORS.border}`,
-          borderRadius: SIZES.borderRadius,
-          boxShadow: `0 8px 32px ${COLORS.shadow}`,
-          display: "flex",
-          flexDirection: "column"
-        }}
+        className="w-[420px] max-h-[80vh] bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-md shadow-2xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 16px",
-            borderBottom: `1px solid ${COLORS.border}`
-          }}
-        >
-          <span style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary }}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-accent">
+          <span className="text-sm font-semibold text-text-primary">
             管理标签
           </span>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              width: 24,
-              height: 24,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-              background: "transparent",
-              color: COLORS.textMuted,
-              cursor: "pointer",
-              borderRadius: 4,
-              fontSize: 16
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(199, 69, 69, 0.2)";
-              e.currentTarget.style.color = COLORS.error;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = COLORS.textMuted;
-            }}
+            className="w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-muted cursor-pointer rounded-sm hover:bg-danger/20 hover:text-danger"
           >
-            ×
+            <XIcon size={16} />
           </button>
         </div>
 
         {/* 标签列表 */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "8px 0"
-          }}
-        >
+        <div className="flex-1 overflow-y-auto py-2">
           {tags.length === 0 && !isCreating ? (
-            <div
-              style={{
-                padding: "24px 16px",
-                textAlign: "center",
-                color: COLORS.textMuted,
-                fontSize: 13
-              }}
-            >
+            <div className="px-4 py-6 text-center text-text-muted text-[13px]">
               暂无标签，点击下方按钮创建
             </div>
           ) : (
@@ -204,18 +134,8 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
 
           {/* 新建标签输入 */}
           {isCreating && (
-            <div style={{ padding: "8px 16px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 12px",
-                  background: COLORS.accentDark,
-                  borderRadius: 6,
-                  border: `1px solid ${COLORS.accent}`
-                }}
-              >
+            <div className="px-4 py-2">
+              <div className="flex items-center gap-2 px-3 py-2 bg-accent-subtle rounded-md border border-accent">
                 <input
                   ref={newTagInputRef}
                   type="text"
@@ -223,52 +143,25 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
                   onChange={(e) => setNewTagName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleCreate();
-                    if (e.key === "Escape") {
-                      setIsCreating(false);
-                      setNewTagName("");
-                    }
+                    if (e.key === "Escape") { setIsCreating(false); setNewTagName(""); }
                   }}
                   placeholder="输入标签名称"
-                  style={{
-                    flex: 1,
-                    border: "none",
-                    background: "transparent",
-                    color: COLORS.textPrimary,
-                    fontSize: 13,
-                    outline: "none"
-                  }}
+                  className="flex-1 border-none bg-transparent text-text-primary text-[13px] outline-none"
                 />
                 <button
                   type="button"
                   onClick={handleCreate}
                   disabled={!newTagName.trim()}
-                  style={{
-                    padding: "4px 12px",
-                    border: "none",
-                    borderRadius: 4,
-                    background: newTagName.trim() ? COLORS.accent : COLORS.textMuted,
-                    color: "#fff",
-                    fontSize: 12,
-                    cursor: newTagName.trim() ? "pointer" : "not-allowed"
-                  }}
+                  className={`px-3 py-1 border-none rounded-sm text-white text-xs cursor-pointer ${
+                    newTagName.trim() ? "bg-accent" : "bg-text-muted cursor-not-allowed"
+                  }`}
                 >
                   创建
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsCreating(false);
-                    setNewTagName("");
-                  }}
-                  style={{
-                    padding: "4px 8px",
-                    border: "none",
-                    borderRadius: 4,
-                    background: "transparent",
-                    color: COLORS.textMuted,
-                    fontSize: 12,
-                    cursor: "pointer"
-                  }}
+                  onClick={() => { setIsCreating(false); setNewTagName(""); }}
+                  className="px-2 py-1 border-none rounded-sm bg-transparent text-text-muted text-xs cursor-pointer"
                 >
                   取消
                 </button>
@@ -278,37 +171,20 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
         </div>
 
         {/* 底部按钮 */}
-        <div
-          style={{
-            padding: "12px 16px",
-            borderTop: `1px solid ${COLORS.border}`
-          }}
-        >
+        <div className="px-4 py-3 border-t border-border-accent">
           <button
             type="button"
             onClick={() => setIsCreating(true)}
             disabled={isCreating}
-            style={{
-              width: "100%",
-              padding: "8px 16px",
-              border: `1px dashed ${isCreating ? COLORS.textMuted : COLORS.accent}`,
-              borderRadius: 6,
-              background: "transparent",
-              color: isCreating ? COLORS.textMuted : COLORS.accent,
-              fontSize: 13,
-              cursor: isCreating ? "not-allowed" : "pointer",
-              transition: "all 0.15s ease"
-            }}
-            onMouseEnter={(e) => {
-              if (!isCreating) {
-                e.currentTarget.style.background = COLORS.accentDark;
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-            }}
+            className={`w-full px-4 py-2 rounded-md text-[13px] transition-all duration-150 ease-out ${
+              isCreating
+                ? "border border-dashed border-text-muted text-text-muted bg-transparent cursor-not-allowed"
+                : "border border-dashed border-accent text-accent bg-transparent cursor-pointer hover:bg-accent-subtle"
+            }`}
           >
-            + 新建标签
+            <span className="inline-flex items-center gap-1">
+              <PlusIcon size={14} /> 新建标签
+            </span>
           </button>
         </div>
       </div>
@@ -356,53 +232,23 @@ const TagItem: React.FC<TagItemProps> = ({
   // 删除确认状态
   if (isDeleting) {
     return (
-      <div
-        style={{
-          padding: "8px 16px"
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "8px 12px",
-            background: "rgba(199, 69, 69, 0.15)",
-            borderRadius: 6,
-            border: `1px solid ${COLORS.error}`
-          }}
-        >
-          <span style={{ fontSize: 12, color: COLORS.textPrimary }}>
-            确定删除标签 "{tag.name}"?
+      <div className="px-4 py-2">
+        <div className="flex items-center justify-between px-3 py-2 bg-danger/15 rounded-md border border-danger">
+          <span className="text-xs text-text-primary">
+            确定删除标签 &ldquo;{tag.name}&rdquo;?
           </span>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <button
               type="button"
               onClick={onConfirmDelete}
-              style={{
-                padding: "4px 12px",
-                border: "none",
-                borderRadius: 4,
-                background: COLORS.error,
-                color: "#fff",
-                fontSize: 12,
-                cursor: "pointer"
-              }}
+              className="px-3 py-1 border-none rounded-sm bg-danger text-white text-xs cursor-pointer"
             >
               删除
             </button>
             <button
               type="button"
               onClick={onCancelDelete}
-              style={{
-                padding: "4px 8px",
-                border: "none",
-                borderRadius: 4,
-                background: "transparent",
-                color: COLORS.textMuted,
-                fontSize: 12,
-                cursor: "pointer"
-              }}
+              className="px-2 py-1 border-none rounded-sm bg-transparent text-text-muted text-xs cursor-pointer"
             >
               取消
             </button>
@@ -413,87 +259,32 @@ const TagItem: React.FC<TagItemProps> = ({
   }
 
   return (
-    <div
-      style={{
-        padding: "4px 16px"
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "8px 12px",
-          borderRadius: 6,
-          transition: "background 0.15s ease"
-        }}
-        onMouseEnter={(e) => {
-          if (!isEditing) {
-            e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isEditing) {
-            e.currentTarget.style.background = "transparent";
-          }
-        }}
-      >
+    <div className="px-4 py-1">
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors duration-150 ${
+        isEditing ? "" : "hover:bg-white/5"
+      }`}>
         {/* 颜色选择器触发 */}
-        <div style={{ position: "relative" }}>
+        <div className="relative">
           <button
             type="button"
             onClick={onToggleColorPicker}
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              border: `2px solid ${tag.color}`,
-              background: tag.color,
-              cursor: "pointer",
-              padding: 0
-            }}
+            className="w-5 h-5 rounded-sm border-2 cursor-pointer p-0"
+            style={{ borderColor: tag.color, background: tag.color }}
             title="更改颜色"
           />
 
           {/* 颜色选择器弹出 */}
           {showColorPicker && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                marginTop: 4,
-                padding: 10,
-                background: COLORS.panelBg,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: 8,
-                boxShadow: `0 4px 12px ${COLORS.shadow}`,
-                display: "grid",
-                gridTemplateColumns: "repeat(5, 1fr)",
-                gap: 6,
-                zIndex: 10
-              }}
-            >
+            <div className="absolute top-full left-0 mt-1 p-2.5 bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-md shadow-lg grid grid-cols-5 gap-1.5 z-10">
               {TAG_COLORS.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => onColorChange(color)}
+                  className="w-8 h-8 rounded-md cursor-pointer p-0 transition-transform duration-100 ease-out hover:scale-110"
                   style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 6,
-                    border: color === tag.color ? "3px solid #fff" : "2px solid transparent",
                     background: color,
-                    cursor: "pointer",
-                    padding: 0,
-                    transition: "transform 0.1s ease"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = "scale(1.1)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = "scale(1)";
+                    border: color === tag.color ? "3px solid #fff" : "2px solid transparent"
                   }}
                 />
               ))}
@@ -513,25 +304,11 @@ const TagItem: React.FC<TagItemProps> = ({
               if (e.key === "Escape") onCancelEdit();
             }}
             onBlur={onSaveEdit}
-            style={{
-              flex: 1,
-              padding: "4px 8px",
-              border: `1px solid ${COLORS.accent}`,
-              borderRadius: 4,
-              background: "rgba(102, 192, 244, 0.1)",
-              color: COLORS.textPrimary,
-              fontSize: 13,
-              outline: "none"
-            }}
+            className="flex-1 px-2 py-1 border border-accent rounded-sm bg-accent/10 text-text-primary text-[13px] outline-none"
           />
         ) : (
           <span
-            style={{
-              flex: 1,
-              fontSize: 13,
-              color: COLORS.textPrimary,
-              cursor: "pointer"
-            }}
+            className="flex-1 text-[13px] text-text-primary cursor-pointer"
             onClick={onStartEdit}
             title="点击编辑"
           >
@@ -541,62 +318,22 @@ const TagItem: React.FC<TagItemProps> = ({
 
         {/* 操作按钮 */}
         {!isEditing && (
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="flex gap-1">
             <button
               type="button"
               onClick={onStartEdit}
-              style={{
-                width: 24,
-                height: 24,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "none",
-                background: "transparent",
-                color: COLORS.textMuted,
-                cursor: "pointer",
-                borderRadius: 4,
-                fontSize: 12
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = COLORS.accentDark;
-                e.currentTarget.style.color = COLORS.accent;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = COLORS.textMuted;
-              }}
+              className="w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-muted cursor-pointer rounded-sm hover:bg-accent-subtle hover:text-accent"
               title="重命名"
             >
-              ✏
+              <PencilIcon size={12} />
             </button>
             <button
               type="button"
               onClick={onStartDelete}
-              style={{
-                width: 24,
-                height: 24,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "none",
-                background: "transparent",
-                color: COLORS.textMuted,
-                cursor: "pointer",
-                borderRadius: 4,
-                fontSize: 12
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(199, 69, 69, 0.2)";
-                e.currentTarget.style.color = COLORS.error;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = COLORS.textMuted;
-              }}
+              className="w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-muted cursor-pointer rounded-sm hover:bg-danger/20 hover:text-danger"
               title="删除"
             >
-              🗑
+              <TrashIcon size={12} />
             </button>
           </div>
         )}

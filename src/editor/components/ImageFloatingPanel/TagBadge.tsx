@@ -3,7 +3,7 @@
  * 显示单个标签（名称 + 颜色）
  */
 import React from "react";
-import { COLORS } from "./styles";
+import { XIcon } from "./icons";
 
 interface TagBadgeProps {
   name: string;
@@ -31,24 +31,6 @@ const TagBadge: React.FC<TagBadgeProps> = ({
 }) => {
   const isSmall = size === "small";
 
-  const baseStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: isSmall ? 2 : 4,
-    padding: isSmall ? "1px 4px" : "2px 8px",
-    borderRadius: isSmall ? 2 : 4,
-    fontSize: isSmall ? 10 : 12,
-    fontWeight: 500,
-    color: selected ? "#fff" : COLORS.textPrimary,
-    background: selected ? color : `${color}33`, // 33 = 20% opacity
-    border: `1px solid ${selected ? color : `${color}66`}`,
-    cursor: onClick ? "pointer" : "default",
-    transition: "all 0.15s ease",
-    whiteSpace: "nowrap",
-    maxWidth: isSmall ? 60 : 120,
-    overflow: "hidden"
-  };
-
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onClick?.();
@@ -61,7 +43,16 @@ const TagBadge: React.FC<TagBadgeProps> = ({
 
   return (
     <span
-      style={baseStyle}
+      className={`inline-flex items-center whitespace-nowrap overflow-hidden transition-all duration-150 ease-out ${
+        isSmall
+          ? "gap-0.5 px-1 py-px rounded-xs text-[10px] max-w-[60px]"
+          : "gap-1 px-2 py-0.5 rounded-sm text-xs max-w-[120px]"
+      } ${onClick ? "cursor-pointer" : "cursor-default"} font-medium`}
+      style={{
+        color: selected ? "#fff" : "var(--color-text-primary)",
+        background: selected ? color : `${color}33`,
+        border: `1px solid ${selected ? color : `${color}66`}`
+      }}
       onClick={onClick ? handleClick : undefined}
       onMouseEnter={(e) => {
         if (onClick) {
@@ -76,22 +67,12 @@ const TagBadge: React.FC<TagBadgeProps> = ({
     >
       {/* 颜色点 */}
       <span
-        style={{
-          width: isSmall ? 6 : 8,
-          height: isSmall ? 6 : 8,
-          borderRadius: "50%",
-          background: color,
-          flexShrink: 0
-        }}
+        className={`rounded-full shrink-0 ${isSmall ? "w-1.5 h-1.5" : "w-2 h-2"}`}
+        style={{ background: color }}
       />
 
       {/* 标签名 */}
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis"
-        }}
-      >
+      <span className="overflow-hidden text-ellipsis">
         {name}
       </span>
 
@@ -100,32 +81,11 @@ const TagBadge: React.FC<TagBadgeProps> = ({
         <button
           type="button"
           onClick={handleDelete}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: isSmall ? 12 : 16,
-            height: isSmall ? 12 : 16,
-            padding: 0,
-            border: "none",
-            background: "transparent",
-            color: COLORS.textMuted,
-            cursor: "pointer",
-            borderRadius: "50%",
-            fontSize: isSmall ? 10 : 12,
-            marginLeft: isSmall ? 0 : 2,
-            flexShrink: 0
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(199, 69, 69, 0.3)";
-            e.currentTarget.style.color = COLORS.error;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "transparent";
-            e.currentTarget.style.color = COLORS.textMuted;
-          }}
+          className={`flex items-center justify-center p-0 border-none bg-transparent text-text-muted rounded-full shrink-0 cursor-pointer hover:bg-danger/30 hover:text-danger ${
+            isSmall ? "w-3 h-3" : "w-4 h-4 ml-0.5"
+          }`}
         >
-          ×
+          <XIcon size={isSmall ? 8 : 10} />
         </button>
       )}
     </span>

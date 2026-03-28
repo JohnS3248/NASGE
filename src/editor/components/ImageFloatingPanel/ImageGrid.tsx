@@ -12,7 +12,8 @@ import { useGuideStore } from "../../stores/useGuideStore";
 import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
 import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
-import { COLORS, SIZES } from "./styles";
+import { SIZES } from "./styles";
+import { ImageIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
 
@@ -54,18 +55,18 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
   // 计算分页
   const totalPages = useMemo(() => {
-    if (itemsPerPage === 0) return 1; // 全部显示
+    if (itemsPerPage === 0) return 1;
     return Math.ceil(images.length / itemsPerPage);
   }, [images.length, itemsPerPage]);
 
   // 当前页的图片
   const currentImages = useMemo(() => {
-    if (itemsPerPage === 0) return images; // 全部显示
+    if (itemsPerPage === 0) return images;
     const start = (currentPage - 1) * itemsPerPage;
     return images.slice(start, start + itemsPerPage);
   }, [images, currentPage, itemsPerPage]);
 
-  // 所有图片的 ID 列表（用于范围选择）
+  // 所有图片的 ID 列表
   const allImageIds = useMemo(() => {
     return images.map(img => img.previewId || img.fileName);
   }, [images]);
@@ -73,14 +74,13 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 选择处理
   const handleSelect = useCallback((id: string, mode: "single" | "toggle" | "add") => {
     if (mode === "add") {
-      // Shift+点击，执行范围选择
       selectRange(id, allImageIds);
     } else {
       selectImage(id, mode);
     }
   }, [selectImage, selectRange, allImageIds]);
 
-  // 获取选中的图片（用于批量拖拽）
+  // 获取选中的图片
   const getSelectedImages = useCallback(() => {
     return images.filter(img => {
       const imgId = img.previewId || img.fileName;
@@ -92,73 +92,53 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const { addLocalImage } = useSteamGuideImageStore();
 
-  // 获取当前存档 ID（用于关联新添加的图片）
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
 
-  // 处理双击事件 - 待上传或失败的图片加入上传队列
+  // 处理双击事件
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {
     if (image.state === "pending") {
-      // 待上传图片：加入上传队列
       loggers.image.info("双击加入上传队列", { fileName: image.fileName });
       queueImageUpload(image);
     } else if (image.state === "error") {
-      // 失败图片：重置状态后加入上传队列重试
       loggers.image.info("双击重试上传", { fileName: image.fileName });
       setImageState(image.fileName, "pending");
       queueImageUpload({ ...image, state: "pending", uploadError: undefined });
     } else {
-      // 其他状态（success, uploading）：使用原有的双击行为
       onImageDoubleClick(image);
     }
   }, [setImageState, onImageDoubleClick]);
 
   // 获取图片在队列中的位置
   const getQueuePosition = useCallback((imageId: string): number => {
-    // 检查是否正在上传
     if (queueState.currentItem?.id === imageId) {
       return 0;
     }
-    // 检查是否在等待队列中
     const index = queueState.queue.findIndex(item => item.id === imageId);
     return index >= 0 ? index + 1 : -1;
   }, [queueState]);
 
-  // 队列总长度（包括正在上传的）
   const queueLength = queueState.queue.length + (queueState.currentItem ? 1 : 0);
 
-  // 删除本地图片（未上传的）
+  // 删除本地图片
   const doDeleteLocalImage = useCallback((image: ImageWithState) => {
     loggers.image.info("删除本地图片", { fileName: image.fileName });
-
-    // 从上传队列中移除
     uploadQueue.dequeue(image.fileName);
-
-    // 从图片池中移除
     useSteamGuideImageStore.setState((state) => ({
       items: state.items.filter(item => item.fileName !== image.fileName)
     }));
-
-    // 释放本地 URL
     if (image.localUrl) {
       URL.revokeObjectURL(image.localUrl);
     }
   }, []);
 
-  // 删除 Steam 服务器端图片（已上传的）
+  // 删除 Steam 服务器端图片
   const doDeleteSteamImage = useCallback(async (image: ImageWithState) => {
     if (!image.previewId) return;
-
     loggers.image.info("删除 Steam 图片", { fileName: image.fileName, previewId: image.previewId });
-
     try {
-      // 调用 Steam API 删除服务器端图片
       await deleteSteamImage(image.previewId);
       loggers.image.info("Steam 图片删除成功", { previewId: image.previewId });
-
-      // 从本地图片池中移除
       removeItem(image.previewId);
-
-      // 释放本地 URL
       if (image.localUrl) {
         URL.revokeObjectURL(image.localUrl);
       }
@@ -171,14 +151,12 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
   // 删除图片处理
   const handleDeleteImage = useCallback((image: ImageWithState) => {
-    // 已上传的图片：需要确认并删除 Steam 服务器端
     if (image.state === "success" && image.previewId) {
       const confirmed = window.confirm(`确认删除 "${image.fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`);
       if (confirmed) {
         void doDeleteSteamImage(image);
       }
     } else {
-      // 未上传的本地图片：直接删除
       doDeleteLocalImage(image);
     }
   }, [doDeleteSteamImage, doDeleteLocalImage]);
@@ -186,10 +164,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 快捷键处理
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 如果正在编辑，不处理快捷键
       if (editingImageId) return;
-
-      // 如果焦点在输入框中，不处理
       const activeElement = document.activeElement;
       if (activeElement && (
         activeElement.tagName === "INPUT" ||
@@ -199,7 +174,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
         return;
       }
 
-      // 重命名快捷键 (默认 F2)
       if (matchShortcut(e, shortcuts.renameImage) && focusedId) {
         e.preventDefault();
         const focusedImage = images.find(
@@ -212,27 +186,20 @@ const ImageGrid: React.FC<ImageGridProps> = ({
         return;
       }
 
-      // 删除快捷键 (默认 Delete)
       if (matchShortcut(e, shortcuts.deleteImage) && selectedIds.length > 0) {
         e.preventDefault();
         loggers.image.info("快捷键触发删除", { count: selectedIds.length });
-
-        // 获取选中的图片
         const selectedImages = images.filter(img => {
           const imgId = img.previewId || img.fileName;
           return selectedIds.includes(imgId);
         });
-
-        // 检查是否有已上传的图片
         const uploadedImages = selectedImages.filter(img => img.state === "success" && img.previewId);
         const localImages = selectedImages.filter(img => img.state !== "success" || !img.previewId);
 
         if (uploadedImages.length > 0) {
-          // 有已上传的图片，需要确认
           const msg = selectedImages.length === 1
             ? `确认删除 "${selectedImages[0].fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`
             : `确认删除 ${selectedImages.length} 张图片？\n\n其中 ${uploadedImages.length} 张已上传到 Steam，删除后无法撤销。`;
-
           if (window.confirm(msg)) {
             for (const img of selectedImages) {
               if (img.state === "success" && img.previewId) {
@@ -244,7 +211,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
             clearSelection();
           }
         } else {
-          // 只有本地图片，直接删除
           for (const img of localImages) {
             doDeleteLocalImage(img);
           }
@@ -252,28 +218,19 @@ const ImageGrid: React.FC<ImageGridProps> = ({
         }
         return;
       }
-
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
-    focusedId,
-    editingImageId,
-    images,
-    selectedIds,
-    onEditingChange,
-    shortcuts,
-    doDeleteLocalImage,
-    doDeleteSteamImage,
-    clearSelection
+    focusedId, editingImageId, images, selectedIds,
+    onEditingChange, shortcuts, doDeleteLocalImage, doDeleteSteamImage, clearSelection
   ]);
 
   // 检查是否有图片文件
   const hasImageFiles = useCallback((event: React.DragEvent) => {
     const items = event.dataTransfer?.items;
     if (!items) return false;
-
     for (let i = 0; i < items.length; i++) {
       if (items[i].kind === "file" && items[i].type.startsWith("image/")) {
         return true;
@@ -282,33 +239,22 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     return false;
   }, []);
 
-  // 拖拽进入
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (hasImageFiles(e)) {
-      setIsDragOver(true);
-    }
+    if (hasImageFiles(e)) setIsDragOver(true);
   }, [hasImageFiles]);
 
-  // 拖拽离开
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // 只有当离开到网格外部时才取消高亮
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const { clientX, clientY } = e;
-    if (
-      clientX < rect.left ||
-      clientX > rect.right ||
-      clientY < rect.top ||
-      clientY > rect.bottom
-    ) {
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
       setIsDragOver(false);
     }
   }, []);
 
-  // 拖拽悬停
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -318,7 +264,6 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     }
   }, [hasImageFiles]);
 
-  // 拖拽放下
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -327,14 +272,12 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     const files = e.dataTransfer?.files;
     if (!files || files.length === 0) return;
 
-    // 筛选图片文件
     const imageFiles: File[] = [];
     for (let i = 0; i < files.length; i++) {
       if (files[i].type.startsWith("image/")) {
         imageFiles.push(files[i]);
       }
     }
-
     if (imageFiles.length === 0) return;
 
     loggers.image.info("外部文件拖入悬浮窗", {
@@ -343,13 +286,11 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       autoUpload: autoUploadInPanel
     });
 
-    // 添加到图片池，收集去重结果
     const addedImages: ImageWithState[] = [];
     const skippedFiles: { fileName: string; existingFileName: string; reason: string }[] = [];
 
     for (const file of imageFiles) {
       const result = await addLocalImage(file, currentArchiveId ?? undefined);
-
       if (result.skipped) {
         skippedFiles.push({
           fileName: file.name,
@@ -361,32 +302,26 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       }
     }
 
-    // 显示去重提示
     if (skippedFiles.length > 0) {
       if (imageFiles.length === 1) {
-        // 单张图片：显示详细提示
         toast.info(`"${skippedFiles[0].fileName}" 已存在（${skippedFiles[0].reason}），已跳过`);
       } else {
-        // 批量拖入：显示统计
-        const msg = `已添加 ${addedImages.length} 张图片\n跳过 ${skippedFiles.length} 张重复图片`;
-        toast.info(msg);
+        toast.info(`已添加 ${addedImages.length} 张图片\n跳过 ${skippedFiles.length} 张重复图片`);
       }
     }
 
-    // 如果启用了拖拽重命名且只添加了一张图片，进入编辑模式
     if (promptRenameOnDrop && addedImages.length === 1) {
       const imageId = addedImages[0].previewId || addedImages[0].fileName;
       onEditingChange(imageId);
     }
 
-    // 如果启用了自动上传，则将新添加的图片加入上传队列
     if (autoUploadInPanel && addedImages.length > 0) {
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
       queueBatchUpload(addedImages);
     }
   }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange, currentArchiveId]);
 
-  // 空状态（也支持拖入）
+  // 空状态
   if (images.length === 0) {
     return (
       <div
@@ -394,25 +329,15 @@ const ImageGrid: React.FC<ImageGridProps> = ({
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          color: COLORS.textMuted,
-          fontSize: 13,
-          textAlign: "center",
-          padding: 20,
-          border: isDragOver ? `2px dashed ${COLORS.accent}` : "2px dashed transparent",
-          borderRadius: SIZES.borderRadiusSmall,
-          background: isDragOver ? "rgba(102, 192, 244, 0.1)" : "transparent",
-          transition: "all 0.15s ease"
-        }}
+        className={`flex flex-col items-center justify-center h-full text-text-muted text-[13px] text-center p-5 rounded-sm transition-all duration-150 ease-out ${
+          isDragOver
+            ? "border-2 border-dashed border-accent bg-accent/10"
+            : "border-2 border-dashed border-transparent"
+        }`}
       >
-        <span style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>📷</span>
+        <span className="mb-3 opacity-40"><ImageIcon size={32} /></span>
         <div>{isDragOver ? "放开添加图片" : "暂无图片"}</div>
-        <div style={{ fontSize: 11, marginTop: 4 }}>
+        <div className="text-[11px] mt-1">
           {isDragOver ? "松开鼠标添加到图片池" : "拖拽图片到此处添加"}
         </div>
       </div>
@@ -420,26 +345,19 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* 图片网格（支持外部文件拖入） */}
+    <div className="flex flex-col h-full">
+      {/* 图片网格 */}
       <div
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
-        style={{
-          flex: 1,
-          display: "flex",
-          flexWrap: "wrap",
-          gap: SIZES.gap,
-          alignContent: "flex-start",
-          overflow: "auto",
-          padding: 4,
-          border: isDragOver ? `2px dashed ${COLORS.accent}` : "2px dashed transparent",
-          borderRadius: SIZES.borderRadiusSmall,
-          background: isDragOver ? "rgba(102, 192, 244, 0.08)" : "transparent",
-          transition: "all 0.15s ease"
-        }}
+        className={`flex-1 flex flex-wrap content-start overflow-auto p-1 rounded-sm transition-all duration-150 ease-out ${
+          isDragOver
+            ? "border-2 border-dashed border-accent bg-accent/[0.08]"
+            : "border-2 border-dashed border-transparent"
+        }`}
+        style={{ gap: SIZES.gap }}
       >
         {currentImages.map((image) => {
           const imageId = image.previewId || image.fileName;
@@ -494,82 +412,32 @@ const Pagination: React.FC<PaginationProps> = ({
   onPageChange
 }) => {
   const handlePrev = () => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
+    if (currentPage > 1) onPageChange(currentPage - 1);
   };
-
   const handleNext = () => {
-    if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
-    }
+    if (currentPage < totalPages) onPageChange(currentPage + 1);
   };
 
-  // 计算当前显示范围
   const start = (currentPage - 1) * itemsPerPage + 1;
   const end = Math.min(currentPage * itemsPerPage, totalItems);
 
+  const navBtn = (disabled: boolean) =>
+    `w-6 h-6 flex items-center justify-center border border-border-accent rounded-sm bg-transparent cursor-pointer ${
+      disabled ? "text-text-muted opacity-50 !cursor-not-allowed" : "text-text-secondary"
+    }`;
+
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "8px 4px",
-        borderTop: `1px solid ${COLORS.border}`,
-        fontSize: 12,
-        color: COLORS.textSecondary
-      }}
-    >
-      {/* 左侧：页码信息 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <button
-          type="button"
-          onClick={handlePrev}
-          disabled={currentPage <= 1}
-          style={{
-            width: 24,
-            height: 24,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: SIZES.borderRadiusSmall,
-            background: "transparent",
-            color: currentPage <= 1 ? COLORS.textMuted : COLORS.textSecondary,
-            cursor: currentPage <= 1 ? "not-allowed" : "pointer",
-            opacity: currentPage <= 1 ? 0.5 : 1
-          }}
-        >
-          ◀
+    <div className="flex items-center justify-between px-1 py-2 border-t border-border-accent text-xs text-text-secondary">
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={handlePrev} disabled={currentPage <= 1} className={navBtn(currentPage <= 1)}>
+          <ChevronLeftIcon size={14} />
         </button>
-        <span>
-          {currentPage} / {totalPages}
-        </span>
-        <button
-          type="button"
-          onClick={handleNext}
-          disabled={currentPage >= totalPages}
-          style={{
-            width: 24,
-            height: 24,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: SIZES.borderRadiusSmall,
-            background: "transparent",
-            color: currentPage >= totalPages ? COLORS.textMuted : COLORS.textSecondary,
-            cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
-            opacity: currentPage >= totalPages ? 0.5 : 1
-          }}
-        >
-          ▶
+        <span>{currentPage} / {totalPages}</span>
+        <button type="button" onClick={handleNext} disabled={currentPage >= totalPages} className={navBtn(currentPage >= totalPages)}>
+          <ChevronRightIcon size={14} />
         </button>
       </div>
-
-      {/* 右侧：显示范围 */}
-      <div style={{ color: COLORS.textMuted }}>
+      <div className="text-text-muted">
         {start}-{end} / {totalItems}
       </div>
     </div>

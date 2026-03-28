@@ -1,40 +1,8 @@
 /**
  * 图片悬浮窗样式常量
+ * 仅保留需要在 JS 中动态计算的数值常量
  */
 import { CSSProperties } from "react";
-
-// ============ 颜色 ============
-export const COLORS = {
-  // 背景
-  panelBg: "rgba(13, 23, 36, 0.95)",
-  panelBgHover: "rgba(13, 23, 36, 0.98)",
-  headerBg: "rgba(8, 16, 28, 0.9)",
-
-  // 边框
-  border: "var(--border-accent, rgba(102, 192, 244, 0.25))",
-  borderHover: "rgba(102, 192, 244, 0.4)",
-  borderActive: "rgba(102, 192, 244, 0.6)",
-
-  // 文字
-  textPrimary: "var(--text-primary, #d7e8ff)",
-  textSecondary: "var(--text-secondary, #8aa4c7)",
-  textMuted: "#5a7a9a",
-
-  // 强调色
-  accent: "var(--color-primary, #66c0f4)",
-  accentHover: "#7dcfff",
-  accentDark: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
-
-  // 状态色
-  success: "#5ba32b",
-  warning: "#d4a72c",
-  error: "#c74545",
-  pending: "#6a7a8a",
-
-  // 阴影
-  shadow: "rgba(0, 0, 0, 0.4)",
-  shadowStrong: "rgba(0, 0, 0, 0.6)"
-};
 
 // ============ 尺寸 ============
 export const SIZES = {
@@ -74,94 +42,7 @@ export const Z_INDEX = {
   fullscreenPreview: 2000
 };
 
-// ============ 基础样式 ============
-
-/** 悬浮窗容器样式 */
-export const panelContainerStyle: CSSProperties = {
-  position: "fixed",
-  display: "flex",
-  flexDirection: "column",
-  background: COLORS.panelBg,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: SIZES.borderRadius,
-  boxShadow: `0 8px 32px ${COLORS.shadow}, 0 0 1px ${COLORS.border}`,
-  overflow: "hidden",
-  zIndex: Z_INDEX.panel,
-  userSelect: "none"
-};
-
-/** 标题栏样式 */
-export const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  height: SIZES.headerHeight,
-  padding: `0 ${SIZES.padding}px`,
-  background: COLORS.headerBg,
-  borderBottom: `1px solid ${COLORS.border}`,
-  cursor: "move"
-};
-
-/** 标题文字样式 */
-export const headerTitleStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  fontSize: 13,
-  fontWeight: 600,
-  color: COLORS.textPrimary
-};
-
-/** 控制按钮组样式 */
-export const headerButtonsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 4
-};
-
-/** 控制按钮样式 */
-export const headerButtonStyle: CSSProperties = {
-  width: 24,
-  height: 24,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  border: "none",
-  background: "transparent",
-  color: COLORS.textSecondary,
-  borderRadius: SIZES.borderRadiusSmall,
-  cursor: "pointer",
-  fontSize: 14,
-  transition: "all 0.15s ease"
-};
-
-/** 内容区样式 */
-export const contentStyle: CSSProperties = {
-  flex: 1,
-  overflow: "auto",
-  padding: SIZES.padding
-};
-
-/** 最小化状态样式 */
-export const minimizedStyle: CSSProperties = {
-  position: "fixed",
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "8px 12px",
-  background: COLORS.panelBg,
-  border: `1px solid ${COLORS.border}`,
-  borderRadius: SIZES.borderRadius,
-  boxShadow: `0 4px 16px ${COLORS.shadow}`,
-  cursor: "pointer",
-  zIndex: Z_INDEX.minimized,
-  fontSize: 13,
-  fontWeight: 600,
-  color: COLORS.textPrimary,
-  transition: "all 0.15s ease"
-};
-
-/** 调整大小手柄样式 */
+// ============ 调整手柄样式（依赖 SIZES 动态计算） ============
 export const resizeHandleStyle = (position: string): CSSProperties => {
   const base: CSSProperties = {
     position: "absolute",

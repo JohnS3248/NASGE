@@ -6,7 +6,7 @@ export { default as PanelHeader } from "./PanelHeader";
 export { default as MinimizedPanel } from "./MinimizedPanel";
 export { default as ImageGrid } from "./ImageGrid";
 export { default as ImageCard } from "./ImageCard";
-export * from "./styles";
+export { SIZES, Z_INDEX } from "./styles";
 
 // 拖拽相关类型导出
 export type { ImageDragData } from "./ImageCard";

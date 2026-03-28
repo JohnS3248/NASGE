@@ -7,7 +7,6 @@ import { ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import ImageCard from "./ImageCard";
-import { COLORS } from "./styles";
 
 interface SmartImageGridProps {
   images: ImageWithState[];
@@ -40,16 +39,12 @@ function calculateSpan(
   const isTall = dimensions.height >= heightThreshold;
 
   if (isWide && isTall) {
-    // 大图：2×2
     return { colSpan: 2, rowSpan: 2 };
   } else if (isWide) {
-    // 宽图：2×1
     return { colSpan: 2, rowSpan: 1 };
   } else if (isTall) {
-    // 高图：1×2
     return { colSpan: 1, rowSpan: 2 };
   } else {
-    // 小图：1×1
     return { colSpan: 1, rowSpan: 1 };
   }
 }
@@ -92,10 +87,8 @@ const SmartImageGrid: React.FC<SmartImageGridProps> = ({
       for (const image of images) {
         const imageId = image.previewId || image.fileName;
 
-        // 已缓存则跳过
         if (dimensionsCache.has(imageId)) continue;
 
-        // 获取图片 URL
         const url = image.thumbnailUrl || image.localUrl;
         if (!url) continue;
 
@@ -105,7 +98,6 @@ const SmartImageGrid: React.FC<SmartImageGridProps> = ({
           newDimensions.set(imageId, dims);
           hasNewData = true;
         } catch (e) {
-          // 加载失败，使用默认尺寸
           const defaultDims = { width: 200, height: 200 };
           dimensionsCache.set(imageId, defaultDims);
           newDimensions.set(imageId, defaultDims);
@@ -120,10 +112,9 @@ const SmartImageGrid: React.FC<SmartImageGridProps> = ({
     loadDimensions();
   }, [images, smartLayoutEnabled, imageDimensions]);
 
-  // 选择处理（与 ImageGrid 一致）
+  // 选择处理
   const handleSelect = useCallback((id: string, mode: "single" | "toggle" | "add") => {
     if (mode === "add") {
-      // Shift+点击，执行范围选择
       selectRange(id, allImageIds);
     } else {
       selectImage(id, mode);
@@ -150,16 +141,7 @@ const SmartImageGrid: React.FC<SmartImageGridProps> = ({
 
   if (images.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: 200,
-          color: COLORS.textMuted,
-          fontSize: 14
-        }}
-      >
+      <div className="flex items-center justify-center h-[200px] text-text-muted text-sm">
         暂无图片
       </div>
     );
@@ -167,14 +149,13 @@ const SmartImageGrid: React.FC<SmartImageGridProps> = ({
 
   return (
     <div
+      className="gap-3 p-2"
       style={{
         display: "grid",
         gridTemplateColumns: smartLayoutEnabled
           ? `repeat(auto-fill, minmax(${baseSize}px, 1fr))`
-          : `repeat(auto-fill, minmax(120px, 1fr))`,
-        gridAutoRows: smartLayoutEnabled ? `${baseSize}px` : "auto",
-        gap: 12,
-        padding: 8
+          : "repeat(auto-fill, minmax(120px, 1fr))",
+        gridAutoRows: smartLayoutEnabled ? `${baseSize}px` : "auto"
       }}
     >
       {images.map((image) => {

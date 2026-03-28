@@ -3,7 +3,7 @@
  * 支持搜索、排序、状态筛选
  */
 import React, { useCallback, useRef, useEffect, useState } from "react";
-import { COLORS, SIZES } from "./styles";
+import { SearchIcon, XIcon, ChevronDownIcon, ArrowUpIcon, ArrowDownIcon } from "./icons";
 import { SortBy, SortOrder, FilterStatus } from "../../stores/useImagePanelStore";
 
 interface SearchBarProps {
@@ -75,36 +75,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
   const isFiltering = filterStatus !== "all";
 
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 6,
-        padding: `6px ${SIZES.padding}px`,
-        borderBottom: `1px solid ${COLORS.border}`,
-        background: "rgba(8, 16, 28, 0.5)",
-        flexWrap: "wrap"
-      }}
-    >
+    <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-border-accent bg-bg-app/50 flex-wrap">
       {/* 搜索区域 */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          flex: 1,
-          minWidth: 120
-        }}
-      >
+      <div className="flex items-center gap-1.5 flex-1 min-w-[120px]">
         {/* 搜索图标 */}
-        <span
-          style={{
-            fontSize: 12,
-            color: isSearching ? COLORS.accent : COLORS.textMuted,
-            flexShrink: 0
-          }}
-        >
-          🔍
+        <span className={`shrink-0 ${isSearching ? "text-accent" : "text-text-muted"}`}>
+          <SearchIcon size={12} />
         </span>
 
         {/* 输入框 */}
@@ -114,27 +90,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="搜索..."
-          style={{
-            flex: 1,
-            border: "none",
-            background: "transparent",
-            color: COLORS.textPrimary,
-            fontSize: 12,
-            outline: "none",
-            padding: "2px 0",
-            minWidth: 60
-          }}
+          className="flex-1 border-none bg-transparent text-text-primary text-xs outline-none py-0.5 min-w-[60px]"
         />
 
         {/* 结果计数 */}
         {isSearching && (
-          <span
-            style={{
-              fontSize: 10,
-              color: resultCount > 0 ? COLORS.textMuted : COLORS.error,
-              flexShrink: 0
-            }}
-          >
+          <span className={`text-[10px] shrink-0 ${resultCount > 0 ? "text-text-muted" : "text-danger"}`}>
             {resultCount}/{totalCount}
           </span>
         )}
@@ -144,46 +105,19 @@ const SearchBar: React.FC<SearchBarProps> = ({
           <button
             type="button"
             onClick={handleClear}
-            style={{
-              width: 16,
-              height: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "none",
-              background: "var(--border-subtle, rgba(102, 192, 244, 0.15))",
-              color: COLORS.textSecondary,
-              borderRadius: "50%",
-              cursor: "pointer",
-              fontSize: 10,
-              flexShrink: 0
-            }}
+            className="w-4 h-4 flex items-center justify-center border-none bg-accent-subtle text-text-secondary rounded-full cursor-pointer shrink-0"
             title="清空搜索 (ESC)"
           >
-            ×
+            <XIcon size={10} />
           </button>
         )}
       </div>
 
       {/* 分隔线 */}
-      <div
-        style={{
-          width: 1,
-          height: 16,
-          background: COLORS.border,
-          flexShrink: 0
-        }}
-      />
+      <div className="w-px h-4 bg-border-accent shrink-0" />
 
       {/* 排序控件 */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-          flexShrink: 0
-        }}
-      >
+      <div className="flex items-center gap-1 shrink-0">
         <MiniSelect
           value={sortBy}
           options={SORT_OPTIONS}
@@ -192,22 +126,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
         <button
           type="button"
           onClick={onToggleSortOrder}
-          style={{
-            width: 20,
-            height: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "none",
-            background: "transparent",
-            color: COLORS.textSecondary,
-            cursor: "pointer",
-            fontSize: 11,
-            borderRadius: SIZES.borderRadiusSmall
-          }}
+          className="w-5 h-5 flex items-center justify-center border-none bg-transparent text-text-secondary cursor-pointer rounded-sm"
           title={sortOrder === "asc" ? "升序" : "降序"}
         >
-          {sortOrder === "asc" ? "↑" : "↓"}
+          {sortOrder === "asc" ? <ArrowUpIcon size={11} /> : <ArrowDownIcon size={11} />}
         </button>
       </div>
 
@@ -256,49 +178,22 @@ function MiniSelect<T extends string>({
   }, [isOpen]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        position: "relative",
-        flexShrink: 0
-      }}
-    >
+    <div ref={containerRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 2,
-          padding: "2px 6px",
-          border: "none",
-          background: highlight ? "var(--border-subtle, rgba(102, 192, 244, 0.15))" : "transparent",
-          color: highlight ? COLORS.accent : COLORS.textSecondary,
-          cursor: "pointer",
-          fontSize: 11,
-          borderRadius: SIZES.borderRadiusSmall,
-          whiteSpace: "nowrap"
-        }}
+        className={`flex items-center gap-0.5 px-1.5 py-0.5 border-none cursor-pointer text-[11px] rounded-sm whitespace-nowrap ${
+          highlight
+            ? "bg-accent-subtle text-accent"
+            : "bg-transparent text-text-secondary"
+        }`}
       >
         {currentOption?.label}
-        <span style={{ fontSize: 8 }}>▼</span>
+        <ChevronDownIcon size={8} />
       </button>
 
       {isOpen && (
-        <div
-          style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            marginTop: 2,
-            background: COLORS.panelBg,
-            border: `1px solid ${COLORS.border}`,
-            borderRadius: SIZES.borderRadiusSmall,
-            boxShadow: `0 4px 12px ${COLORS.shadow}`,
-            zIndex: 100,
-            minWidth: "100%"
-          }}
-        >
+        <div className="absolute top-full left-0 mt-0.5 bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-sm shadow-lg z-[100] min-w-full">
           {options.map((option) => (
             <button
               key={option.value}
@@ -307,27 +202,11 @@ function MiniSelect<T extends string>({
                 onChange(option.value);
                 setIsOpen(false);
               }}
-              style={{
-                display: "block",
-                width: "100%",
-                padding: "6px 10px",
-                border: "none",
-                background: option.value === value ? COLORS.accentDark : "transparent",
-                color: option.value === value ? COLORS.accent : COLORS.textSecondary,
-                cursor: "pointer",
-                fontSize: 11,
-                textAlign: "left",
-                whiteSpace: "nowrap"
-              }}
-              onMouseEnter={(e) => {
-                if (option.value !== value) {
-                  e.currentTarget.style.background = "rgba(102, 192, 244, 0.08)";
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background =
-                  option.value === value ? COLORS.accentDark : "transparent";
-              }}
+              className={`block w-full px-2.5 py-1.5 border-none cursor-pointer text-[11px] text-left whitespace-nowrap ${
+                option.value === value
+                  ? "bg-accent-subtle text-accent"
+                  : "bg-transparent text-text-secondary hover:bg-accent-subtle"
+              }`}
             >
               {option.label}
             </button>
