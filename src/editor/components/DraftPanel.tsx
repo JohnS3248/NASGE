@@ -2,6 +2,146 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useGuideStore } from '../stores/useGuideStore';
 import { extractTitleText } from '../utils/titleHelpers';
 
+// ============================================================================
+// Types & Helpers
+// ============================================================================
+
+type DraftItem = ReturnType<typeof useGuideStore.getState>['drafts'][number];
+
+const formatDate = (ts: number) =>
+  new Date(ts).toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+const getDraftDisplayTitle = (draft: DraftItem | undefined) => {
+  if (!draft) return '';
+  const titleText = extractTitleText(draft.title);
+  if (titleText) return titleText;
+  return draft.lastSyncedAt ? '未命名章节' : '本地未命名章节';
+};
+
+// 蓝色按钮样式（跟"导出草稿"风格一致：bg-accent/15 + text-accent + border-accent/30）
+const btnAccent = `
+  px-2.5 py-1 text-xs rounded-md
+  bg-accent/15 border border-accent/30 text-accent
+  hover:bg-accent/25 hover:text-accent-hover hover:border-accent/50
+  nasge-transition-quick cursor-pointer
+`;
+
+const btnDanger = `
+  px-2.5 py-1 text-xs rounded-md
+  bg-danger/15 border border-danger/30 text-danger
+  hover:bg-danger/25 hover:border-danger/50
+  nasge-transition-quick cursor-pointer
+  disabled:opacity-40 disabled:cursor-not-allowed
+`;
+
+// ============================================================================
+// SVG Icons (Lucide)
+// ============================================================================
+
+const ChevronIcon: React.FC<{ expanded: boolean; className?: string }> = ({ expanded, className = '' }) => (
+  <svg
+    className={`w-3.5 h-3.5 shrink-0 nasge-transition-quick ${expanded ? 'rotate-90' : ''} ${className}`}
+    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round"
+  >
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+);
+
+const CheckIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`w-3.5 h-3.5 shrink-0 ${className}`} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6 9 17l-5-5" />
+  </svg>
+);
+
+const PlusIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`w-3.5 h-3.5 ${className}`} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14" /><path d="M12 5v14" />
+  </svg>
+);
+
+const EllipsisIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`w-4 h-4 ${className}`} viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" />
+  </svg>
+);
+
+// ============================================================================
+// DraftContextMenu — ··· 弹出菜单
+// ============================================================================
+
+const DraftContextMenu: React.FC<{
+  anchorRef: React.RefObject<HTMLButtonElement | null>;
+  floatingRef: React.RefObject<HTMLDivElement | null>;
+  onClose: () => void;
+  onRename: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}> = ({ anchorRef, floatingRef, onClose, onRename, onDuplicate, onDelete }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
+
+  useEffect(() => {
+    if (anchorRef.current && floatingRef.current) {
+      const btnRect = anchorRef.current.getBoundingClientRect();
+      const panelRect = floatingRef.current.getBoundingClientRect();
+      setPosition({
+        top: btnRect.bottom - panelRect.top + 4,
+        right: panelRect.right - btnRect.right,
+      });
+    }
+  }, [anchorRef, floatingRef]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) &&
+          anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose, anchorRef]);
+
+  if (!position) return null;
+
+  const menuItemClass = `w-full text-left ${btnAccent}`;
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute z-[60] min-w-[140px] py-1 rounded-lg border border-border-accent bg-bg-overlay shadow-xl flex flex-col gap-1 px-1"
+      style={{ top: position.top, right: position.right }}
+    >
+      <button type="button" onClick={() => { onRename(); onClose(); }}
+        className={menuItemClass}>
+        重命名
+      </button>
+      <button type="button" onClick={() => { onDuplicate(); onClose(); }}
+        className={menuItemClass}>
+        复制
+      </button>
+      <div className="mx-1 border-t border-border-default" />
+      <button type="button" onClick={() => { onDelete(); onClose(); }}
+        className={`w-full text-left ${btnDanger}`}>
+        删除
+      </button>
+    </div>
+  );
+};
+
+// ============================================================================
+// DraftPanel — 主组件
+// ============================================================================
+
 const DraftPanel: React.FC = () => {
   const {
     drafts,
@@ -11,321 +151,266 @@ const DraftPanel: React.FC = () => {
     updateDraft,
     deleteDraft,
     duplicateDraft,
-    // 存档相关
     currentArchiveId,
-    getCurrentArchive
+    getCurrentArchive,
   } = useGuideStore();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [batchMode, setBatchMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
+  const menuAnchorRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const floatingRef = useRef<HTMLDivElement>(null);
 
   const currentArchive = getCurrentArchive();
 
-  // 过滤草稿：只显示当前存档的草稿（或未关联的草稿，如果没有选中存档）
   const displayedDrafts = useMemo(() => {
     if (!currentArchiveId) {
-      return drafts.filter(draft => !draft.linkedGuideId);
+      return drafts.filter((d) => !d.linkedGuideId);
     }
-    return drafts.filter(draft => draft.linkedGuideId === currentArchiveId);
+    return drafts.filter((d) => d.linkedGuideId === currentArchiveId);
   }, [drafts, currentArchiveId]);
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
 
-  const getDraftDisplayTitle = (draft: typeof activeDraft) => {
-    if (!draft) return '';
-    const titleText = extractTitleText(draft.title);
-    if (titleText) return titleText;
-    return draft.lastSyncedAt ? '未命名章节' : '本地未命名章节';
-  };
+  // ---- 操作处理 ----
 
-  // 点击外部关闭下拉
-  const handleClickOutside = useCallback((e: MouseEvent) => {
-    if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-      setIsOpen(false);
+  const handleSelectDraft = useCallback((id: string) => {
+    selectDraft(id);
+    setIsExpanded(false);
+  }, [selectDraft]);
+
+  const handleAddDraft = useCallback(() => {
+    const newDraft = addDraft();
+    if (newDraft) selectDraft(newDraft.id);
+  }, [addDraft, selectDraft]);
+
+  const handleRename = useCallback((id: string, currentName: string) => {
+    const newName = window.prompt('重命名草稿', currentName);
+    if (newName && newName.trim()) {
+      updateDraft(id, { draftName: newName.trim() });
     }
+  }, [updateDraft]);
+
+  const handleDuplicate = useCallback((id: string) => {
+    const newDraft = duplicateDraft(id);
+    if (newDraft) selectDraft(newDraft.id);
+  }, [duplicateDraft, selectDraft]);
+
+  const handleDelete = useCallback((id: string, name: string) => {
+    if (window.confirm(`确定要删除草稿"${name}"吗？`)) {
+      deleteDraft(id);
+    }
+  }, [deleteDraft]);
+
+  const handleBatchDelete = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    if (window.confirm(`确定要删除选中的 ${selectedIds.size} 个草稿吗？`)) {
+      selectedIds.forEach((id) => deleteDraft(id));
+      setSelectedIds(new Set());
+      setBatchMode(false);
+    }
+  }, [selectedIds, deleteDraft]);
+
+  const exitBatchMode = useCallback(() => {
+    setBatchMode(false);
+    setSelectedIds(new Set());
   }, []);
 
+  const toggleBatchSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  // ---- 点击外部关闭 ----
+
   useEffect(() => {
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isOpen, handleClickOutside]);
+    if (!isExpanded) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+        exitBatchMode();
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isExpanded, exitBatchMode]);
+
+  // ---- 渲染 ----
 
   return (
-    <div
-      ref={dropdownRef}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.6rem',
-        position: 'relative'
-      }}
-    >
-      {/* 草稿选择器 */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          flex: 1,
-          minWidth: 0
-        }}
-      >
-        {/* 下拉触发器 */}
+    <div data-draft-panel ref={panelRef} className="relative">
+      {/* 触发器 bar — 始终可见，样式不变 */}
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.45rem 0.75rem',
-            borderRadius: '0.5rem',
-            border: '1px solid rgba(102, 192, 244, 0.3)',
-            background: 'rgba(8, 14, 23, 0.7)',
-            color: 'var(--text-primary, #d7e8ff)',
-            cursor: 'pointer',
-            fontSize: '0.85rem',
-            minWidth: 0,
-            maxWidth: '420px'
-          }}
+          onClick={() => { if (isExpanded) { exitBatchMode(); setMenuOpenId(null); } setIsExpanded(!isExpanded); }}
+          className="
+            flex items-center gap-2 px-3 py-2
+            rounded-lg border border-border-default bg-bg-surface
+            text-sm text-text-secondary
+            hover:border-border-accent hover:bg-bg-hover hover:text-text-primary
+            nasge-transition-quick cursor-pointer
+          "
         >
-          <span style={{
-            color: 'var(--text-secondary, #8aa4c7)',
-            fontSize: '0.75rem',
-            flexShrink: 0
-          }}>
-            {isOpen ? '\u25BC' : '\u25B6'}
-          </span>
+          <ChevronIcon expanded={isExpanded} className="text-text-secondary" />
 
           {activeDraft ? (
-            <span style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem'
-            }}>
-              <span style={{ fontWeight: 500 }}>
+            <span className="flex items-center gap-1.5 truncate">
+              <span className="font-medium text-text-primary truncate">
                 {getDraftDisplayTitle(activeDraft)}
               </span>
-              <span style={{
-                fontSize: '0.75rem',
-                color: 'var(--text-secondary, #8aa4c7)',
-                opacity: 0.85
-              }}>
-                · {activeDraft.draftName}
-              </span>
+              <span className="text-xs text-text-secondary">· {activeDraft.draftName}</span>
             </span>
           ) : (
-            <span style={{ color: 'var(--text-secondary, #8aa4c7)' }}>
-              未选择草稿
-            </span>
+            <span className="text-text-secondary">未选择草稿</span>
           )}
         </button>
 
+        <span className="text-xs text-text-muted">
+          {displayedDrafts.length} 个草稿
+        </span>
       </div>
 
-      {/* 新建按钮 */}
-      <button
-        type="button"
-        onClick={() => addDraft()}
-        style={{
-          padding: '0.4rem 0.85rem',
-          borderRadius: '0.5rem',
-          border: 'none',
-          background: 'linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))',
-          color: '#06101e',
-          fontWeight: 600,
-          cursor: 'pointer',
-          fontSize: '0.8rem',
-          flexShrink: 0
-        }}
-      >
-        新建草稿
-      </button>
+      {/* 悬浮面板 */}
+      {isExpanded && (
+        <div ref={floatingRef} className="absolute top-[calc(100%+6px)] left-0 z-50 min-w-80 max-w-[450px] rounded-lg border border-border-accent bg-bg-surface shadow-xl">
+          {/* 工具栏 */}
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border-default">
+            {batchMode ? (
+              <>
+                <button type="button" onClick={exitBatchMode} className={btnAccent}>
+                  取消
+                </button>
+                <div className="flex-1" />
+                <button type="button" onClick={handleBatchDelete}
+                  disabled={selectedIds.size === 0} className={btnDanger}>
+                  删除选中{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" onClick={() => { setBatchMode(true); setMenuOpenId(null); }}
+                  className={btnAccent}>
+                  批量管理
+                </button>
+                <div className="flex-1" />
+                <button type="button" onClick={handleAddDraft}
+                  className={`${btnAccent} flex items-center gap-1`}>
+                  <PlusIcon className="w-3 h-3" />
+                  新建
+                </button>
+              </>
+            )}
+          </div>
 
-      {/* 下拉浮层 */}
-      {isOpen && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 'calc(100% + 4px)',
-            left: 0,
-            minWidth: '320px',
-            maxWidth: '450px',
-            maxHeight: '380px',
-            overflowY: 'auto',
-            background: 'rgba(10, 17, 28, 0.98)',
-            border: '1px solid rgba(102, 192, 244, 0.3)',
-            borderRadius: '0.6rem',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
-            zIndex: 200,
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
           {/* 草稿列表 */}
-          {displayedDrafts.length === 0 ? (
-            <div style={{
-              padding: '1.2rem 1rem',
-              textAlign: 'center',
-              color: 'var(--text-secondary, #8aa4c7)',
-              fontSize: '0.8rem'
-            }}>
-              {currentArchive
-                ? `"${currentArchive.guideName}" 下没有草稿`
-                : '点击「新建草稿」开始编辑'}
-            </div>
-          ) : (
-            <div style={{ padding: '0.35rem 0' }}>
-              {displayedDrafts.map((draft) => {
+          <div className="max-h-72 overflow-y-auto p-1.5">
+            {displayedDrafts.length === 0 ? (
+              <div className="py-6 text-center text-text-muted text-xs">
+                {currentArchive?.guideName
+                  ? `"${currentArchive.guideName}" 下没有草稿`
+                  : '点击「新建」开始编辑'}
+              </div>
+            ) : (
+              displayedDrafts.map((draft) => {
                 const isActive = activeDraftId === draft.id;
+                const isSelected = selectedIds.has(draft.id);
 
                 return (
-                  <button
+                  <div
                     key={draft.id}
-                    type="button"
-                    onClick={() => {
-                      selectDraft(draft.id);
-                      setIsOpen(false);
-                    }}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.6rem',
-                      padding: '0.55rem 0.85rem',
-                      border: 'none',
-                      background: isActive ? 'rgba(102, 192, 244, 0.15)' : 'transparent',
-                      color: 'var(--text-primary, #d7e8ff)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontSize: '0.85rem',
-                      transition: 'background 0.1s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) e.currentTarget.style.background = 'rgba(102, 192, 244, 0.08)';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) e.currentTarget.style.background = 'transparent';
-                    }}
+                    className={`
+                      group flex items-center gap-2 px-3 py-2 rounded-md
+                      nasge-transition-quick
+                      ${isActive && !batchMode
+                        ? 'bg-accent-muted text-text-primary'
+                        : 'bg-transparent text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                      }
+                      ${batchMode ? '' : 'cursor-pointer'}
+                    `}
+                    onClick={batchMode ? undefined : () => handleSelectDraft(draft.id)}
                   >
-                    {/* 选中指示器 */}
-                    <span style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: isActive ? 'var(--color-primary, #66c0f4)' : 'transparent',
-                      border: isActive ? 'none' : '1px solid rgba(102, 192, 244, 0.3)',
-                      flexShrink: 0
-                    }} />
+                    {/* 左侧：批量 checkbox 或 选中 checkmark */}
+                    {batchMode ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleBatchSelect(draft.id)}
+                        className={`
+                          w-4 h-4 shrink-0 rounded border nasge-transition-quick cursor-pointer
+                          flex items-center justify-center
+                          ${isSelected
+                            ? 'bg-accent border-accent text-white'
+                            : 'border-text-muted bg-transparent hover:border-accent'
+                          }
+                        `}
+                      >
+                        {isSelected && (
+                          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M20 6 9 17l-5-5" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      isActive && <CheckIcon className="text-accent" />
+                    )}
 
                     {/* 草稿信息 */}
-                    <div style={{
-                      flex: 1,
-                      minWidth: 0,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.15rem'
-                    }}>
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem'
-                      }}>
-                        <span style={{
-                          fontWeight: 500,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {getDraftDisplayTitle(draft)}
-                        </span>
-                      </div>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        color: 'var(--text-secondary, #8aa4c7)',
-                        opacity: 0.8
-                      }}>
-                        {draft.draftName} · {new Date(draft.updatedAt).toLocaleString('zh-CN', {
-                          month: 'numeric',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                    <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                      <span className="text-sm font-medium truncate">
+                        {getDraftDisplayTitle(draft)}
+                      </span>
+                      <span className="text-[11px] text-text-muted">
+                        {draft.draftName} · {formatDate(draft.updatedAt)}
                       </span>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
 
-          {/* 操作栏 */}
-          {activeDraft && displayedDrafts.length > 0 && (
-            <div style={{
-              display: 'flex',
-              gap: '0',
-              borderTop: '1px solid rgba(102, 192, 244, 0.15)'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  const newName = window.prompt('重命名草稿', activeDraft.draftName);
-                  if (newName && newName.trim()) {
-                    updateDraft(activeDraft.id, { draftName: newName.trim() });
-                  }
-                }}
-                style={dropdownActionStyle}
-              >
-                重命名
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const newDraft = duplicateDraft(activeDraft.id);
-                  if (newDraft) {
-                    selectDraft(newDraft.id);
-                  }
-                }}
-                style={dropdownActionStyle}
-              >
-                复制
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm(`确定要删除草稿"${activeDraft.draftName}"吗？`)) {
-                    deleteDraft(activeDraft.id);
-                  }
-                }}
-                style={{
-                  ...dropdownActionStyle,
-                  color: '#ff8080'
-                }}
-              >
-                删除
-              </button>
-            </div>
-          )}
+                    {/* ··· 菜单按钮 */}
+                    {!batchMode && (
+                      <button
+                        type="button"
+                        ref={menuOpenId === draft.id ? menuAnchorRef : undefined}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMenuOpenId(menuOpenId === draft.id ? null : draft.id);
+                        }}
+                        className={`shrink-0 p-1 rounded-md nasge-transition-quick cursor-pointer ${btnAccent}`}
+                      >
+                        <EllipsisIcon />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* ··· 上下文菜单 */}
+          {menuOpenId && (() => {
+            const menuDraft = displayedDrafts.find((d) => d.id === menuOpenId);
+            if (!menuDraft) return null;
+            return (
+              <DraftContextMenu
+                anchorRef={menuAnchorRef}
+                floatingRef={floatingRef}
+                onClose={() => setMenuOpenId(null)}
+                onRename={() => handleRename(menuDraft.id, menuDraft.draftName)}
+                onDuplicate={() => handleDuplicate(menuDraft.id)}
+                onDelete={() => handleDelete(menuDraft.id, menuDraft.draftName)}
+              />
+            );
+          })()}
         </div>
       )}
     </div>
   );
-};
-
-const dropdownActionStyle: React.CSSProperties = {
-  flex: 1,
-  border: 'none',
-  borderRadius: 0,
-  padding: '0.5rem 0.6rem',
-  background: 'transparent',
-  color: 'var(--text-secondary, #8aa4c7)',
-  cursor: 'pointer',
-  fontSize: '0.78rem',
-  transition: 'background 0.1s ease'
 };
 
 export default DraftPanel;
