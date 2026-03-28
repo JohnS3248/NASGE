@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import "./styles/tailwind.css";
 
 // === DEBUG: 导出 Store 和 Service 用于控制台测试 ===
 import("./stores/useImageStore").then(({ useImageStore }) => {
