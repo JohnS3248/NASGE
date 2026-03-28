@@ -115,6 +115,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
 
   // 编辑器布局设置
+  const theme = useEditorConfigStore(
+    (state) => state.theme
+  );
+  const setTheme = useEditorConfigStore(
+    (state) => state.setTheme
+  );
   const showPreview = useEditorConfigStore(
     (state) => state.showPreview
   );
@@ -537,6 +543,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               编辑器布局
             </div>
+
+            {/* 主题 */}
+            <SelectOption
+              label="主题"
+              description="切换编辑器的视觉风格"
+              value={theme}
+              options={[
+                { value: "steam-dark", label: "Steam Dark" },
+                { value: "steam-midnight", label: "Steam Midnight" },
+                { value: "steam-classic", label: "Steam Classic" },
+              ]}
+              onChange={setTheme}
+            />
 
             {/* 实时预览 */}
             <ToggleOption

@@ -147,7 +147,7 @@ const App: React.FC = () => {
     <div
       style={{
         minHeight: "100vh",
-        background: "radial-gradient(circle at 20% 0%, rgba(102, 192, 244, 0.2), transparent 55%), var(--bg-app, linear-gradient(180deg, #101a2b 0%, #0b1522 100%))",
+        background: "var(--bg-app, #0e141b)",
         padding: "1.5rem",
         boxSizing: "border-box",
         display: "flex",

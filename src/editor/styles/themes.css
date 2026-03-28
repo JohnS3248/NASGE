@@ -1,0 +1,32 @@
+/* ===== NASGE Theme Variants ===== */
+/* steam-dark: defined in tokens.css (default) */
+
+:root[data-theme="steam-midnight"] {
+  --bg-app: #0e141b;
+  --bg-surface: #171d25;
+  --bg-input: rgba(6, 10, 16, 0.6);
+  --bg-editor: rgba(8, 12, 20, 0.85);
+  --bg-toolbar: rgba(12, 18, 28, 0.95);
+  --text-bright: #e8ecf0;
+  --text-primary: #d0dae8;
+  --text-secondary: #7a8ea8;
+  --text-muted: #5a6e84;
+  --border-accent: rgba(102, 192, 244, 0.18);
+  --border-subtle: rgba(102, 192, 244, 0.10);
+  --shadow-panel: 0 24px 40px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="steam-classic"] {
+  --bg-app: linear-gradient(180deg, #2a475e 0%, #1b2838 80%);
+  --bg-surface: #1b2838;
+  --bg-input: rgba(14, 20, 27, 0.55);
+  --bg-editor: rgba(16, 26, 43, 0.7);
+  --bg-toolbar: rgba(27, 40, 56, 0.95);
+  --text-bright: #e5e5e5;
+  --text-primary: #c7d5e0;
+  --text-secondary: #8fa8c4;
+  --text-muted: #6b8ba8;
+  --border-accent: rgba(102, 192, 244, 0.30);
+  --border-subtle: rgba(102, 192, 244, 0.18);
+  --shadow-panel: 0 16px 32px rgba(0, 0, 0, 0.35);
+}
