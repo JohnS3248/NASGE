@@ -175,70 +175,19 @@ const App: React.FC = () => {
         }}
       >
         {/* 按钮行 - 独立于编辑区 */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "0.6rem"
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              toast.info('导出草稿功能待实现');
-            }}
-            style={{
-              padding: "0.45rem 1rem",
-              borderRadius: "var(--radius-sm, 0.6rem)",
-              border: "1px solid rgba(102, 192, 244, 0.5)",
-              background: "rgba(102, 192, 244, 0.15)",
-              color: "var(--color-primary, #66c0f4)",
-              fontWeight: 600,
-              cursor: "pointer",
-              fontSize: "0.85rem",
-              transition: "all 0.15s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(102, 192, 244, 0.25)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(102, 192, 244, 0.15)";
-            }}
-          >
-            导出草稿
-          </button>
-
-          <div style={{ display: "flex", gap: "0.6rem" }}>
+        <div className="flex justify-end items-center gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleImportBBCode}
-              style={{
-                padding: "0.45rem 1rem",
-                borderRadius: "var(--radius-sm, 0.6rem)",
-                border: "1px solid rgba(102, 192, 244, 0.35)",
-                background: "rgba(12, 21, 33, 0.85)",
-                color: "#cfe7ff",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: "0.85rem"
-              }}
+              className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer bg-bg-overlay text-text-secondary border border-border-default hover:bg-bg-hover hover:text-text-primary"
             >
               导入 BBCode
             </button>
             <button
               type="button"
               onClick={handleExportBBCode}
-              style={{
-                padding: "0.45rem 1rem",
-                borderRadius: "var(--radius-sm, 0.6rem)",
-                border: "1px solid rgba(102, 192, 244, 0.35)",
-                background: "rgba(12, 21, 33, 0.85)",
-                color: "#cfe7ff",
-                fontWeight: 600,
-                cursor: "pointer",
-                fontSize: "0.85rem"
-              }}
+              className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer bg-bg-overlay text-text-secondary border border-border-default hover:bg-bg-hover hover:text-text-primary"
             >
               导出 BBCode
             </button>
@@ -248,16 +197,7 @@ const App: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsUploadPreviewing(false)}
-                    style={{
-                      padding: "0.45rem 0.8rem",
-                      borderRadius: "var(--radius-sm, 0.6rem)",
-                      border: "1px solid rgba(255, 128, 128, 0.4)",
-                      background: "transparent",
-                      color: "#ff8080",
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      fontSize: "0.8rem"
-                    }}
+                    className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer text-danger border border-danger/40 bg-transparent hover:bg-danger/10"
                   >
                     取消上传
                   </button>
@@ -267,21 +207,13 @@ const App: React.FC = () => {
                   onClick={handleUploadClick}
                   disabled={isUploading || isDraftEmpty}
                   title={isDraftEmpty ? "草稿内容为空，无法上传" : undefined}
-                  style={{
-                    padding: "0.45rem 1rem",
-                    borderRadius: "var(--radius-sm, 0.6rem)",
-                    border: isUploadPreviewing ? "2px solid rgba(255, 180, 50, 0.7)" : "none",
-                    background: (isUploading || isDraftEmpty)
-                      ? "rgba(102, 192, 244, 0.3)"
-                      : isUploadPreviewing
-                        ? "linear-gradient(135deg, rgba(255, 180, 50, 0.9), rgba(230, 140, 20, 0.9))"
-                        : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-                    color: isUploadPreviewing ? "#1a1000" : "#06101e",
-                    fontWeight: 600,
-                    cursor: (isUploading || isDraftEmpty) ? "not-allowed" : "pointer",
-                    fontSize: "0.85rem",
-                    opacity: (isUploading || isDraftEmpty) ? 0.5 : 1
-                  }}
+                  className={`px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick
+                    ${(isUploading || isDraftEmpty)
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer"}
+                    ${isUploadPreviewing
+                      ? "bg-warning text-bg-app border-2 border-warning/70"
+                      : "bg-accent text-bg-app hover:bg-accent-hover border-0"}`}
                 >
                   {isUploading ? "上传中..." : isUploadPreviewing ? "确认上传" : "上传到 Steam"}
                 </button>
