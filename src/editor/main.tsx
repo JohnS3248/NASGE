@@ -22,6 +22,9 @@ import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
   const theme = useEditorConfigStore.getState().theme;
   document.documentElement.dataset.theme = theme;
 });
+import("./stores/useToastStore").then(({ useToastStore }) => {
+  (window as any).__toastStore = useToastStore;
+});
 import("./utils/bbcode").then(({ bbcodeToHtml, htmlToBBCode }) => {
   (window as any).__bbcodeToHtml = bbcodeToHtml;
   (window as any).__htmlToBBCode = htmlToBBCode;

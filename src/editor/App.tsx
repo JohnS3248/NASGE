@@ -19,6 +19,8 @@ import { loggers } from "../shared/logger";
 import { ImageFloatingPanel } from "./components/ImageFloatingPanel";
 import { useEditorConfigStore } from "./stores/useEditorConfigStore";
 import { PreviewPanel } from "./components/PreviewPanel";
+import ToastContainer from "./components/ToastContainer";
+import { toast } from "./stores/useToastStore";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
@@ -75,13 +77,13 @@ const App: React.FC = () => {
 
   const handleExportBBCode = useCallback(() => {
     if (!currentHtml) {
-      window.alert("当前章节为空，没有可导出的 BBCode。");
+      toast.error("当前章节为空，没有可导出的 BBCode。");
       return;
     }
     const bbcode = htmlToBBCode(currentHtml);
     try {
       void navigator.clipboard?.writeText(bbcode);
-      window.alert("BBCode 已复制到剪贴板。");
+      toast.success("BBCode 已复制到剪贴板。");
     } catch {
       window.prompt("复制以下 BBCode", bbcode);
     }
@@ -96,7 +98,7 @@ const App: React.FC = () => {
       doc = generateJSON(html, htmlExtensions);
     } catch (error) {
       loggers.editor.error("导入 BBCode 失败", error);
-      window.alert("BBCode 内容无法识别，请检查格式后再试。");
+      toast.error("BBCode 内容无法识别，请检查格式后再试。");
       return;
     }
     setExternalDoc(doc);
@@ -127,12 +129,12 @@ const App: React.FC = () => {
     setIsUploading(true);
     try {
       await pushDraft(activeDraft.id);
-      window.alert("上传成功！");
+      toast.success("上传成功！");
       setIsUploadPreviewing(false);
     } catch (error) {
       loggers.sync.error("上传失败", error);
       const message = error instanceof Error ? error.message : "上传失败，未知错误";
-      window.alert(`上传失败：${message}`);
+      toast.error(`上传失败：${message}`);
     } finally {
       setIsUploading(false);
     }
@@ -184,7 +186,7 @@ const App: React.FC = () => {
           <button
             type="button"
             onClick={() => {
-              window.alert('导出草稿功能待实现');
+              toast.info('导出草稿功能待实现');
             }}
             style={{
               padding: "0.45rem 1rem",
@@ -404,6 +406,7 @@ const App: React.FC = () => {
       </div>
 
       <UploadStatusHUD />
+      <ToastContainer />
 
       {/* 章节导航 - 固定在右侧边缘 */}
       <div

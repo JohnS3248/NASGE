@@ -12,6 +12,7 @@ import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
 import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
 import { loggers } from '../../shared/logger';
+import { toast } from '../stores/useToastStore';
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -198,7 +199,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       loggers.image.info('TitleEditor 图片上传成功');
     } catch (error) {
       loggers.image.error('TitleEditor 图片上传失败:', error);
-      window.alert(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.error(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
   }, [contextMenu.payload?.imageNodeId]);
 

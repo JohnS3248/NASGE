@@ -22,6 +22,7 @@ import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from "../utils/characterLimit";
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 import { loggers } from "../../shared/logger";
+import { toast } from "../stores/useToastStore";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
 
 // 类型别名，保持向后兼容
@@ -115,7 +116,7 @@ const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> =
 ];
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
-  initialContent = "<p>欢迎使用 NASGE。这里是 Sprint 1 的 Tiptap 最小可行版本。</p>",
+  initialContent = "<p>欢迎使用 NASGE 编辑器。</p>",
   externalDoc,
   onUpdate,
   onEditorReady
@@ -395,12 +396,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const previewId = await uploadSingleImage(nodeId);
       loggers.image.info('TipTapEditor 图片上传成功，预览码:', previewId);
 
-      // 可选：显示成功提示
-      // window.alert(`图片上传成功！预览码：${previewId}`);
+      // 静默成功，无需弹窗
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       loggers.image.error('TipTapEditor 图片上传失败:', errorMessage);
-      window.alert(`图片上传失败：${errorMessage}`);
+      toast.error(`图片上传失败：${errorMessage}`);
     }
   }, [contextMenu, editor]);
 

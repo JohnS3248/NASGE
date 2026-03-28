@@ -23,6 +23,7 @@ import {
   Z_INDEX
 } from "./styles";
 import { loggers } from "../../../shared/logger";
+import { toast } from "../../stores/useToastStore";
 
 /**
  * 根据 MIME 类型获取默认文件名
@@ -180,8 +181,8 @@ const ImageFloatingPanel: React.FC = () => {
   // ============ 图片双击（插入到编辑器） ============
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {
     loggers.image.info("双击图片", { fileName: image.fileName, previewId: image.previewId });
-    // TODO: Phase 2 实现插入到编辑器
-    window.alert(`双击图片: ${image.fileName}\n(插入功能将在 Phase 2 实现)`);
+    // TODO: 实现插入到编辑器
+    toast.info(`双击图片: ${image.fileName}\n(插入功能待实现)`);
   }, []);
 
   // ============ 拖拽移动 ============
@@ -272,7 +273,7 @@ const ImageFloatingPanel: React.FC = () => {
         if (result.skipped) {
           // 重复图片提示
           const reason = result.reason === 'duplicate_uploaded' ? '已上传' : '待上传';
-          window.alert(`此截图已存在于图片池中（${reason}）\n已有文件: ${result.existingFileName}`);
+          toast.info(`此截图已存在于图片池中（${reason}）\n已有文件: ${result.existingFileName}`);
         } else {
           // 如果启用粘贴重命名，设置为编辑模式让用户可以重命名
           if (promptRenameOnPaste) {

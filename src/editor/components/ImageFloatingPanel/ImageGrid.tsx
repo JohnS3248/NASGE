@@ -14,6 +14,7 @@ import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
 import { COLORS, SIZES } from "./styles";
 import { loggers } from "../../../shared/logger";
+import { toast } from "../../stores/useToastStore";
 
 interface ImageGridProps {
   images: ImageWithState[];
@@ -164,7 +165,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       loggers.image.error("Steam 图片删除失败", { previewId: image.previewId, error: errorMsg });
-      window.alert(`删除失败: ${errorMsg}`);
+      toast.error(`删除失败: ${errorMsg}`);
     }
   }, [removeItem]);
 
@@ -364,11 +365,11 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     if (skippedFiles.length > 0) {
       if (imageFiles.length === 1) {
         // 单张图片：显示详细提示
-        window.alert(`"${skippedFiles[0].fileName}" 已存在（${skippedFiles[0].reason}），已跳过`);
+        toast.info(`"${skippedFiles[0].fileName}" 已存在（${skippedFiles[0].reason}），已跳过`);
       } else {
         // 批量拖入：显示统计
         const msg = `已添加 ${addedImages.length} 张图片\n跳过 ${skippedFiles.length} 张重复图片`;
-        window.alert(msg);
+        toast.info(msg);
       }
     }
 

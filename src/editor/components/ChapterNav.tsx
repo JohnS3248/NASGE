@@ -5,6 +5,7 @@ import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import type { ImageState } from '../stores/useSteamGuideImageStore';
 import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
+import { toast } from '../stores/useToastStore';
 
 /**
  * 格式化同步时间
@@ -410,7 +411,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
     // 离线模式下禁止拖拽排序（需要连接 Steam）
     if (isOfflineData) {
-      window.alert('离线模式下无法重新排序章节，请先刷新连接 Steam');
+      toast.warning('离线模式下无法重新排序章节，请先刷新连接 Steam');
       return;
     }
 
@@ -437,7 +438,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       loggers.sync.info('章节排序已同步到 Steam');
     } catch (error) {
       loggers.sync.error('章节排序同步失败', error);
-      window.alert('章节排序同步到 Steam 失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error('章节排序同步到 Steam 失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsSyncing(false);
     }
@@ -453,10 +454,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
     try {
       await onRefresh();
-      window.alert('章节列表已刷新');
+      toast.success('章节列表已刷新');
     } catch (error) {
       loggers.editor.error('章节列表刷新失败', error);
-      window.alert('章节列表刷新失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error('章节列表刷新失败：' + (error instanceof Error ? error.message : '未知错误'));
     }
   };
 
@@ -466,7 +467,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
     // 离线模式下禁止创建章节
     if (isOfflineData) {
-      window.alert('离线模式下无法创建新章节，请先刷新连接 Steam');
+      toast.warning('离线模式下无法创建新章节，请先刷新连接 Steam');
       return;
     }
 
@@ -482,7 +483,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       // 不弹窗，新章节会自动出现在列表中
     } catch (error) {
       loggers.editor.error('创建章节失败', error);
-      window.alert('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
     } finally {
       setIsCreatingChapter(false);
     }

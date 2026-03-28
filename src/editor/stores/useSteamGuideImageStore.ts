@@ -237,7 +237,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       addLocalImage: async (file: File, linkedGuideId?: string): Promise<AddImageResult> => {
         const items = get().items;
 
-        // Phase 2: 内容哈希去重检测
+        // 内容哈希去重检测
         const contentHash = await computeImageHash(file);
 
         // 检查是否有相同内容的图片（已上传的）
@@ -276,7 +276,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           };
         }
 
-        // Phase 1: 文件名去重检测（仅对不同内容的同名文件）
+        // 文件名去重检测（仅对不同内容的同名文件）
         let finalFileName = file.name;
         const existingNames = new Set(items.map(item => item.fileName));
 
