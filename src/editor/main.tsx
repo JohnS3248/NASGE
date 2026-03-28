@@ -25,6 +25,9 @@ import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
 import("./stores/useToastStore").then(({ useToastStore }) => {
   (window as any).__toastStore = useToastStore;
 });
+import("./stores/useReviewStore").then(({ useReviewStore }) => {
+  (window as any).__reviewStore = useReviewStore;
+});
 import("./utils/bbcode").then(({ bbcodeToHtml, htmlToBBCode }) => {
   (window as any).__bbcodeToHtml = bbcodeToHtml;
   (window as any).__htmlToBBCode = htmlToBBCode;

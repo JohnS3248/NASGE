@@ -3,7 +3,7 @@ import type { Editor } from "@tiptap/core";
 import TipTapEditor from "./components/TipTapEditor";
 import EditorToolbar from "./components/EditorToolbar";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
-import { useGuideStore } from "./stores/useGuideStore";
+import { useGuideStore, isReviewMode as checkReviewMode, isOnlineMode } from "./stores/useGuideStore";
 import { JSONContent } from "@tiptap/core";
 import { createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
@@ -21,10 +21,13 @@ import { useEditorConfigStore } from "./stores/useEditorConfigStore";
 import { PreviewPanel } from "./components/PreviewPanel";
 import ToastContainer from "./components/ToastContainer";
 import { toast } from "./stores/useToastStore";
+import ReviewSettingsPanel from "./components/ReviewSettingsPanel";
 
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
+  const mode = useGuideStore((s) => s.mode);
+  const reviewMode = checkReviewMode(mode);
   const showPreview = useEditorConfigStore((s) => s.showPreview);
   const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
@@ -37,7 +40,7 @@ const App: React.FC = () => {
   const { drafts, activeDraftId, updateDraft } = useGuideStore();
 
   const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId) ?? drafts[0], [drafts, activeDraftId]);
-  const htmlExtensions = useMemo(() => createEditorExtensions(), []);
+  const htmlExtensions = useMemo(() => createEditorExtensions({ reviewMode }), [reviewMode]);
 
   // 草稿是否为空
   const isDraftEmpty = useMemo(() => {
@@ -191,7 +194,7 @@ const App: React.FC = () => {
             >
               导出 BBCode
             </button>
-            {activeDraft?.linkedChapterId && (
+            {!reviewMode && activeDraft?.linkedChapterId && (
               <>
                 {isUploadPreviewing && (
                   <button
@@ -222,15 +225,17 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 标题编辑器 - 独立于编辑区 */}
-        <TitleEditor
-          value={activeDraft?.title || createEmptyTitle()}
-          onChange={(newTitle) => {
-            if (activeDraft) {
-              updateDraft(activeDraft.id, { title: newTitle });
-            }
-          }}
-        />
+        {/* 标题编辑器 - 仅指南模式 */}
+        {!reviewMode && (
+          <TitleEditor
+            value={activeDraft?.title || createEmptyTitle()}
+            onChange={(newTitle) => {
+              if (activeDraft) {
+                updateDraft(activeDraft.id, { title: newTitle });
+              }
+            }}
+          />
+        )}
 
         {/* 编辑器 + 预览 */}
         <div
@@ -340,29 +345,46 @@ const App: React.FC = () => {
       <UploadStatusHUD />
       <ToastContainer />
 
-      {/* 章节导航 - 固定在右侧边缘 */}
-      <div
-        style={{
-          position: "fixed",
-          right: "1rem",
-          top: "14rem",
-          bottom: "1rem",
-          zIndex: 100,
-          overflowY: "auto",
-          pointerEvents: "auto"
-        }}
-      >
-        <ChapterNav
-          onRefresh={refreshGuideInfo}
-          isRefreshing={isRefreshingGuide}
-        />
-      </div>
+      {/* 章节导航 - 仅指南模式，固定在右侧边缘 */}
+      {!reviewMode && (
+        <div
+          style={{
+            position: "fixed",
+            right: "1rem",
+            top: "14rem",
+            bottom: "1rem",
+            zIndex: 100,
+            overflowY: "auto",
+            pointerEvents: "auto"
+          }}
+        >
+          <ChapterNav
+            onRefresh={refreshGuideInfo}
+            isRefreshing={isRefreshingGuide}
+          />
+        </div>
+      )}
+
+      {/* 评测设置面板 - 仅评测模式，固定在右侧 */}
+      {reviewMode && (
+        <div
+          style={{
+            position: "fixed",
+            right: "1rem",
+            top: "14rem",
+            zIndex: 100,
+            pointerEvents: "auto"
+          }}
+        >
+          <ReviewSettingsPanel currentHtml={currentHtml} />
+        </div>
+      )}
 
       {/* 悬浮工具栏 */}
       {activeDraft && <EditorToolbar editor={editorInstance} />}
 
-      {/* 图片悬浮窗 */}
-      <ImageFloatingPanel />
+      {/* 图片悬浮窗 - 仅指南模式 */}
+      {!reviewMode && <ImageFloatingPanel />}
     </div>
   );
 };

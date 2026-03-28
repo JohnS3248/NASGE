@@ -3,6 +3,14 @@ import { useGuideStore, type EditorMode } from '../stores/useGuideStore';
 import { fetchGuideInfo } from '../services/guideInfo';
 import { loggers } from '../../shared/logger';
 
+const VALID_MODES = new Set<string>(['guide', 'review', 'offline-guide', 'offline-review', 'offline']);
+
+function resolveMode(raw: string): EditorMode {
+  // 兼容旧 URL 参数 ?mode=offline → offline-guide
+  if (raw === 'offline') return 'offline-guide';
+  return raw as EditorMode;
+}
+
 /**
  * 根据 URL 参数初始化编辑器模式和指南信息
  */
@@ -18,23 +26,43 @@ export function useEditorMode() {
     }
 
     const params = new URLSearchParams(window.location.search);
-    const urlMode = params.get('mode') as EditorMode | null;
+    const urlModeRaw = params.get('mode');
     const guideId = params.get('guideId');
+    const appId = params.get('appId');
 
-    loggers.editor.verbose('URL 参数', { urlMode, guideId });
+    loggers.editor.verbose('URL 参数', { urlModeRaw, guideId, appId });
 
     // 设置模式（仅当模式不同时）
-    if (urlMode && (urlMode === 'guide' || urlMode === 'review' || urlMode === 'offline')) {
-      if (mode !== urlMode) {
-        setMode(urlMode);
-        loggers.editor.verbose('设置模式:', urlMode);
-      } else {
-        loggers.editor.verbose('模式已是:', urlMode, '无需更新');
+    if (urlModeRaw && VALID_MODES.has(urlModeRaw)) {
+      const resolved = resolveMode(urlModeRaw);
+      if (mode !== resolved) {
+        setMode(resolved);
+        loggers.editor.verbose('设置模式:', resolved);
       }
     }
 
+    const resolved = urlModeRaw && VALID_MODES.has(urlModeRaw)
+      ? resolveMode(urlModeRaw)
+      : mode;
+
+    // 如果是评测模式且有 appId，初始化评测信息
+    if (resolved === 'review' && appId) {
+      import('../services/reviewBridge').then(({ fetchReviewForm }) => {
+        fetchReviewForm().then((data) => {
+          import('../stores/useReviewStore').then(({ useReviewStore }) => {
+            useReviewStore.getState().setReviewInfo(data);
+            loggers.editor.info('评测信息导入成功', data);
+          });
+        }).catch((error) => {
+          loggers.editor.error('评测信息导入失败', error);
+        });
+      });
+      hasInitialized.current = true;
+      return;
+    }
+
     // 如果是指南模式且有 guideId，检查是否需要拉取指南信息
-    if (urlMode === 'guide' && guideId) {
+    if (resolved === 'guide' && guideId) {
       // 如果已经有相同 ID 的指南信息，跳过拉取
       if (guideInfo?.id === guideId) {
         loggers.editor.verbose('指南信息已存在，跳过拉取', { guideId });
@@ -47,10 +75,9 @@ export function useEditorMode() {
       // 添加重试逻辑，处理 content script 未就绪的情况
       const fetchWithRetry = async (retries = 3, initialDelay = 300) => {
         // 初始延迟：给 Steam content script 时间准备
-        // 避免在扩展首次加载时出现不必要的连接错误
         await new Promise(resolve => setTimeout(resolve, initialDelay));
 
-        let delay = 500; // 每次重试的延迟
+        let delay = 500;
 
         for (let i = 0; i < retries; i++) {
           try {
@@ -64,28 +91,23 @@ export function useEditorMode() {
                error.message.includes('Receiving end does not exist'));
 
             if (isConnectionError && i < retries - 1) {
-              // 静默重试，不显示错误（避免困扰用户）
               loggers.editor.info(`连接 Steam 中，${delay}ms 后重试 (${i + 1}/${retries})`);
               await new Promise(resolve => setTimeout(resolve, delay));
-              // 指数退避：每次重试延迟加倍
               delay *= 2;
             } else {
-              // 只在最终失败时显示错误
               const errorMessage = error instanceof Error ? error.message : String(error);
               loggers.editor.error('指南信息导入失败:', errorMessage);
 
-              // 显示中文错误提示
               if (isConnectionError) {
                 loggers.editor.error('无法连接到 Steam 页面，请确保已打开指南编辑页面');
               }
-              return; // 不要 throw，避免未处理的 Promise rejection
+              return;
             }
           }
         }
       };
 
       fetchWithRetry().catch((error) => {
-        // 最终失败，已经记录了错误
         loggers.editor.error('fetchWithRetry 最终失败', error);
       });
 

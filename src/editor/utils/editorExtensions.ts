@@ -18,57 +18,67 @@ import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 
-export const createEditorExtensions = (): Extensions => [
-  StarterKit.configure({
-    heading: false,
-    strike: false,
-    horizontalRule: false,
-    underline: false,
-    link: false,
-    blockquote: false
-  }),
-  Underline,
-  Strike,
-  Heading.configure({
-    levels: [1, 2, 3]
-  }),
-  Link.extend({
-    // 扩展 renderHTML 以添加 title 属性，悬停时显示链接地址
-    renderHTML({ HTMLAttributes }) {
-      return [
-        "a",
-        mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
-          title: HTMLAttributes.href // 将 href 设为 title，悬停显示
-        }),
-        0
-      ];
-    }
-  }).configure({
-    openOnClick: false,
-    linkOnPaste: true,
-    autolink: true
-  }),
-  Spoiler,
-  KeyboardShortcuts,
-  HorizontalRule,
-  Image.configure({
-    HTMLAttributes: {
-      class: "nasge-image"
-    }
-  }),
-  SteamImage,
-  SteamImageInline,
-  Table.configure({
-    resizable: false,
-    HTMLAttributes: {
-      class: "nasge-table"
-    }
-  }),
-  TableRow,
-  TableHeader,
-  TableCell,
-  SteamBlockquote
-];
+export const createEditorExtensions = (options?: { reviewMode?: boolean }): Extensions => {
+  const base: Extensions = [
+    StarterKit.configure({
+      heading: false,
+      strike: false,
+      horizontalRule: false,
+      underline: false,
+      link: false,
+      blockquote: false
+    }),
+    Underline,
+    Strike,
+    Heading.configure({
+      levels: [1, 2, 3]
+    }),
+    Link.extend({
+      // 扩展 renderHTML 以添加 title 属性，悬停时显示链接地址
+      renderHTML({ HTMLAttributes }) {
+        return [
+          "a",
+          mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
+            title: HTMLAttributes.href // 将 href 设为 title，悬停显示
+          }),
+          0
+        ];
+      }
+    }).configure({
+      openOnClick: false,
+      linkOnPaste: true,
+      autolink: true
+    }),
+    Spoiler,
+    KeyboardShortcuts,
+    HorizontalRule,
+    Table.configure({
+      resizable: false,
+      HTMLAttributes: {
+        class: "nasge-table"
+      }
+    }),
+    TableRow,
+    TableHeader,
+    TableCell,
+    SteamBlockquote
+  ];
+
+  // 评测模式不加载图片相关 extension
+  if (!options?.reviewMode) {
+    base.push(
+      Image.configure({
+        HTMLAttributes: {
+          class: "nasge-image"
+        }
+      }),
+      SteamImage,
+      SteamImageInline
+    );
+  }
+
+  return base;
+};
 
 export const EMPTY_DOC: JSONContent = {
   type: "doc",

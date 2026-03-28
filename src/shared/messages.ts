@@ -82,6 +82,8 @@ export type ReviewFormData = {
   receivedCompensation: boolean;
   appId: string;
   gameName: string;
+  hasExistingReview: boolean;
+  recommendationId: string | null;
 };
 
 export type SteamFetchReviewRequest = BridgeBase & {

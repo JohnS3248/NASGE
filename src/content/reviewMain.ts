@@ -68,8 +68,8 @@ async function dispatchReviewMessage(
 
       case "submit-review": {
         const submitReq = message as SteamSubmitReviewRequest;
-        await submitReviewToSteam(submitReq.data);
-        sendResponse({ ok: true, data: { success: true } });
+        const result = await submitReviewToSteam(submitReq.data);
+        sendResponse({ ok: true, data: result });
         break;
       }
 

@@ -7,6 +7,7 @@ export type PageInfo = {
   url: string;
   guideId?: string;
   reviewId?: string;
+  appId?: string;
 };
 
 /**
@@ -39,12 +40,21 @@ export function useCurrentPage(): PageInfo | null {
           return;
         }
 
-        // 检测评测页
+        // 检测 Steam 商店游戏页（评测编辑入口）
+        // URL 格式: https://store.steampowered.com/app/XXXXXX/GameName/
+        const storeMatch = url.match(/store\.steampowered\.com\/app\/(\d+)/);
+        if (storeMatch) {
+          const appId = storeMatch[1];
+          console.log('[NASGE Popup] 检测到商店游戏页，appId:', appId);
+          setPageInfo({ type: 'review', url, appId });
+          return;
+        }
+
+        // 检测评测列表页
         // URL 格式: https://steamcommunity.com/id/USERNAME/reviews/ 或 /profiles/USERID/reviews/
         const reviewMatch = url.match(/steamcommunity\.com\/(id\/[^/]+|profiles\/\d+)\/reviews/);
         if (reviewMatch) {
-          // 评测 ID 需要从页面内容提取，这里先不实现
-          console.log('[NASGE Popup] 检测到评测页');
+          console.log('[NASGE Popup] 检测到评测列表页');
           setPageInfo({ type: 'review', url });
           return;
         }

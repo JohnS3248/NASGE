@@ -247,7 +247,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const currentArchive = getCurrentArchive();
 
   const { chapters, isOfflineData, syncTime } = useMemo(() => {
-    const isOfflineMode = mode === 'offline';
+    const isOfflineMode = mode === 'offline-guide' || mode === 'offline-review';
 
     if (guideInfo?.chapters && Array.isArray(guideInfo.chapters) && guideInfo.chapters.length > 0) {
       return {

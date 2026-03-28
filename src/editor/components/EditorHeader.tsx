@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
+import { useGuideStore, type GuideArchive, isReviewMode } from '../stores/useGuideStore';
+import { useReviewStore } from '../stores/useReviewStore';
 import { SettingsModal } from './SettingsModal';
 import { ArchiveManageModal } from './ArchiveManageModal';
 
@@ -8,9 +9,10 @@ import { ArchiveManageModal } from './ArchiveManageModal';
 // ============================================================================
 
 const MODE_CONFIG = {
-  guide:   { label: '指南模式', dot: 'bg-accent' },
-  review:  { label: '评测模式', dot: 'bg-warning' },
-  offline: { label: '离线模式', dot: 'bg-text-muted' },
+  'guide':          { label: '指南模式',     dot: 'bg-accent' },
+  'review':         { label: '评测模式',     dot: 'bg-warning' },
+  'offline-guide':  { label: '离线指南',     dot: 'bg-text-muted' },
+  'offline-review': { label: '离线评测',     dot: 'bg-text-muted' },
 } as const;
 
 // ============================================================================
@@ -38,9 +40,13 @@ const EditorHeader: React.FC = () => {
   const [manageModalVisible, setManageModalVisible] = useState(false);
   const archiveRef = useRef<HTMLDivElement>(null);
 
+  const reviewGameName = useReviewStore((s) => s.gameName);
+  const reviewAppId = useReviewStore((s) => s.appId);
+  const inReviewMode = isReviewMode(mode);
+
   const currentArchive = getCurrentArchive();
   const archiveList = Object.values(archives);
-  const modeConf = MODE_CONFIG[mode] ?? MODE_CONFIG.guide;
+  const modeConf = MODE_CONFIG[mode] ?? MODE_CONFIG['guide'];
 
   // 存档下拉外部点击关闭
   const handleClickOutside = useCallback((e: MouseEvent) => {
@@ -59,12 +65,14 @@ const EditorHeader: React.FC = () => {
   // 模式描述
   const subtitle = mode === 'guide' && guideInfo
     ? `ID ${guideInfo.id} · ${guideInfo.chapters.length} 个章节`
-    : mode === 'review'
+    : inReviewMode && reviewGameName
+    ? `${reviewGameName}${reviewAppId ? ` · ID ${reviewAppId}` : ''}`
+    : inReviewMode
     ? '编辑 Steam 评测内容'
     : '离线编辑模式 - 不关联任何 Steam 内容';
 
-  // 是否显示存档选择器（指南模式绑定 Steam 页面，不允许切换）
-  const showArchiveSelector = mode !== 'guide' && archiveList.length > 0;
+  // 是否显示存档选择器（指南/评测在线模式绑定 Steam 页面，不允许切换）
+  const showArchiveSelector = mode !== 'guide' && !inReviewMode && archiveList.length > 0;
 
   return (
     <>
@@ -97,9 +105,11 @@ const EditorHeader: React.FC = () => {
 
           <BreadcrumbSep />
 
-          {/* 指南标题 / 描述 */}
+          {/* 标题 / 描述 */}
           <span className="text-sm text-text-primary truncate" title={subtitle}>
-            {guideInfo?.title || subtitle}
+            {inReviewMode
+              ? (reviewGameName || subtitle)
+              : (guideInfo?.title || subtitle)}
           </span>
 
           {/* 章节数（指南模式下显示） */}

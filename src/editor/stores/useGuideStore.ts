@@ -15,10 +15,21 @@ import type { SteamGuideImage } from "../../shared/messages";
 /**
  * 编辑器模式
  * - guide: 指南模式（完整功能：章节、图片池等）
- * - review: 评测模式（简化版：仅文字编辑）
- * - offline: 离线模式（草稿模式：无 Steam 连接）
+ * - review: 评测模式（连接 Steam 商店页）
+ * - offline-guide: 离线指南（草稿模式：无 Steam 连接，多章节）
+ * - offline-review: 离线评测（草稿模式：无 Steam 连接，单文本）
  */
-export type EditorMode = 'guide' | 'review' | 'offline';
+export type EditorMode = 'guide' | 'review' | 'offline-guide' | 'offline-review';
+
+export function isReviewMode(mode: EditorMode): boolean {
+  return mode === 'review' || mode === 'offline-review';
+}
+export function isGuideMode(mode: EditorMode): boolean {
+  return mode === 'guide' || mode === 'offline-guide';
+}
+export function isOnlineMode(mode: EditorMode): boolean {
+  return mode === 'guide' || mode === 'review';
+}
 
 /**
  * 章节信息（从 Steam 导入，可离线缓存）
@@ -228,7 +239,7 @@ export const useGuideStore = create<GuideState>()(
 
       return {
         // === 初始状态 ===
-        mode: 'offline',
+        mode: 'offline-guide',
         currentArchiveId: null,
         guideInfo: null,
         drafts: [],
@@ -536,7 +547,7 @@ export const useGuideStore = create<GuideState>()(
             set({
               currentArchiveId: null,
               guideInfo: null,
-              mode: 'offline'
+              mode: 'offline-guide'
             });
 
             // 加载图片池（清空 Steam 图片，禁用自动 refresh）
@@ -1079,7 +1090,7 @@ export const useGuideStore = create<GuideState>()(
         // 如果没有数据，返回空状态（不自动创建草稿，让用户看到引导）
         if (!state) {
           return {
-            mode: 'offline',
+            mode: 'offline-guide',
             currentArchiveId: null,
             guideInfo: null,
             drafts: [],

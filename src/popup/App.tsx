@@ -8,7 +8,7 @@ const App: React.FC = () => {
   const editorUrl = useMemo(() => runtime?.getURL("src/editor/index.html"), []);
   const version = useMemo(() => runtime?.getManifest()?.version || "0.0.0", []);
 
-  const openEditor = useCallback((mode: 'guide' | 'review' | 'offline', guideId?: string) => {
+  const openEditor = useCallback((mode: string, guideId?: string, appId?: string) => {
     if (!editorUrl) {
       console.warn("[NASGE] 无法生成编辑器链接");
       return;
@@ -20,8 +20,11 @@ const App: React.FC = () => {
     if (guideId) {
       url.searchParams.set('guideId', guideId);
     }
+    if (appId) {
+      url.searchParams.set('appId', appId);
+    }
 
-    console.log('[NASGE] 打开编辑器:', { mode, guideId, url: url.toString() });
+    console.log('[NASGE] 打开编辑器:', { mode, guideId, appId, url: url.toString() });
 
     if (chrome?.tabs) {
       chrome.tabs.create({ url: url.toString() });
@@ -37,11 +40,13 @@ const App: React.FC = () => {
   }, [pageInfo, openEditor]);
 
   const handleEditReview = useCallback(() => {
-    openEditor('review');
-  }, [openEditor]);
+    if (pageInfo?.appId) {
+      openEditor('review', undefined, pageInfo.appId);
+    }
+  }, [pageInfo, openEditor]);
 
   const handleOpenOffline = useCallback(() => {
-    openEditor('offline');
+    openEditor('offline-guide');
   }, [openEditor]);
 
   // 根据页面类型显示提示信息
@@ -54,7 +59,7 @@ const App: React.FC = () => {
       case 'guide':
         return `已检测到指南管理页`;
       case 'review':
-        return `已检测到评测页`;
+        return pageInfo.appId ? `已检测到游戏商店页（appId: ${pageInfo.appId}）` : `已检测到评测页`;
       case 'other':
         return `当前页面不是 Steam 指南或评测页`;
       default:
