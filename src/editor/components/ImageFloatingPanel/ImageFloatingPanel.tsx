@@ -167,10 +167,10 @@ const ImageFloatingPanel: React.FC = () => {
   const handleResizeEnd = useCallback(() => { setIsResizing(null); }, []);
 
   useEffect(() => {
-    if (imagePoolStatus === "idle") {
+    if (imagePoolStatus === "idle" && currentArchiveId) {
       void refreshImagePool();
     }
-  }, [imagePoolStatus, refreshImagePool]);
+  }, [imagePoolStatus, refreshImagePool, currentArchiveId]);
 
   const handleRefresh = useCallback(() => {
     loggers.image.info('手动刷新图片池');

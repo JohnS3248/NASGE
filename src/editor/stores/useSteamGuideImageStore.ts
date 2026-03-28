@@ -351,6 +351,15 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
        * @param triggerRefresh - 是否在缓存为空时触发 refresh（默认 true）
        */
       loadFromArchive: (guideId: string | null, triggerRefresh: boolean = true) => {
+        const currentStatus = get().status;
+
+        // 如果 refresh 正在进行中，不干扰——让正在运行的 refresh 完成
+        // 避免 loadFromArchive 设置 status="idle" 导致重复 refresh
+        if (currentStatus === "loading") {
+          loggers.image.info('图片池正在加载中，跳过 loadFromArchive', { guideId });
+          return;
+        }
+
         const currentItems = get().items;
 
         // 保留所有本地图片（pending/uploading/error 状态）
