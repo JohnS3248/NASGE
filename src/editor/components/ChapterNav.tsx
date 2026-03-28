@@ -7,6 +7,48 @@ import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
 import { toast } from '../stores/useToastStore';
 
+/* ── Lucide SVG 图标 ─────────────────────────────────────── */
+
+const RotateCwIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
+  </svg>
+);
+
+const XIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+  </svg>
+);
+
+const MenuIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />
+  </svg>
+);
+
+const ArrowDownIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 5v14" /><path d="m19 12-7 7-7-7" />
+  </svg>
+);
+
+const PlusIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14" /><path d="M12 5v14" />
+  </svg>
+);
+
+/* ── Tailwind class 常量 ─────────────────────────────────── */
+
+// 分隔线
+const navHr = "h-px bg-border-subtle my-1";
+
+// 状态 border
+const borderLinked = "border-l-[3px] border-l-accent";
+const borderModified = "border-l-[3px] border-l-warning";
+const borderNone = "border-l-[3px] border-l-transparent";
+
 /**
  * 格式化同步时间
  */
@@ -35,39 +77,19 @@ interface ChapterNavProps {
  * 迷你状态指示器组件（小圆点，用于章节标题缩略图）
  */
 const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
-  const color = useMemo(() => {
-    switch (state) {
-      case "pending":
-        return "#808080"; // 灰色
-      case "uploading":
-        return "var(--color-warning, #FFC107)"; // 黄色
-      case "success":
-        return "var(--color-success, #4CAF50)"; // 绿色
-      case "error":
-        return "#F44336"; // 红色
-      default:
-        return "#808080";
-    }
-  }, [state]);
-
   // 只在非成功状态下显示（成功状态不显示，因为章节标题图片默认都是已上传的）
   if (state === "success") return null;
 
+  const colorClass = state === "pending"
+    ? "bg-gray-500"
+    : state === "uploading"
+      ? "bg-warning"
+      : state === "error"
+        ? "bg-danger"
+        : "bg-gray-500";
+
   return (
-    <div
-      style={{
-        position: "absolute",
-        bottom: "2px",
-        right: "2px",
-        width: "8px",
-        height: "8px",
-        borderRadius: "50%",
-        backgroundColor: color,
-        border: "1.5px solid rgba(0, 0, 0, 0.6)",
-        boxShadow: "0 1px 2px rgba(0,0,0,0.3)",
-        zIndex: 10
-      }}
-    />
+    <div className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border-[1.5px] border-black/60 shadow-sm z-10 ${colorClass}`} />
   );
 };
 
@@ -78,88 +100,49 @@ const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
 const ChapterTitleImage: React.FC<{
   previewId: string;
   fileName: string;
-  titleText?: string; // 可选，目前章节目录不显示文字
+  titleText?: string;
 }> = ({ previewId, fileName }) => {
   const imagePool = useSteamGuideImageStore((state) => state.items);
   const imagePoolStatus = useSteamGuideImageStore((state) => state.status);
   const [imageError, setImageError] = useState(false);
 
-  // 从图片池查找图片信息
   const imageInfo = useMemo(() => {
     return imagePool.find((img) => img.previewId === previewId);
   }, [imagePool, previewId]);
 
-  // 构建图片URL
-  // 优先使用图片池中的 originalUrl（透明背景），其次 thumbnailUrl
-  // 如果图片池还在加载中且找不到图片信息，返回 null（显示占位符）
   const imageUrl = useMemo(() => {
     const poolOriginal = imageInfo?.originalUrl;
     const poolThumbnail = imageInfo?.thumbnailUrl;
 
     loggers.editor.verbose('ChapterTitleImage building URL:', {
-      previewId,
-      fileName,
-      imageInfo,
-      poolOriginal,
-      poolThumbnail,
-      imagePoolStatus,
+      previewId, fileName, imageInfo, poolOriginal, poolThumbnail, imagePoolStatus,
       finalUrl: poolOriginal || poolThumbnail || null
     });
 
-    // 如果图片池正在加载且没有找到图片信息，返回 null（显示加载占位符）
     if (!imageInfo && (imagePoolStatus === "loading" || imagePoolStatus === "idle")) {
       return null;
     }
 
-    // 如果图片池已就绪但仍找不到图片，返回 null（显示错误占位符）
     return poolOriginal || poolThumbnail || null;
   }, [previewId, fileName, imageInfo, imagePoolStatus]);
 
-  // 获取图片状态
   const imageState: ImageState = imageInfo?.state || "success";
+  const showPlaceholder = imageError || !imageUrl;
 
   return (
-    <div
-      style={{
-        display: 'block',
-        position: 'relative',
-        width: '100%',
-        maxWidth: '100%',
-        backgroundColor: (imageError || !imageUrl) ? 'rgba(14, 26, 40, 0.6)' : 'transparent',
-        border: (imageError || !imageUrl) ? '1px solid rgba(102, 192, 244, 0.2)' : 'none',
-        borderRadius: '3px',
-        overflow: 'hidden'
-      }}
-    >
+    <div className={`block relative w-full max-w-full overflow-hidden rounded-sm ${showPlaceholder ? 'bg-bg-app/60 border border-accent/20' : 'bg-transparent'}`}>
       {!imageError && imageUrl ? (
         <>
           <img
             src={imageUrl}
             alt={fileName}
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              objectFit: 'contain'
-            }}
-            onError={() => {
-              setImageError(true);
-            }}
+            className="w-full h-auto block object-contain"
+            onError={() => setImageError(true)}
           />
-          {/* 迷你状态指示器 */}
           <MiniStateIndicator state={imageState} />
         </>
       ) : (
-        // 图片URL不存在或加载失败时显示占位符
-        <div style={{
-          width: '100%',
-          minHeight: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '32px',
-          opacity: 0.3
-        }}>
+        <div className="w-full min-h-[80px] flex items-center justify-center text-[32px] opacity-30">
           {imagePoolStatus === "loading" || imagePoolStatus === "idle" ? '⏳' : '🖼️'}
         </div>
       )}
@@ -169,7 +152,6 @@ const ChapterTitleImage: React.FC<{
 
 /**
  * 单个章节项组件（使用 React.memo 避免不必要的重渲染）
- * 🔧 性能优化：只在章节自身属性变化时重渲染
  */
 const ChapterItem = React.memo<{
   chapter: { sectionId: string; title: string };
@@ -188,22 +170,22 @@ const ChapterItem = React.memo<{
   onDragEnd: () => void;
   renderTitle: (title: string) => React.ReactNode;
 }>(({
-  chapter,
-  isLinked,
-  isModified,
-  isLoading,
-  isDragging,
-  isDragOver,
-  boundDraftName,
-  onChapterClick,
-  onPullChapter,
-  onDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onDragEnd,
-  renderTitle
+  chapter, isLinked, isModified, isLoading, isDragging, isDragOver,
+  boundDraftName, onChapterClick, onPullChapter, onDragStart, onDragOver,
+  onDragLeave, onDrop, onDragEnd, renderTitle
 }) => {
+  // 状态 border class
+  const borderClass = isDragOver
+    ? "border-l-[3px] border-l-accent/80"
+    : isModified ? borderModified : isLinked ? borderLinked : borderNone;
+
+  // 背景 class
+  const bgClass = isModified
+    ? "bg-warning/10"
+    : isLinked
+      ? "bg-accent-subtle"
+      : "hover:bg-white/5";
+
   return (
     <div
       key={chapter.sectionId}
@@ -213,73 +195,20 @@ const ChapterItem = React.memo<{
       onDragLeave={() => onDragLeave()}
       onDrop={(e) => onDrop(e, chapter.sectionId)}
       onDragEnd={() => onDragEnd()}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        borderLeft: isDragOver
-          ? '3px solid rgba(102, 192, 244, 0.8)'
-          : isModified
-            ? '3px solid var(--color-warning, #FFC107)'    // 黄色 - 有修改未提交
-            : isLinked
-              ? '3px solid var(--color-primary, #66c0f4)'  // 蓝色 - 已拉取
-              : '3px solid transparent',
-        background: isModified
-          ? 'rgba(255, 193, 7, 0.1)'    // 淡黄色
-          : isLinked
-            ? 'rgba(102, 192, 244, 0.1)' // 淡蓝色
-            : 'transparent',
-        transition: 'all 0.15s ease',
-        opacity: isDragging ? 0.5 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab'
-      }}
-      onMouseEnter={(e) => {
-        if (!isLinked && !isDragging) {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isLinked && !isDragging) {
-          e.currentTarget.style.background = 'transparent';
-        }
-      }}
+      className={`flex items-center flex-wrap nasge-transition-quick ${borderClass} ${bgClass} ${isDragging ? 'opacity-50 cursor-grabbing' : 'cursor-grab'}`}
     >
       <button
         onClick={() => onChapterClick(chapter.sectionId)}
         disabled={isLoading}
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: isLinked ? '#ffffff' : '#c5c5c5',
-          textAlign: 'left',
-          padding: '0.9rem 0.8rem',
-          fontSize: '0.88rem',
-          cursor: isLoading ? 'wait' : 'pointer',
-          flex: 1,
-          fontWeight: 400,
-          lineHeight: 1.4,
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-          opacity: isLoading ? 0.6 : 1,
-          overflow: 'hidden'
-        }}
+        className={`border-0 bg-transparent text-left py-2 px-2.5 text-sm flex-1 font-normal leading-relaxed overflow-hidden ${isLinked ? 'text-white' : 'text-[#c5c5c5]'} ${isLoading ? 'cursor-wait opacity-60' : 'cursor-pointer'}`}
       >
-        {isLoading ? `拉取中...` : renderTitle(chapter.title)}
+        {isLoading ? '拉取中...' : renderTitle(chapter.title)}
       </button>
 
       {/* 显示绑定的草稿名 */}
       {boundDraftName && (
-        <span
-          style={{
-            fontSize: '0.7rem',
-            color: 'var(--color-primary, #66c0f4)',
-            padding: '0.15rem 0.4rem',
-            background: 'var(--border-subtle, rgba(102, 192, 244, 0.15))',
-            borderRadius: '0.25rem',
-            marginRight: '0.5rem',
-            whiteSpace: 'nowrap'
-          }}
-        >
-          📎 {boundDraftName}
+        <span className="text-[11px] text-accent px-1.5 bg-accent-subtle rounded mr-2 whitespace-nowrap">
+          {boundDraftName}
         </span>
       )}
 
@@ -291,24 +220,9 @@ const ChapterItem = React.memo<{
         }}
         disabled={isLoading}
         title="从 Steam 拉取章节内容"
-        style={{
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--color-primary, #66c0f4)',
-          padding: '0.5rem 0.8rem',
-          fontSize: '0.85rem',
-          cursor: isLoading ? 'wait' : 'pointer',
-          opacity: isLoading ? 0.5 : 0.7,
-          transition: 'opacity 0.15s ease'
-        }}
-        onMouseEnter={(e) => {
-          if (!isLoading) e.currentTarget.style.opacity = '1';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = '0.7';
-        }}
+        className={`border-0 bg-transparent text-accent px-2.5 py-1.5 cursor-pointer nasge-transition-quick ${isLoading ? 'opacity-50 cursor-wait' : 'opacity-70 hover:opacity-100'}`}
       >
-        ↓
+        <ArrowDownIcon className="w-3.5 h-3.5" />
       </button>
     </div>
   );
@@ -317,12 +231,10 @@ const ChapterItem = React.memo<{
 ChapterItem.displayName = 'ChapterItem';
 
 const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false }) => {
-  // 🔧 性能优化：使用选择器仅订阅需要的状态，避免每次 draft 更新都触发重渲染
   const mode = useGuideStore((state) => state.mode);
   const guideInfo = useGuideStore((state) => state.guideInfo);
   const reorderChapters = useGuideStore((state) => state.reorderChapters);
   const getCurrentArchive = useGuideStore((state) => state.getCurrentArchive);
-
   const getDraftByChapterId = useGuideStore((state) => state.getDraftByChapterId);
 
   const { pullChapter, switchToChapter, getChapterDraft, syncStatus, syncChapterOrder } = useChapterSync();
@@ -332,24 +244,19 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // 获取当前存档（用于离线数据）
   const currentArchive = getCurrentArchive();
 
-  // 章节数据源：优先使用 guideInfo，离线时使用存档缓存
   const { chapters, isOfflineData, syncTime } = useMemo(() => {
-    // 如果是 offline 模式，标记为离线数据
     const isOfflineMode = mode === 'offline';
 
-    // 优先使用 guideInfo（实时数据）
     if (guideInfo?.chapters && Array.isArray(guideInfo.chapters) && guideInfo.chapters.length > 0) {
       return {
         chapters: guideInfo.chapters as ChapterInfo[],
-        isOfflineData: isOfflineMode,  // offline 模式下也标记为离线
+        isOfflineData: isOfflineMode,
         syncTime: currentArchive?.chaptersUpdatedAt || Date.now()
       };
     }
 
-    // 回退到存档缓存（离线数据）
     if (currentArchive?.chapters && currentArchive.chapters.length > 0) {
       loggers.editor.info('使用离线缓存的章节数据', {
         count: currentArchive.chapters.length,
@@ -365,22 +272,12 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     return { chapters: [], isOfflineData: false, syncTime: 0 };
   }, [mode, guideInfo?.chapters, currentArchive?.chapters, currentArchive?.chaptersUpdatedAt]);
 
-  // 显示章节导航的条件：
-  // 1. guide 模式且有章节数据
-  // 2. 或者任意模式下有离线缓存的章节数据（允许在离线模式查看缓存）
-  // 3. review 模式始终不显示
-  if (mode === 'review') {
-    return null;
-  }
-  if (chapters.length === 0) {
-    return null;
-  }
+  if (mode === 'review') return null;
+  if (chapters.length === 0) return null;
 
   const handleChapterClick = (sectionId: string) => {
-    // 尝试切换到已有的草稿
     const switched = switchToChapter(sectionId);
     if (!switched) {
-      // 如果没有草稿，询问是否拉取
       if (window.confirm('该章节尚未拉取，是否立即从 Steam 拉取内容？')) {
         pullChapter(sectionId);
       }
@@ -409,7 +306,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     e.preventDefault();
     if (!draggedId || draggedId === targetId || chapters.length === 0) return;
 
-    // 离线模式下禁止拖拽排序（需要连接 Steam）
     if (isOfflineData) {
       toast.warning('离线模式下无法重新排序章节，请先刷新连接 Steam');
       return;
@@ -426,12 +322,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
     const orderedSectionIds = newOrder.map(c => c.sectionId);
 
-    // 先更新本地状态
     reorderChapters(orderedSectionIds);
     setDraggedId(null);
     setDragOverId(null);
 
-    // 同步到 Steam
     setIsSyncing(true);
     try {
       await syncChapterOrder(orderedSectionIds);
@@ -451,7 +345,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
   const handleRefresh = async () => {
     if (!onRefresh || isRefreshing) return;
-
     try {
       await onRefresh();
       toast.success('章节列表已刷新');
@@ -461,11 +354,9 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     }
   };
 
-  // 创建新章节
   const handleCreateChapter = async () => {
     if (isCreatingChapter || !guideInfo?.id) return;
 
-    // 离线模式下禁止创建章节
     if (isOfflineData) {
       toast.warning('离线模式下无法创建新章节，请先刷新连接 Steam');
       return;
@@ -475,12 +366,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     try {
       const newSectionId = await createChapterOnSteam(guideInfo.id);
       loggers.editor.info('新章节创建成功', { sectionId: newSectionId });
-
-      // 刷新章节列表
-      if (onRefresh) {
-        await onRefresh();
-      }
-      // 不弹窗，新章节会自动出现在列表中
+      if (onRefresh) await onRefresh();
     } catch (error) {
       loggers.editor.error('创建章节失败', error);
       toast.error('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
@@ -489,263 +375,126 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     }
   };
 
-  /**
-   * 解析章节标题中的图片 BBCode
-   */
   const parseChapterTitleImage = (title: string): { previewId: string; fileName: string } | null => {
-    // 匹配 [previewicon=id;size,align;filename][/previewicon]
     const previewIconMatch = title.match(/\[previewicon=(\d+);([^;]+);([^\]]+)\]\[\/previewicon\]/i);
     if (previewIconMatch) {
-      return {
-        previewId: previewIconMatch[1],
-        fileName: previewIconMatch[3]
-      };
+      return { previewId: previewIconMatch[1], fileName: previewIconMatch[3] };
     }
 
-    // 匹配 [previewimg=id;size,align;filename][/previewimg]
     const previewImgMatch = title.match(/\[previewimg=(\d+);([^;]+);([^\]]+)\]\[\/previewimg\]/i);
     if (previewImgMatch) {
-      return {
-        previewId: previewImgMatch[1],
-        fileName: previewImgMatch[3]
-      };
+      return { previewId: previewImgMatch[1], fileName: previewImgMatch[3] };
     }
 
     return null;
   };
 
-  /**
-   * 获取章节标题的纯文本（移除所有BBCode）
-   */
   const getChapterTitleText = (title: string): string => {
-    // 移除图片BBCode
     let text = title.replace(/\[previewicon=[^\]]+\]\[\/previewicon\]/gi, '');
     text = text.replace(/\[previewimg=[^\]]+\]\[\/previewimg\]/gi, '');
     text = text.replace(/\[img\][^\[]+\[\/img\]/gi, '');
-
-    // 移除其他BBCode标签
     text = text.replace(/\[\/?\w+(?:=[^\]]+)?\]/g, '');
-
     return text.trim();
   };
 
-  /**
-   * 渲染章节标题（用于章节目录导航）
-   * - 如果包含图片：只显示缩略图，不显示图片后的文字
-   * - 如果是纯文字：正常显示文字
-   */
   const renderChapterTitle = (title: string) => {
     const imageInfo = parseChapterTitleImage(title);
 
-    loggers.editor.verbose('renderChapterTitle', {
-      title,
-      imageInfo,
-      rawTitle: title
-    });
+    loggers.editor.verbose('renderChapterTitle', { title, imageInfo, rawTitle: title });
 
-    // 如果包含图片，只显示图片缩略图
     if (imageInfo) {
       return (
         <ChapterTitleImage
           previewId={imageInfo.previewId}
           fileName={imageInfo.fileName}
-          titleText="" // 不显示文字，只显示图片
+          titleText=""
         />
       );
     }
 
-    // 没有图片时，显示纯文本（移除BBCode标签）
     const titleText = getChapterTitleText(title);
     return titleText || title;
   };
 
+  /* ── 折叠态 ────────────────────────────────────────────── */
+
   if (isCollapsed) {
     return (
-      <aside
-        style={{
-          position: 'sticky',
-          top: '1rem',
-          alignSelf: 'flex-end'
-        }}
-      >
+      <aside className="sticky top-4 self-end">
         <button
           type="button"
           onClick={() => setIsCollapsed(false)}
-          style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '0.4rem',
-            background: 'rgba(23, 26, 33, 0.95)',
-            border: '1px solid rgba(69, 75, 87, 0.6)',
-            color: '#8b8b8b',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '14px',
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)'
-          }}
+          className="w-9 h-9 rounded-md bg-bg-app/95 border border-border-subtle text-text-muted hover:text-text-primary hover:bg-bg-hover nasge-transition-quick cursor-pointer flex items-center justify-center shadow-md"
           title="展开目录"
         >
-          {'☰'}
+          <MenuIcon className="w-4 h-4" />
         </button>
       </aside>
     );
   }
 
+  /* ── 展开态 ────────────────────────────────────────────── */
+
   return (
-    <aside
-      style={{
-        width: '300px',
-        borderRadius: '0.5rem',
-        background: 'rgba(23, 26, 33, 0.95)',
-        border: '1px solid rgba(69, 75, 87, 0.6)',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'fit-content',
-        maxHeight: 'calc(100vh - 200px)',
-        position: 'sticky',
-        top: '1rem',
-        overflow: 'hidden'
-      }}
-    >
+    <aside className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col h-fit max-h-[calc(100vh-200px)] sticky top-4 overflow-hidden">
       {/* 头部 */}
-      <div
-        style={{
-          padding: '1rem 1.2rem',
-          borderBottom: '1px solid rgba(69, 75, 87, 0.4)',
-          background: 'rgba(16, 18, 23, 0.6)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: '0.95rem',
-              fontWeight: 400,
-              color: '#c5c5c5',
-              letterSpacing: '0.02em',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            {currentArchive ? `${currentArchive.guideName}` : '目录'}
+      <div className="px-2.5 py-2.5 border-b border-border-subtle bg-bg-app/60 flex justify-between items-center">
+        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+          <h3 className="m-0 text-sm text-text-secondary font-normal flex items-center gap-2">
+            {currentArchive ? currentArchive.guideName : '目录'}
             {isOfflineData && (
-              <span
-                style={{
-                  fontSize: '0.65rem',
-                  color: 'var(--color-warning, #FFC107)',
-                  padding: '0.1rem 0.35rem',
-                  background: 'rgba(255, 193, 7, 0.15)',
-                  borderRadius: '0.2rem',
-                  fontWeight: 500
-                }}
-              >
+              <span className="text-[10px] text-warning bg-warning/15 rounded px-1.5 py-0.5 font-medium">
                 离线
               </span>
             )}
             {(isSyncing || isRefreshing) && (
-              <span style={{ fontSize: '0.75rem', color: 'var(--color-primary, #66c0f4)' }}>
+              <span className="text-xs text-accent">
                 {isSyncing ? '同步中...' : '刷新中...'}
               </span>
             )}
           </h3>
-          {/* 同步时间显示 */}
           {syncTime > 0 && (
-            <span
-              style={{
-                fontSize: '0.7rem',
-                color: isOfflineData ? 'var(--color-warning, #FFC107)' : '#8b8b8b',
-                opacity: 0.8
-              }}
-            >
+            <span className={`text-[11px] ${isOfflineData ? 'text-warning' : 'text-text-muted'}`}>
               {isOfflineData ? '离线数据 · ' : ''}同步于 {formatSyncTime(syncTime)}
             </span>
           )}
         </div>
 
-        {/* 刷新按钮 */}
-        {onRefresh && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          {/* 刷新按钮 */}
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isSyncing}
+              className={`border-0 bg-transparent text-accent p-1 nasge-transition-quick ${isRefreshing || isSyncing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-accent-hover'}`}
+              title="刷新章节列表"
+            >
+              <RotateCwIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+          {/* 折叠按钮 */}
           <button
             type="button"
-            onClick={handleRefresh}
-            disabled={isRefreshing || isSyncing}
-            style={{
-              padding: '0.3rem 0.6rem',
-              border: 'none',
-              borderRadius: '0.3rem',
-              background: 'rgba(102, 192, 244, 0.15)',
-              color: 'var(--color-primary, #66c0f4)',
-              fontSize: '0.75rem',
-              cursor: isRefreshing || isSyncing ? 'not-allowed' : 'pointer',
-              opacity: isRefreshing || isSyncing ? 0.5 : 1,
-              transition: 'all 0.15s ease'
-            }}
-            onMouseEnter={(e) => {
-              if (!isRefreshing && !isSyncing) {
-                e.currentTarget.style.background = 'rgba(102, 192, 244, 0.25)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
-            }}
-            title="刷新章节列表"
+            onClick={() => setIsCollapsed(true)}
+            className="border-0 bg-transparent text-text-muted hover:text-text-primary p-1 nasge-transition-quick cursor-pointer"
+            title="收起目录"
           >
-            ↻ 刷新
+            <XIcon className="w-4 h-4" />
           </button>
-        )}
-        {/* 折叠按钮 */}
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(true)}
-          style={{
-            padding: '0.3rem 0.5rem',
-            border: 'none',
-            borderRadius: '0.3rem',
-            background: 'transparent',
-            color: '#8b8b8b',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-            lineHeight: 1
-          }}
-          title="收起目录"
-        >
-          ✕
-        </button>
+        </div>
       </div>
 
       {/* 章节列表 */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          flex: 1
-        }}
-      >
+      <div className="flex flex-col overflow-y-auto flex-1">
         {chapters.length === 0 ? (
-          <div
-            style={{
-              padding: '2rem 1.2rem',
-              textAlign: 'center',
-              color: '#8b8b8b',
-              fontSize: '0.85rem',
-              lineHeight: 1.6
-            }}
-          >
+          <div className="py-8 px-3 text-center text-text-muted text-sm leading-relaxed">
             该指南暂无章节
           </div>
         ) : (
           chapters.map((chapter) => {
             const linkedDraft = getChapterDraft(chapter.sectionId);
             const isLinked = !!linkedDraft;
-            // 判断是否有修改但未提交：已拉取 && 更新时间 > 同步时间 + 100ms容差
-            // 容差是为了避免拉取时两个时间戳的微小差异（几毫秒）被误判为修改
             const isModified = isLinked && linkedDraft?.lastSyncedAt != null &&
               (linkedDraft.updatedAt - linkedDraft.lastSyncedAt) > 100;
             const status = syncStatus[chapter.sectionId] || 'idle';
@@ -776,44 +525,19 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           })
         )}
 
-        {/* 新建章节按钮 */}
+        {/* 新建章节按钮 — 融入章节列表 */}
         <button
           onClick={handleCreateChapter}
           disabled={isCreatingChapter}
-          style={{
-            margin: '0.8rem',
-            padding: '0.7rem 1rem',
-            borderRadius: '0.4rem',
-            border: '1px dashed rgba(102, 192, 244, 0.5)',
-            background: isCreatingChapter
-              ? 'rgba(102, 192, 244, 0.1)'
-              : 'transparent',
-            color: 'var(--color-primary, #66c0f4)',
-            fontSize: '0.85rem',
-            cursor: isCreatingChapter ? 'not-allowed' : 'pointer',
-            transition: 'all 0.15s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.4rem'
-          }}
-          onMouseEnter={(e) => {
-            if (!isCreatingChapter) {
-              e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
-              e.currentTarget.style.borderStyle = 'solid';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isCreatingChapter) {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.borderStyle = 'dashed';
-            }
-          }}
+          className={`border-0 bg-transparent text-accent/60 text-sm py-2 px-2.5 text-left nasge-transition-quick flex items-center gap-1.5 ${borderNone} ${isCreatingChapter ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-white/5 hover:text-accent'}`}
         >
           {isCreatingChapter ? (
             <>创建中...</>
           ) : (
-            <>+ 新建章节</>
+            <>
+              <PlusIcon className="w-3.5 h-3.5" />
+              新建章节
+            </>
           )}
         </button>
       </div>
