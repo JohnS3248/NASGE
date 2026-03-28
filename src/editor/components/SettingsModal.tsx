@@ -4,7 +4,6 @@ import {
   ShortcutConfig,
   SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
-  EditorAlignment,
   // 右键菜单配置
   ContextMenuType,
   MenuItemConfig,
@@ -116,12 +115,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   );
 
   // 编辑器布局设置
-  const editorAlignment = useEditorConfigStore(
-    (state) => state.editorAlignment
-  );
-  const setEditorAlignment = useEditorConfigStore(
-    (state) => state.setEditorAlignment
-  );
   const showPreview = useEditorConfigStore(
     (state) => state.showPreview
   );
@@ -544,19 +537,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             >
               编辑器布局
             </div>
-
-            {/* 编辑器对齐方式 */}
-            <SelectOption
-              label="编辑器对齐"
-              description="编辑器区域在页面中的水平对齐方式和宽度限制"
-              value={editorAlignment}
-              options={[
-                { value: "center", label: "居中 (720px)" },
-                { value: "left", label: "靠左 (720px)" },
-                { value: "full", label: "全屏" }
-              ]}
-              onChange={(v) => setEditorAlignment(v as EditorAlignment)}
-            />
 
             {/* 实时预览 */}
             <ToggleOption

@@ -23,9 +23,7 @@ import { PreviewPanel } from "./components/PreviewPanel";
 const App: React.FC = () => {
   // 初始化编辑器模式和指南信息
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
-  const editorAlignment = useEditorConfigStore((s) => s.editorAlignment);
   const showPreview = useEditorConfigStore((s) => s.showPreview);
-  const setShowPreview = useEditorConfigStore((s) => s.setShowPreview);
   const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
@@ -114,8 +112,7 @@ const App: React.FC = () => {
     if (!activeDraft || !activeDraft.linkedChapterId) return;
 
     if (!isUploadPreviewing) {
-      // 第一阶段：打开预览，进入确认模式
-      setShowPreview(true);
+      // 第一阶段：进入确认模式（isUploadPreviewing 会触发预览面板显示）
       setIsUploadPreviewing(true);
       return;
     }
