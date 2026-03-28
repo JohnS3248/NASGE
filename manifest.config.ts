@@ -24,7 +24,10 @@ export default defineManifest({
     type: "module"
   },
   permissions: ["storage", "activeTab", "scripting"],
-  host_permissions: ["https://steamcommunity.com/*"],
+  host_permissions: [
+    "https://steamcommunity.com/*",
+    "https://store.steampowered.com/*"
+  ],
   content_scripts: [
     {
       matches: ["https://steamcommunity.com/*"],
@@ -44,6 +47,10 @@ export default defineManifest({
       matches: ["https://steamcommunity.com/*"],
       js: ["src/content/inspectGlobals.ts"],
       world: "MAIN"
+    },
+    {
+      matches: ["https://store.steampowered.com/app/*"],
+      js: ["src/content/reviewMain.ts"]
     }
   ],
   web_accessible_resources: [

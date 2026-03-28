@@ -60,13 +60,15 @@ async function handleSteamBridgeMessage(
   sendResponse: (response: SteamBridgeResponse) => void
 ) {
   try {
-    const targetTabId = await resolveTargetTabId(sender);
+    const targetTabId = await resolveTargetTabId(sender, message.action);
 
     if (!targetTabId) {
+      const isReview = REVIEW_ACTIONS.has(message.action);
       sendResponse({
         ok: false,
-        error:
-          "未找到已打开的 Steam 页面，请先在浏览器中进入 Steam 指南编辑界面。"
+        error: isReview
+          ? "未找到已打开的 Steam 商店页面，请先在浏览器中打开游戏商店页。"
+          : "未找到已打开的 Steam 页面，请先在浏览器中进入 Steam 指南编辑界面。"
       });
       return;
     }
@@ -84,7 +86,8 @@ async function handleSteamBridgeMessage(
 }
 
 async function resolveTargetTabId(
-  sender: chrome.runtime.MessageSender
+  sender: chrome.runtime.MessageSender,
+  action?: string
 ): Promise<number | undefined> {
   if (sender.tab?.id !== undefined) {
     const url = sender.tab.url ?? "";
@@ -93,7 +96,7 @@ async function resolveTargetTabId(
     }
   }
 
-  const target = await findSteamTab();
+  const target = await findSteamTab(action);
   return target?.id;
 }
 
@@ -189,7 +192,7 @@ function getContentScriptFiles(): string[] {
 }
 
 function isSteamUrl(url: string): boolean {
-  return /^https?:\/\/steamcommunity\.com\//i.test(url);
+  return /^https?:\/\/(steamcommunity\.com|store\.steampowered\.com)\//i.test(url);
 }
 
 function cloneSteamBridgeRequest(message: SteamBridgeRequest): SteamBridgeRequest {
@@ -280,15 +283,25 @@ function describeRawKeys(raw: ArrayBuffer | number[] | ArrayLike<number> | undef
   return undefined;
 }
 
-async function findSteamTab(): Promise<chrome.tabs.Tab | undefined> {
-  const tabs = await chrome.tabs.query({
-    url: ["https://steamcommunity.com/*", "http://steamcommunity.com/*"]
-  });
+const REVIEW_ACTIONS = new Set([
+  "fetch-review",
+  "write-review-text",
+  "submit-review",
+]);
 
+async function findSteamTab(action?: string): Promise<chrome.tabs.Tab | undefined> {
+  // 评测 action → 只找 store.steampowered.com
+  // 其他 action → 只找 steamcommunity.com
+  const urls =
+    action && REVIEW_ACTIONS.has(action)
+      ? ["https://store.steampowered.com/*"]
+      : ["https://steamcommunity.com/*", "http://steamcommunity.com/*"];
+
+  const tabs = await chrome.tabs.query({ url: urls });
   if (tabs.length) {
     return tabs[0];
   }
 
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-  return active && active.url?.includes("steamcommunity.com") ? active : undefined;
+  return active && isSteamUrl(active.url ?? "") ? active : undefined;
 }

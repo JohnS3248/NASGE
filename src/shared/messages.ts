@@ -70,6 +70,41 @@ export type SteamFetchGuideInfoRequest = BridgeBase & {
   guideId: string;
 };
 
+// === 评测相关 ===
+
+export type ReviewFormData = {
+  text: string;
+  ratedUp: boolean | null;
+  visibility: "public" | "friends";
+  language: string;
+  enableComments: boolean;
+  attachHardware: boolean;
+  receivedCompensation: boolean;
+  appId: string;
+  gameName: string;
+};
+
+export type SteamFetchReviewRequest = BridgeBase & {
+  action: "fetch-review";
+};
+
+export type SteamWriteReviewTextRequest = BridgeBase & {
+  action: "write-review-text";
+  text: string;
+};
+
+export type SteamSubmitReviewRequest = BridgeBase & {
+  action: "submit-review";
+  data: {
+    comment: string;
+    rated_up: boolean;
+    is_public: boolean;
+    language: string;
+    received_compensation: number;
+    disable_comments: number;
+  };
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamCollectContextRequest
@@ -79,7 +114,10 @@ export type SteamBridgeRequest =
   | SteamFetchChapterRequest
   | SteamSaveChapterRequest
   | SteamFetchChapterListRequest
-  | SteamFetchGuideInfoRequest;
+  | SteamFetchGuideInfoRequest
+  | SteamFetchReviewRequest
+  | SteamWriteReviewTextRequest
+  | SteamSubmitReviewRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;
