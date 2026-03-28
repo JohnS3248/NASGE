@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
 import { extractTitleText } from '../utils/titleHelpers';
-import type { ChapterInfo } from '../stores/useGuideStore';
 
 const DraftPanel: React.FC = () => {
   const {
@@ -12,13 +11,6 @@ const DraftPanel: React.FC = () => {
     updateDraft,
     deleteDraft,
     duplicateDraft,
-    // 绑定相关
-    mode,
-    guideInfo,
-    isBindingMode,
-    enterBindingMode,
-    exitBindingMode,
-    unbindDraft,
     // 存档相关
     currentArchiveId,
     getCurrentArchive
@@ -37,15 +29,6 @@ const DraftPanel: React.FC = () => {
   }, [drafts, currentArchiveId]);
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
-
-  // 获取当前草稿绑定的章节信息
-  const boundChapter = useMemo<ChapterInfo | undefined>(() => {
-    if (!activeDraft?.linkedChapterId || !guideInfo?.chapters) return undefined;
-    return guideInfo.chapters.find((c) => c.sectionId === activeDraft.linkedChapterId);
-  }, [activeDraft?.linkedChapterId, guideInfo?.chapters]);
-
-  // 是否可以绑定（指南模式且有活动草稿）
-  const canBind = mode === 'guide' && !!activeDraft;
 
   const getDraftDisplayTitle = (draft: typeof activeDraft) => {
     if (!draft) return '';
@@ -134,15 +117,6 @@ const DraftPanel: React.FC = () => {
               }}>
                 · {activeDraft.draftName}
               </span>
-              {boundChapter && (
-                <span style={{
-                  fontSize: '0.7rem',
-                  color: 'var(--color-primary, #66c0f4)',
-                  flexShrink: 0
-                }}>
-                  \u2192 {boundChapter.title}
-                </span>
-              )}
             </span>
           ) : (
             <span style={{ color: 'var(--text-secondary, #8aa4c7)' }}>
@@ -151,80 +125,6 @@ const DraftPanel: React.FC = () => {
           )}
         </button>
 
-        {/* 绑定操作 */}
-        {canBind && (
-          <>
-            {isBindingMode ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexShrink: 0 }}>
-                <span style={{
-                  fontSize: '0.78rem',
-                  color: 'var(--color-primary, #66c0f4)',
-                  fontWeight: 500,
-                  animation: 'pulse 1.5s infinite'
-                }}>
-                  请在章节列表中选择
-                </span>
-                <button
-                  type="button"
-                  onClick={() => exitBindingMode()}
-                  style={{
-                    padding: '0.25rem 0.55rem',
-                    borderRadius: '0.35rem',
-                    border: '1px solid rgba(255, 128, 128, 0.5)',
-                    background: 'rgba(255, 128, 128, 0.15)',
-                    color: '#ff8080',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    fontSize: '0.72rem'
-                  }}
-                >
-                  取消
-                </button>
-              </div>
-            ) : boundChapter ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('确定要解除绑定吗？解除后需要重新绑定才能上传到 Steam。')) {
-                    unbindDraft(activeDraft!.id);
-                  }
-                }}
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '0.35rem',
-                  border: '1px solid rgba(255, 128, 128, 0.4)',
-                  background: 'transparent',
-                  color: '#ff8080',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontSize: '0.7rem',
-                  opacity: 0.8,
-                  flexShrink: 0
-                }}
-              >
-                解绑
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => enterBindingMode()}
-                style={{
-                  padding: '0.3rem 0.65rem',
-                  borderRadius: '0.35rem',
-                  border: '1px solid rgba(102, 192, 244, 0.5)',
-                  background: 'rgba(102, 192, 244, 0.15)',
-                  color: 'var(--color-primary, #66c0f4)',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  flexShrink: 0
-                }}
-              >
-                绑定章节
-              </button>
-            )}
-          </>
-        )}
       </div>
 
       {/* 新建按钮 */}
@@ -282,9 +182,6 @@ const DraftPanel: React.FC = () => {
             <div style={{ padding: '0.35rem 0' }}>
               {displayedDrafts.map((draft) => {
                 const isActive = activeDraftId === draft.id;
-                const draftBoundChapter = draft.linkedChapterId && guideInfo?.chapters
-                  ? guideInfo.chapters.find(c => c.sectionId === draft.linkedChapterId)
-                  : undefined;
 
                 return (
                   <button
@@ -346,15 +243,6 @@ const DraftPanel: React.FC = () => {
                         }}>
                           {getDraftDisplayTitle(draft)}
                         </span>
-                        {draftBoundChapter && (
-                          <span style={{
-                            fontSize: '0.7rem',
-                            color: 'var(--color-primary, #66c0f4)',
-                            flexShrink: 0
-                          }}>
-                            \u2192 {draftBoundChapter.title}
-                          </span>
-                        )}
                       </div>
                       <span style={{
                         fontSize: '0.72rem',

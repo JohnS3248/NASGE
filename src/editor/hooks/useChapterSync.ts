@@ -149,6 +149,11 @@ export function useChapterSync() {
         // 3. 将 HTML 转换为 BBCode
         const bbcode = htmlToBBCode(html);
 
+        // 3.5 安全校验：阻止上传空内容
+        if (bbcode.trim() === '') {
+          throw new Error('草稿内容为空，无法上传到 Steam');
+        }
+
         // 4. 上传到 Steam
         await saveChapterToSteam(
           draft.linkedGuideId,

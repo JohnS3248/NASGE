@@ -177,7 +177,6 @@ const ChapterItem = React.memo<{
   isLoading: boolean;
   isDragging: boolean;
   isDragOver: boolean;
-  isBindingMode: boolean;
   boundDraftName?: string;
   onChapterClick: (sectionId: string) => void;
   onPullChapter: (sectionId: string) => void;
@@ -194,7 +193,6 @@ const ChapterItem = React.memo<{
   isLoading,
   isDragging,
   isDragOver,
-  isBindingMode,
   boundDraftName,
   onChapterClick,
   onPullChapter,
@@ -208,12 +206,12 @@ const ChapterItem = React.memo<{
   return (
     <div
       key={chapter.sectionId}
-      draggable={!isBindingMode}
-      onDragStart={(e) => !isBindingMode && onDragStart(e, chapter.sectionId)}
-      onDragOver={(e) => !isBindingMode && onDragOver(e, chapter.sectionId)}
-      onDragLeave={() => !isBindingMode && onDragLeave()}
-      onDrop={(e) => !isBindingMode && onDrop(e, chapter.sectionId)}
-      onDragEnd={() => !isBindingMode && onDragEnd()}
+      draggable
+      onDragStart={(e) => onDragStart(e, chapter.sectionId)}
+      onDragOver={(e) => onDragOver(e, chapter.sectionId)}
+      onDragLeave={() => onDragLeave()}
+      onDrop={(e) => onDrop(e, chapter.sectionId)}
+      onDragEnd={() => onDragEnd()}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -225,52 +223,39 @@ const ChapterItem = React.memo<{
             : isLinked
               ? '3px solid var(--color-primary, #66c0f4)'  // 蓝色 - 已拉取
               : '3px solid transparent',
-        background: isBindingMode
-          ? 'rgba(102, 192, 244, 0.08)'
-          : isModified
-            ? 'rgba(255, 193, 7, 0.1)'    // 淡黄色
-            : isLinked
-              ? 'rgba(102, 192, 244, 0.1)' // 淡蓝色
-              : 'transparent',
+        background: isModified
+          ? 'rgba(255, 193, 7, 0.1)'    // 淡黄色
+          : isLinked
+            ? 'rgba(102, 192, 244, 0.1)' // 淡蓝色
+            : 'transparent',
         transition: 'all 0.15s ease',
         opacity: isDragging ? 0.5 : 1,
-        cursor: isBindingMode ? 'pointer' : isDragging ? 'grabbing' : 'grab'
+        cursor: isDragging ? 'grabbing' : 'grab'
       }}
       onMouseEnter={(e) => {
-        if (isBindingMode) {
-          e.currentTarget.style.background = 'rgba(102, 192, 244, 0.2)';
-        } else if (!isLinked && !isDragging) {
+        if (!isLinked && !isDragging) {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
         }
       }}
       onMouseLeave={(e) => {
-        if (isBindingMode) {
-          e.currentTarget.style.background = 'rgba(102, 192, 244, 0.08)';
-        } else if (!isLinked && !isDragging) {
+        if (!isLinked && !isDragging) {
           e.currentTarget.style.background = 'transparent';
         }
       }}
-      onClick={() => isBindingMode && onChapterClick(chapter.sectionId)}
     >
       <button
-        onClick={(e) => {
-          if (isBindingMode) {
-            e.stopPropagation();
-            return;
-          }
-          onChapterClick(chapter.sectionId);
-        }}
+        onClick={() => onChapterClick(chapter.sectionId)}
         disabled={isLoading}
         style={{
           border: 'none',
           background: 'transparent',
-          color: isBindingMode ? 'var(--color-primary, #66c0f4)' : isLinked ? '#ffffff' : '#c5c5c5',
+          color: isLinked ? '#ffffff' : '#c5c5c5',
           textAlign: 'left',
           padding: '0.9rem 0.8rem',
           fontSize: '0.88rem',
-          cursor: isBindingMode ? 'pointer' : isLoading ? 'wait' : 'pointer',
+          cursor: isLoading ? 'wait' : 'pointer',
           flex: 1,
-          fontWeight: isBindingMode ? 500 : 400,
+          fontWeight: 400,
           lineHeight: 1.4,
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           opacity: isLoading ? 0.6 : 1,
@@ -281,7 +266,7 @@ const ChapterItem = React.memo<{
       </button>
 
       {/* 显示绑定的草稿名 */}
-      {boundDraftName && !isBindingMode && (
+      {boundDraftName && (
         <span
           style={{
             fontSize: '0.7rem',
@@ -297,51 +282,33 @@ const ChapterItem = React.memo<{
         </span>
       )}
 
-      {/* 绑定模式下显示"选择"提示 */}
-      {isBindingMode && (
-        <span
-          style={{
-            fontSize: '0.75rem',
-            color: 'var(--color-primary, #66c0f4)',
-            padding: '0.2rem 0.5rem',
-            background: 'rgba(102, 192, 244, 0.2)',
-            borderRadius: '0.25rem',
-            marginRight: '0.5rem'
-          }}
-        >
-          点击绑定
-        </span>
-      )}
-
-      {/* 拉取按钮（绑定模式下隐藏） */}
-      {!isBindingMode && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onPullChapter(chapter.sectionId);
-          }}
-          disabled={isLoading}
-          title="从 Steam 拉取章节内容"
-          style={{
-            border: 'none',
-            background: 'transparent',
-            color: 'var(--color-primary, #66c0f4)',
-            padding: '0.5rem 0.8rem',
-            fontSize: '0.85rem',
-            cursor: isLoading ? 'wait' : 'pointer',
-            opacity: isLoading ? 0.5 : 0.7,
-            transition: 'opacity 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            if (!isLoading) e.currentTarget.style.opacity = '1';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '0.7';
-          }}
-        >
-          ↓
-        </button>
-      )}
+      {/* 拉取按钮 */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onPullChapter(chapter.sectionId);
+        }}
+        disabled={isLoading}
+        title="从 Steam 拉取章节内容"
+        style={{
+          border: 'none',
+          background: 'transparent',
+          color: 'var(--color-primary, #66c0f4)',
+          padding: '0.5rem 0.8rem',
+          fontSize: '0.85rem',
+          cursor: isLoading ? 'wait' : 'pointer',
+          opacity: isLoading ? 0.5 : 0.7,
+          transition: 'opacity 0.15s ease'
+        }}
+        onMouseEnter={(e) => {
+          if (!isLoading) e.currentTarget.style.opacity = '1';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = '0.7';
+        }}
+      >
+        ↓
+      </button>
     </div>
   );
 });
@@ -355,11 +322,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const reorderChapters = useGuideStore((state) => state.reorderChapters);
   const getCurrentArchive = useGuideStore((state) => state.getCurrentArchive);
 
-  // 绑定模式相关
-  const isBindingMode = useGuideStore((state) => state.isBindingMode);
-  const bindDraftToChapter = useGuideStore((state) => state.bindDraftToChapter);
-  const forceBindDraftToChapter = useGuideStore((state) => state.forceBindDraftToChapter);
-  const exitBindingMode = useGuideStore((state) => state.exitBindingMode);
   const getDraftByChapterId = useGuideStore((state) => state.getDraftByChapterId);
 
   const { pullChapter, switchToChapter, getChapterDraft, syncStatus, syncChapterOrder } = useChapterSync();
@@ -414,47 +376,12 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   }
 
   const handleChapterClick = (sectionId: string) => {
-    // 绑定模式：点击章节触发绑定
-    if (isBindingMode) {
-      handleBindToChapter(sectionId);
-      return;
-    }
-
-    // 正常模式：尝试切换到已有的草稿
+    // 尝试切换到已有的草稿
     const switched = switchToChapter(sectionId);
     if (!switched) {
       // 如果没有草稿，询问是否拉取
       if (window.confirm('该章节尚未拉取，是否立即从 Steam 拉取内容？')) {
         pullChapter(sectionId);
-      }
-    }
-  };
-
-  // 处理绑定操作
-  const handleBindToChapter = (sectionId: string) => {
-    const chapter = chapters.find((c) => c.sectionId === sectionId);
-    if (!chapter) return;
-
-    const result = bindDraftToChapter(sectionId);
-
-    if (result.success) {
-      // 绑定成功
-      window.alert(`已成功绑定到章节「${chapter.title}」`);
-    } else if (result.conflictDraft) {
-      // 绑定冲突，询问用户
-      const confirmOverride = window.confirm(
-        `章节「${chapter.title}」当前已绑定到「${result.conflictDraft.draftName}」\n\n` +
-        `是否解除原绑定，并将当前草稿绑定到此章节？`
-      );
-
-      if (confirmOverride) {
-        const forceResult = forceBindDraftToChapter(sectionId);
-        if (forceResult.success) {
-          window.alert(`已成功绑定到章节「${chapter.title}」\n原草稿「${result.conflictDraft.draftName}」的绑定已解除。`);
-        }
-      } else {
-        // 用户取消，退出绑定模式
-        exitBindingMode();
       }
     }
   };
@@ -671,20 +598,15 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
         width: '300px',
         borderRadius: '0.5rem',
         background: 'rgba(23, 26, 33, 0.95)',
-        border: isBindingMode
-          ? '2px solid rgba(102, 192, 244, 0.6)'
-          : '1px solid rgba(69, 75, 87, 0.6)',
-        boxShadow: isBindingMode
-          ? '0 0 20px rgba(102, 192, 244, 0.3), 0 2px 10px rgba(0, 0, 0, 0.3)'
-          : '0 2px 10px rgba(0, 0, 0, 0.3)',
+        border: '1px solid rgba(69, 75, 87, 0.6)',
+        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
         display: 'flex',
         flexDirection: 'column',
         height: 'fit-content',
         maxHeight: 'calc(100vh - 200px)',
         position: 'sticky',
         top: '1rem',
-        overflow: 'hidden',
-        transition: 'border 0.2s ease, box-shadow 0.2s ease'
+        overflow: 'hidden'
       }}
     >
       {/* 头部 */}
@@ -704,14 +626,14 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               margin: 0,
               fontSize: '0.95rem',
               fontWeight: 400,
-              color: isBindingMode ? 'var(--color-primary, #66c0f4)' : '#c5c5c5',
+              color: '#c5c5c5',
               letterSpacing: '0.02em',
               display: 'flex',
               alignItems: 'center',
               gap: '0.5rem'
             }}
           >
-            {isBindingMode ? '📌 选择要绑定的章节' : (currentArchive ? `${currentArchive.guideName}` : '目录')}
+            {currentArchive ? `${currentArchive.guideName}` : '目录'}
             {isOfflineData && (
               <span
                 style={{
@@ -733,7 +655,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             )}
           </h3>
           {/* 同步时间显示 */}
-          {syncTime > 0 && !isBindingMode && (
+          {syncTime > 0 && (
             <span
               style={{
                 fontSize: '0.7rem',
@@ -839,7 +761,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
                 isLoading={isLoading}
                 isDragging={isDragging}
                 isDragOver={isDragOver}
-                isBindingMode={isBindingMode}
                 boundDraftName={linkedDraft?.draftName}
                 onChapterClick={handleChapterClick}
                 onPullChapter={pullChapter}
@@ -857,7 +778,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
         {/* 新建章节按钮 */}
         <button
           onClick={handleCreateChapter}
-          disabled={isCreatingChapter || isBindingMode}
+          disabled={isCreatingChapter}
           style={{
             margin: '0.8rem',
             padding: '0.7rem 1rem',
@@ -866,10 +787,9 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             background: isCreatingChapter
               ? 'rgba(102, 192, 244, 0.1)'
               : 'transparent',
-            color: isBindingMode ? 'var(--text-muted, #6b7f9a)' : 'var(--color-primary, #66c0f4)',
+            color: 'var(--color-primary, #66c0f4)',
             fontSize: '0.85rem',
-            cursor: isCreatingChapter || isBindingMode ? 'not-allowed' : 'pointer',
-            opacity: isBindingMode ? 0.5 : 1,
+            cursor: isCreatingChapter ? 'not-allowed' : 'pointer',
             transition: 'all 0.15s ease',
             display: 'flex',
             alignItems: 'center',
@@ -877,7 +797,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             gap: '0.4rem'
           }}
           onMouseEnter={(e) => {
-            if (!isCreatingChapter && !isBindingMode) {
+            if (!isCreatingChapter) {
               e.currentTarget.style.background = 'rgba(102, 192, 244, 0.15)';
               e.currentTarget.style.borderStyle = 'solid';
             }

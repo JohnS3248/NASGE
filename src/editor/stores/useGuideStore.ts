@@ -139,7 +139,6 @@ type GuideState = {
   nextDraftNumber: number;
   currentChapterId: string | null;
   isDirty: boolean;
-  isBindingMode: boolean;
 
   // === 存档系统 ===
   archives: Record<string, GuideArchive>;
@@ -169,12 +168,7 @@ type GuideState = {
   markDirty: () => void;
   markClean: () => void;
 
-  // === 绑定模式管理 ===
-  enterBindingMode: () => void;
-  exitBindingMode: () => void;
-  bindDraftToChapter: (chapterId: string) => { success: boolean; conflictDraft?: Draft };
-  forceBindDraftToChapter: (chapterId: string) => { success: boolean };
-  unbindDraft: (draftId: string) => void;
+  // === 章节草稿查询 ===
   getDraftByChapterId: (chapterId: string) => Draft | undefined;
 
   // === 存档管理 ===
@@ -242,7 +236,6 @@ export const useGuideStore = create<GuideState>()(
         nextDraftNumber: 1,
         currentChapterId: null,
         isDirty: false,
-        isBindingMode: false,
         archives: {},
 
         // === 模式管理 ===
@@ -478,109 +471,7 @@ export const useGuideStore = create<GuideState>()(
         markDirty: () => set({ isDirty: true }),
         markClean: () => set({ isDirty: false }),
 
-        // === 绑定模式管理 ===
-        enterBindingMode: () => {
-          const state = get();
-          if (state.mode !== 'guide' || !state.activeDraftId) {
-            loggers.store.warn('无法进入绑定模式');
-            return;
-          }
-          set({ isBindingMode: true });
-        },
-
-        exitBindingMode: () => {
-          set({ isBindingMode: false });
-        },
-
-        bindDraftToChapter: (chapterId) => {
-          const state = get();
-          const activeDraftId = state.activeDraftId;
-          const guideId = state.guideInfo?.id;
-
-          if (!activeDraftId || !guideId) {
-            return { success: false };
-          }
-
-          const conflictDraft = state.drafts.find(
-            (d) => d.linkedChapterId === chapterId && d.id !== activeDraftId
-          );
-
-          if (conflictDraft) {
-            return { success: false, conflictDraft };
-          }
-
-          set((s) => ({
-            drafts: s.drafts.map((draft) =>
-              draft.id === activeDraftId
-                ? {
-                    ...draft,
-                    linkedChapterId: chapterId,
-                    linkedGuideId: guideId,
-                    updatedAt: Date.now()
-                  }
-                : draft
-            ),
-            isBindingMode: false,
-            currentChapterId: chapterId
-          }));
-
-          return { success: true };
-        },
-
-        forceBindDraftToChapter: (chapterId) => {
-          const state = get();
-          const activeDraftId = state.activeDraftId;
-          const guideId = state.guideInfo?.id;
-
-          if (!activeDraftId || !guideId) {
-            return { success: false };
-          }
-
-          set((s) => ({
-            drafts: s.drafts.map((draft) => {
-              if (draft.linkedChapterId === chapterId && draft.id !== activeDraftId) {
-                return {
-                  ...draft,
-                  linkedChapterId: undefined,
-                  linkedGuideId: undefined,
-                  lastSyncedAt: undefined,
-                  updatedAt: Date.now()
-                };
-              }
-              if (draft.id === activeDraftId) {
-                return {
-                  ...draft,
-                  linkedChapterId: chapterId,
-                  linkedGuideId: guideId,
-                  updatedAt: Date.now()
-                };
-              }
-              return draft;
-            }),
-            isBindingMode: false,
-            currentChapterId: chapterId
-          }));
-
-          return { success: true };
-        },
-
-        unbindDraft: (draftId) => {
-          set((state) => ({
-            drafts: state.drafts.map((draft) =>
-              draft.id === draftId
-                ? {
-                    ...draft,
-                    linkedChapterId: undefined,
-                    linkedGuideId: undefined,
-                    lastSyncedAt: undefined,
-                    updatedAt: Date.now()
-                  }
-                : draft
-            ),
-            currentChapterId: null
-          }));
-        },
-
+        // === 章节草稿查询 ===
         getDraftByChapterId: (chapterId) => {
           return get().drafts.find((d) => d.linkedChapterId === chapterId);
         },
@@ -1133,7 +1024,6 @@ export const useGuideStore = create<GuideState>()(
           nextDraftNumber: (persisted as Partial<GuideState>).nextDraftNumber ?? currentState.nextDraftNumber,
           currentChapterId: persisted.currentChapterId ?? currentState.currentChapterId,
           isDirty: persisted.isDirty ?? currentState.isDirty,
-          isBindingMode: false,  // 运行时状态，不恢复
           archives: persisted.archives ?? currentState.archives,
 
           // 函数（从 currentState 保留）
@@ -1152,11 +1042,6 @@ export const useGuideStore = create<GuideState>()(
           setDirty: currentState.setDirty,
           markDirty: currentState.markDirty,
           markClean: currentState.markClean,
-          enterBindingMode: currentState.enterBindingMode,
-          exitBindingMode: currentState.exitBindingMode,
-          bindDraftToChapter: currentState.bindDraftToChapter,
-          forceBindDraftToChapter: currentState.forceBindDraftToChapter,
-          unbindDraft: currentState.unbindDraft,
           getDraftByChapterId: currentState.getDraftByChapterId,
           createArchive: currentState.createArchive,
           updateArchive: currentState.updateArchive,
@@ -1202,7 +1087,6 @@ export const useGuideStore = create<GuideState>()(
             nextDraftNumber: 1,
             currentChapterId: null,
             isDirty: false,
-            isBindingMode: false,
             archives: {}
           };
         }

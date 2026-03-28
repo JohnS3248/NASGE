@@ -25,11 +25,13 @@ const App: React.FC = () => {
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
   const editorAlignment = useEditorConfigStore((s) => s.editorAlignment);
   const showPreview = useEditorConfigStore((s) => s.showPreview);
+  const setShowPreview = useEditorConfigStore((s) => s.setShowPreview);
   const { pushDraft } = useChapterSync();
   const [externalDoc, setExternalDoc] = useState<JSONContent>(() => createEmptyDoc());
   const [currentHtml, setCurrentHtml] = useState<string>("");
   const lastAppliedSerializedRef = useRef<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadPreviewing, setIsUploadPreviewing] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 
   const { drafts, activeDraftId, updateDraft } = useGuideStore();
@@ -37,11 +39,17 @@ const App: React.FC = () => {
   const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId) ?? drafts[0], [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions(), []);
 
-  // 为预览面板准备的 BBCode（按需计算）
+  // 草稿是否为空
+  const isDraftEmpty = useMemo(() => {
+    if (!activeDraft) return true;
+    return JSON.stringify(activeDraft.content) === JSON.stringify(createEmptyDoc());
+  }, [activeDraft]);
+
+  // 为预览面板准备的 BBCode（按需计算：预览开启或上传确认模式时）
   const currentBBCode = useMemo(() => {
-    if (!showPreview || !currentHtml) return "";
+    if ((!showPreview && !isUploadPreviewing) || !currentHtml) return "";
     return htmlToBBCode(currentHtml);
-  }, [showPreview, currentHtml]);
+  }, [showPreview, isUploadPreviewing, currentHtml]);
 
   // 为预览面板准备的标题文本
   const currentTitleText = useMemo(() => {
@@ -101,25 +109,29 @@ const App: React.FC = () => {
     }
   }, [activeDraft, updateDraft, htmlExtensions, docToHtml]);
 
-  const handleUploadToSteam = useCallback(async () => {
-    if (!activeDraft) {
-      window.alert("没有可上传的草稿");
+  // 上传按钮点击：两阶段流程
+  const handleUploadClick = useCallback(() => {
+    if (!activeDraft || !activeDraft.linkedChapterId) return;
+
+    if (!isUploadPreviewing) {
+      // 第一阶段：打开预览，进入确认模式
+      setShowPreview(true);
+      setIsUploadPreviewing(true);
       return;
     }
 
-    if (!activeDraft.linkedChapterId) {
-      window.alert("该草稿未关联章节，无法上传。请先拉取章节内容。");
-      return;
-    }
+    // 第二阶段：确认上传
+    handleConfirmUpload();
+  }, [activeDraft, isUploadPreviewing]);
 
-    if (!window.confirm(`确定要将草稿"${activeDraft.draftName}"上传到 Steam 吗？`)) {
-      return;
-    }
+  const handleConfirmUpload = useCallback(async () => {
+    if (!activeDraft) return;
 
     setIsUploading(true);
     try {
       await pushDraft(activeDraft.id);
       window.alert("上传成功！");
+      setIsUploadPreviewing(false);
     } catch (error) {
       loggers.sync.error("上传失败", error);
       const message = error instanceof Error ? error.message : "上传失败，未知错误";
@@ -128,6 +140,11 @@ const App: React.FC = () => {
       setIsUploading(false);
     }
   }, [activeDraft, pushDraft]);
+
+  // 切换草稿时重置上传确认状态
+  useEffect(() => {
+    setIsUploadPreviewing(false);
+  }, [activeDraftId]);
 
   return (
     <div
@@ -227,26 +244,49 @@ const App: React.FC = () => {
               导出 BBCode
             </button>
             {activeDraft?.linkedChapterId && (
-              <button
-                type="button"
-                onClick={handleUploadToSteam}
-                disabled={isUploading}
-                style={{
-                  padding: "0.45rem 1rem",
-                  borderRadius: "var(--radius-sm, 0.6rem)",
-                  border: "none",
-                  background: isUploading
-                    ? "rgba(102, 192, 244, 0.5)"
-                    : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-                  color: "#06101e",
-                  fontWeight: 600,
-                  cursor: isUploading ? "wait" : "pointer",
-                  fontSize: "0.85rem",
-                  opacity: isUploading ? 0.7 : 1
-                }}
-              >
-                {isUploading ? "上传中..." : "上传到 Steam"}
-              </button>
+              <>
+                {isUploadPreviewing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadPreviewing(false)}
+                    style={{
+                      padding: "0.45rem 0.8rem",
+                      borderRadius: "var(--radius-sm, 0.6rem)",
+                      border: "1px solid rgba(255, 128, 128, 0.4)",
+                      background: "transparent",
+                      color: "#ff8080",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      fontSize: "0.8rem"
+                    }}
+                  >
+                    取消上传
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleUploadClick}
+                  disabled={isUploading || isDraftEmpty}
+                  title={isDraftEmpty ? "草稿内容为空，无法上传" : undefined}
+                  style={{
+                    padding: "0.45rem 1rem",
+                    borderRadius: "var(--radius-sm, 0.6rem)",
+                    border: isUploadPreviewing ? "2px solid rgba(255, 180, 50, 0.7)" : "none",
+                    background: (isUploading || isDraftEmpty)
+                      ? "rgba(102, 192, 244, 0.3)"
+                      : isUploadPreviewing
+                        ? "linear-gradient(135deg, rgba(255, 180, 50, 0.9), rgba(230, 140, 20, 0.9))"
+                        : "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
+                    color: isUploadPreviewing ? "#1a1000" : "#06101e",
+                    fontWeight: 600,
+                    cursor: (isUploading || isDraftEmpty) ? "not-allowed" : "pointer",
+                    fontSize: "0.85rem",
+                    opacity: (isUploading || isDraftEmpty) ? 0.5 : 1
+                  }}
+                >
+                  {isUploading ? "上传中..." : isUploadPreviewing ? "确认上传" : "上传到 Steam"}
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -357,7 +397,7 @@ const App: React.FC = () => {
             </main>
 
           {/* 实时预览面板 */}
-          {showPreview && (
+          {(showPreview || isUploadPreviewing) && (
             <PreviewPanel
               bbcode={currentBBCode}
               title={currentTitleText}
