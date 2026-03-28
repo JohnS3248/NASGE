@@ -279,7 +279,8 @@ const App: React.FC = () => {
               padding: "1.1rem",
               boxShadow: "var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))",
               display: "flex",
-              flexDirection: "column"
+              flexDirection: "column",
+              minWidth: "638px"
             }}
           >
               {!activeDraft ? (

@@ -136,6 +136,7 @@ type GuideState = {
   // === 草稿 ===
   drafts: Draft[];
   activeDraftId: string | null;
+  nextDraftNumber: number;
   currentChapterId: string | null;
   isDirty: boolean;
   isBindingMode: boolean;
@@ -238,6 +239,7 @@ export const useGuideStore = create<GuideState>()(
         guideInfo: null,
         drafts: [],
         activeDraftId: null,
+        nextDraftNumber: 1,
         currentChapterId: null,
         isDirty: false,
         isBindingMode: false,
@@ -338,7 +340,7 @@ export const useGuideStore = create<GuideState>()(
 
         addDraft: (title?: string) => {
           const state = get();
-          const draftNumber = state.drafts.length + 1;
+          const draftNumber = state.nextDraftNumber;
           const draft: Draft = {
             id: crypto.randomUUID(),
             draftName: `草稿 ${draftNumber}`,
@@ -352,6 +354,7 @@ export const useGuideStore = create<GuideState>()(
           set((s) => ({
             drafts: [...s.drafts, draft],
             activeDraftId: draft.id,
+            nextDraftNumber: s.nextDraftNumber + 1,
             isDirty: false
           }));
 
@@ -1127,6 +1130,7 @@ export const useGuideStore = create<GuideState>()(
           guideInfo: persisted.guideInfo ?? currentState.guideInfo,
           drafts: persisted.drafts ?? currentState.drafts,
           activeDraftId: persisted.activeDraftId ?? currentState.activeDraftId,
+          nextDraftNumber: (persisted as Partial<GuideState>).nextDraftNumber ?? currentState.nextDraftNumber,
           currentChapterId: persisted.currentChapterId ?? currentState.currentChapterId,
           isDirty: persisted.isDirty ?? currentState.isDirty,
           isBindingMode: false,  // 运行时状态，不恢复
@@ -1187,27 +1191,25 @@ export const useGuideStore = create<GuideState>()(
 
         const state = persistedState as Partial<GuideState> | null;
 
-        // 如果没有数据，创建默认状态
-        if (!state || !state.drafts || state.drafts.length === 0) {
-          const defaultDraft: Draft = {
-            id: crypto.randomUUID(),
-            draftName: "草稿 1",
-            title: createEmptyTitle(),
-            content: createEmptyDoc(),
-            updatedAt: Date.now()
-          };
-
+        // 如果没有数据，返回空状态（不自动创建草稿，让用户看到引导）
+        if (!state) {
           return {
             mode: 'offline',
             currentArchiveId: null,
             guideInfo: null,
-            drafts: [defaultDraft],
-            activeDraftId: defaultDraft.id,
+            drafts: [],
+            activeDraftId: null,
+            nextDraftNumber: 1,
             currentChapterId: null,
             isDirty: false,
             isBindingMode: false,
             archives: {}
           };
+        }
+
+        // 迁移：如果没有 nextDraftNumber，从现有草稿推断
+        if (!(state as Record<string, unknown>).nextDraftNumber) {
+          (state as Record<string, unknown>).nextDraftNumber = (state.drafts?.length ?? 0) + 1;
         }
 
         // 迁移旧存档：添加缺失的 imageTags 和 imageTagMap 字段
@@ -1243,12 +1245,10 @@ export const useGuideStore = create<GuideState>()(
   )
 );
 
-// 启动时确保有默认草稿
+// 启动时修复 activeDraftId（不自动创建草稿）
 setTimeout(() => {
   const state = useGuideStore.getState();
-  if (state.drafts.length === 0) {
-    state.addDraft();
-  } else if (!state.activeDraftId && state.drafts.length > 0) {
+  if (!state.activeDraftId && state.drafts.length > 0) {
     useGuideStore.setState({ activeDraftId: state.drafts[0].id });
   }
 }, 100);
