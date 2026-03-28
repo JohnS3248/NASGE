@@ -238,6 +238,14 @@ function useMainRect() {
 
     const ro = new ResizeObserver(update);
     ro.observe(mainEl);
+    // Observe ancestor containers: when siblings (e.g. PreviewPanel) toggle,
+    // the parent resizes which shifts main's screen position
+    if (mainEl.parentElement) {
+      ro.observe(mainEl.parentElement);
+      if (mainEl.parentElement.parentElement) {
+        ro.observe(mainEl.parentElement.parentElement);
+      }
+    }
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
 
