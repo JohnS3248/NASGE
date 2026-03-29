@@ -15,12 +15,15 @@ import {
   writeReviewText,
   submitReviewToSteam,
 } from "./reviewBridge";
+import { loggers, setDebugMode } from "../shared/logger";
+
+setDebugMode(false);
 
 (() => {
   if (window.__NASGE_REVIEW_CONTENT_INITIALIZED__) return;
   window.__NASGE_REVIEW_CONTENT_INITIALIZED__ = true;
 
-  console.info("[NASGE] Review content script injected:", window.location.href);
+  loggers.content.info("Review content script injected:", window.location.href);
 
   chrome.runtime.onMessage.addListener(
     (message: SteamBridgeRequest, _sender, sendResponse) => {
@@ -34,13 +37,13 @@ import {
     { type: "PING_FROM_CONTENT" },
     (response) => {
       if (chrome.runtime.lastError) {
-        console.debug(
-          "[NASGE] Background ping failed:",
+        loggers.content.verbose(
+          "Background ping failed:",
           chrome.runtime.lastError.message
         );
         return;
       }
-      console.debug("[NASGE] Background response:", response);
+      loggers.content.verbose("Background response:", response);
     }
   );
 })();

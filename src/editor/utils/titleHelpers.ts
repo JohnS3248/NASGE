@@ -142,8 +142,8 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
 
         // 设置旧 Store 显示属性
         imageNodeStore.updateDisplay(registeredNode.nodeId, {
-          preset: (sizePreset as any) || "original",
-          alignment: (alignment as any) || "floatLeft"
+          preset: (sizePreset as ImageSizePreset) || "original",
+          alignment: (alignment as ImageAlignment) || "floatLeft"
         });
 
         loggers.editor.verbose('titleHelpers 注册标题图片节点 (双写):', {

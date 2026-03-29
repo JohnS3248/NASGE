@@ -1,6 +1,11 @@
+import { loggers, setDebugMode } from "../shared/logger";
+
+// Background 无 EditorConfigStore，开发阶段始终开启日志
+setDebugMode(false);
+
 chrome.runtime.onInstalled.addListener((details) => {
-  console.info(
-    `[NASGE] Background worker installed:`,
+  loggers.background.info(
+    "Background worker installed:",
     JSON.stringify(details, null, 2)
   );
 });
@@ -21,7 +26,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         : typeof (payloadShape as { byteLength?: number })?.byteLength === "number"
           ? (payloadShape as { byteLength: number }).byteLength
           : null;
-    console.info("[NASGE][BG] 收到上传消息", {
+    loggers.background.info("收到上传消息", {
       fromTab: sender.tab?.id,
       hasFile: Boolean(message?.file),
       byteLength: size,
@@ -41,7 +46,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "PING_FROM_CONTENT") {
-    console.info("[NASGE] Received ping from content script", sender.tab?.url);
+    loggers.background.info("Received ping from content script", sender.tab?.url);
     sendResponse({ ok: true, receivedAt: Date.now() });
     return true;
   }
@@ -77,7 +82,7 @@ async function handleSteamBridgeMessage(
     const response = await dispatchToSteamTab(targetTabId, forwarded);
     sendResponse(response);
   } catch (error) {
-    console.error("[NASGE] Steam bridge error:", error);
+    loggers.background.error("Steam bridge error:", error);
     sendResponse({
       ok: false,
       error: error instanceof Error ? error.message : String(error)
@@ -115,7 +120,7 @@ async function dispatchToSteamTab(
         : typeof (raw as { byteLength?: number })?.byteLength === "number"
           ? (raw as { byteLength: number }).byteLength
           : null;
-    console.info("[NASGE][BG] 转发上传消息到 Steam Tab", {
+    loggers.background.info("转发上传消息到 Steam Tab", {
       tabId,
       byteLength,
       attempt
@@ -157,7 +162,7 @@ async function injectSteamContentScript(tabId: number): Promise<void> {
     throw new Error("扩展内容脚本缺失，无法注入 Steam 页面。");
   }
 
-  console.info("[NASGE] Attempting to inject Steam content script on demand", {
+  loggers.background.info("Attempting to inject Steam content script on demand", {
     tabId,
     scripts
   });
@@ -168,7 +173,7 @@ async function injectSteamContentScript(tabId: number): Promise<void> {
       files: scripts
     });
   } catch (error) {
-    console.error("[NASGE] Failed to inject content script:", error);
+    loggers.background.error("Failed to inject content script:", error);
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes("Cannot access contents of the page")) {
       throw new Error(
@@ -214,14 +219,14 @@ function cloneSteamBridgeRequest(message: SteamBridgeRequest): SteamBridgeReques
   } else if (raw && typeof raw === "object" && "length" in (raw as { length: number })) {
     clonedData = Array.from(raw as ArrayLike<number>);
   } else {
-    console.warn("[NASGE][BG] 无法识别上传数据形态，使用空数组", {
+    loggers.background.warn("无法识别上传数据形态，使用空数组", {
       type: describeRawType(raw),
       keys: describeRawKeys(raw)
     });
     clonedData = [];
   }
 
-  console.info("[NASGE][BG] 克隆上传数据", {
+  loggers.background.info("克隆上传数据", {
     originalType: describeRawType(raw),
     originalLength: describeRawLength(raw),
     clonedLength: clonedData.length

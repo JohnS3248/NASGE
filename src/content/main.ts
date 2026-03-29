@@ -18,7 +18,13 @@ import type {
   SteamUploadRequest,
   UploadResult
 } from "../shared/messages";
+import type { ChapterContent } from "./chapterSync";
+import type { GuideInfoResult } from "./guideInfo";
 import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./steamBridge";
+import { loggers, setDebugMode } from "../shared/logger";
+
+// Content script 无 EditorConfigStore，开发阶段始终开启日志
+setDebugMode(false);
 
 (() => {
   if (window.__NASGE_STEAM_CONTENT_INITIALIZED__) {
@@ -26,7 +32,7 @@ import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./st
   }
   window.__NASGE_STEAM_CONTENT_INITIALIZED__ = true;
 
-  console.info("[NASGE] Content script injected:", window.location.href);
+  loggers.content.info("Content script injected:", window.location.href);
 
   chrome.runtime.onMessage.addListener(
     (message: SteamBridgeRequest, sender, sendResponse) => {
@@ -41,20 +47,28 @@ import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./st
 
   chrome.runtime.sendMessage({ type: "PING_FROM_CONTENT" }, (response) => {
     if (chrome.runtime.lastError) {
-      console.debug(
-        "[NASGE] Background ping failed:",
+      loggers.content.verbose(
+        "Background ping failed:",
         chrome.runtime.lastError.message
       );
       return;
     }
 
-    console.debug("[NASGE] Background response:", response);
+    loggers.content.verbose("Background response:", response);
   });
 
   window.addEventListener("message", handlePageBridgeMessage);
 })();
 
-type DispatchPayload = UploadResult | { ready: boolean } | { success: boolean } | SteamGuideImage[];
+type DispatchPayload =
+  | UploadResult
+  | { ready: boolean }
+  | { success: boolean }
+  | SteamGuideImage[]
+  | ChapterContent
+  | { sectionId: string }
+  | { chapters: Array<{ sectionId: string; title: string; order: number }> }
+  | GuideInfoResult;
 
 async function dispatchSteamBridgeMessage(
   message: SteamBridgeRequest,
@@ -70,7 +84,7 @@ async function dispatchSteamBridgeMessage(
         : typeof (raw as { byteLength?: number })?.byteLength === "number"
           ? (raw as { byteLength: number }).byteLength
           : null;
-    console.info("[NASGE][Content] 接收到上传消息", {
+    loggers.content.info("接收到上传消息", {
       byteLength,
       name: payload.file?.name
     });
@@ -102,7 +116,7 @@ async function dispatchSteamBridgeMessage(
         const { fetchChapterFromSteam } = await import("./chapterSync");
         const fetchRequest = message as SteamFetchChapterRequest;
         const chapter = await fetchChapterFromSteam(fetchRequest.guideId, fetchRequest.sectionId);
-        sendResponse({ ok: true, data: chapter as any });
+        sendResponse({ ok: true, data: chapter });
         break;
       }
       case "save-chapter": {
@@ -115,21 +129,21 @@ async function dispatchSteamBridgeMessage(
           saveRequest.description,
           saveRequest.sessionId  // 传递从 MAIN world 获取的 sessionId
         );
-        sendResponse({ ok: true, data: { sectionId } as any });
+        sendResponse({ ok: true, data: { sectionId } });
         break;
       }
       case "fetch-chapter-list": {
         const { fetchChapterList } = await import("./chapterSync");
         const listRequest = message as SteamFetchChapterListRequest;
         const chapters = await fetchChapterList(listRequest.guideId);
-        sendResponse({ ok: true, data: { chapters } as any });
+        sendResponse({ ok: true, data: { chapters } });
         break;
       }
       case "fetch-guide-info": {
         const { fetchGuideInfo } = await import("./guideInfo");
         const infoRequest = message as SteamFetchGuideInfoRequest;
         const guideInfo = await fetchGuideInfo(infoRequest.guideId);
-        sendResponse({ ok: true, data: guideInfo as any });
+        sendResponse({ ok: true, data: guideInfo });
         break;
       }
       case "collect-upload-context": {
@@ -143,7 +157,7 @@ async function dispatchSteamBridgeMessage(
       default: {
         sendResponse({
           ok: false,
-          error: `未知的 Steam 桥接操作: ${(message as any)?.action ?? "unknown"}`
+          error: `未知的 Steam 桥接操作: ${message.action ?? "unknown"}`
         });
       }
     }

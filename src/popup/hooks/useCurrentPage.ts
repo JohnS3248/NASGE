@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { loggers } from '../../shared/logger';
 
 export type PageType = 'guide' | 'review' | 'other';
 
@@ -28,14 +29,14 @@ export function useCurrentPage(): PageInfo | null {
         }
 
         const url = tab.url;
-        console.log('[NASGE Popup] 检测页面 URL:', url);
+        loggers.popup.verbose('检测页面 URL:', url);
 
         // 检测指南管理页
         // URL 格式: https://steamcommunity.com/sharedfiles/manageguide/?id=XXXXXXXXX
         const guideMatch = url.match(/steamcommunity\.com\/sharedfiles\/manageguide\/\?id=(\d+)/);
         if (guideMatch) {
           const guideId = guideMatch[1];
-          console.log('[NASGE Popup] 检测到指南管理页，guideId:', guideId);
+          loggers.popup.verbose('检测到指南管理页，guideId:', guideId);
           setPageInfo({ type: 'guide', url, guideId });
           return;
         }
@@ -45,7 +46,7 @@ export function useCurrentPage(): PageInfo | null {
         const storeMatch = url.match(/store\.steampowered\.com\/app\/(\d+)/);
         if (storeMatch) {
           const appId = storeMatch[1];
-          console.log('[NASGE Popup] 检测到商店游戏页，appId:', appId);
+          loggers.popup.verbose('检测到商店游戏页，appId:', appId);
           setPageInfo({ type: 'review', url, appId });
           return;
         }
@@ -54,7 +55,7 @@ export function useCurrentPage(): PageInfo | null {
         // URL 格式: https://steamcommunity.com/id/USERNAME/reviews/ 或 /profiles/USERID/reviews/
         const reviewMatch = url.match(/steamcommunity\.com\/(id\/[^/]+|profiles\/\d+)\/reviews/);
         if (reviewMatch) {
-          console.log('[NASGE Popup] 检测到评测列表页');
+          loggers.popup.verbose('检测到评测列表页');
           setPageInfo({ type: 'review', url });
           return;
         }
@@ -62,7 +63,7 @@ export function useCurrentPage(): PageInfo | null {
         // 其他页面
         setPageInfo({ type: 'other', url });
       } catch (error) {
-        console.error('[NASGE Popup] 检测页面类型失败:', error);
+        loggers.popup.error('检测页面类型失败:', error);
         setPageInfo({ type: 'other', url: '' });
       }
     }

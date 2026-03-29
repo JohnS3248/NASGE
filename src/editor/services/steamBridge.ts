@@ -1,12 +1,14 @@
 import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
+  SteamDeleteImageRequest,
   SteamUploadRequest,
   SteamFetchGuideImagesRequest,
   SteamGuideImage,
   UploadResult,
   UploadScope
 } from "../../shared/messages";
+import { loggers } from "../../shared/logger";
 
 const RUNTIME = chrome?.runtime;
 
@@ -47,7 +49,7 @@ export async function uploadSteamImage(
   const fileData = await file.arrayBuffer();
   const fileArray = Array.from(new Uint8Array(fileData));
 
-  console.info("[NASGE] uploadSteamImage -> 序列化文件", {
+  loggers.bridge.info("uploadSteamImage -> 序列化文件", {
     name: file.name,
     size: file.size,
     byteLength: fileData.byteLength,
@@ -102,12 +104,12 @@ export async function fetchSteamGuideImages(scope: UploadScope = "chapter-previe
 }
 
 export async function deleteSteamImage(previewId: string, scope: UploadScope = "chapter-preview"): Promise<void> {
-  const request: SteamBridgeRequest = {
+  const request: SteamDeleteImageRequest = {
     channel: "nasge:steam",
     action: "delete-image",
     scope,
     previewId
-  } as any;
+  };
 
   const response = await sendSteamRequest(request);
   if (!response.ok) {

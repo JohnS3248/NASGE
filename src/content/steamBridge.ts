@@ -5,6 +5,14 @@ import type {
   UploadResult,
   UploadScope
 } from "../shared/messages";
+import { loggers } from "../shared/logger";
+
+declare global {
+  interface Window {
+    /** Steam page global — session ID */
+    g_sessionID?: string;
+  }
+}
 
 const UPLOAD_SELECTORS: Record<UploadScope, () => HTMLFormElement | null> = {
   "chapter-preview": () => {
@@ -32,7 +40,7 @@ export async function handleUploadRequest(
       ? rawData.byteLength
       : null;
 
-  console.info("[NASGE][Content] handleUploadRequest 收到文件数据", {
+  loggers.bridge.info("handleUploadRequest 收到文件数据", {
     name: request.file.name,
     byteLength,
     type: request.file.type
@@ -44,7 +52,7 @@ export async function handleUploadRequest(
     lastModified: Date.now()
   });
 
-  console.debug("[NASGE] 上传桥接：创建文件对象", {
+  loggers.bridge.verbose("上传桥接：创建文件对象", {
     name: file.name,
     size: file.size,
     type: file.type
@@ -76,14 +84,14 @@ export async function handleUploadRequest(
     );
 
   if (!preparation) {
-    console.info("[NASGE] Steam 自动准备未在时限内完成，改用手动补齐流程。");
+    loggers.bridge.info("Steam 自动准备未在时限内完成，改用手动补齐流程。");
     preparation = manualPrepareUpload(request.scope, file, managedInputs);
   }
 
   const { context, form: activeForm, fileInput: activeFileInput } = preparation;
   const { action, fields, fileFieldName } = context;
 
-  console.debug("[NASGE] Steam 准备完成字段", {
+  loggers.bridge.verbose("Steam 准备完成字段", {
     action,
     fileFieldName,
     file_size: fields["file_size"] ?? fields["file_size[]"] ?? fields["filesize"],
@@ -173,7 +181,7 @@ export async function handleUploadRequest(
     frame.addEventListener("load", handleLoad);
 
     try {
-      console.debug("[NASGE] 准备提交 Steam 上传表单", {
+      loggers.bridge.verbose("准备提交 Steam 上传表单", {
         action: activeForm.action,
         target: activeForm.target,
         hasFile: Boolean(activeFileInput.files?.length),
@@ -214,7 +222,7 @@ function attachDebugListener(input: HTMLInputElement): void {
     (event) => {
       const files = (event.target as HTMLInputElement)?.files;
       const file = files && files.length ? files[0] : null;
-      console.info("[NASGE] 捕获到 Steam 表单 change 事件", {
+      loggers.bridge.info("捕获到 Steam 表单 change 事件", {
         isTrusted: event.isTrusted,
         fileName: file?.name,
         fileSize: file?.size,
@@ -293,17 +301,17 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
   // manageguide 页面：使用 gPreviewImages 桥接数据
   // 注意：AJAX API (userfilesforguide) 返回的是用户截图，不是指南图片池
   if (isManageGuidePage) {
-    console.info("[NASGE] 在 manageguide 页面，从 gPreviewImages 桥接数据读取");
+    loggers.bridge.info("在 manageguide 页面，从 gPreviewImages 桥接数据读取");
     return parseGuideImagePoolFromDOM();
   }
 
   if (isEditSubsectionPage) {
-    console.info("[NASGE] 在 editguidesubsection 页面，从页面 DOM 直接读取图片池");
+    loggers.bridge.info("在 editguidesubsection 页面，从页面 DOM 直接读取图片池");
     return parseGuideImagePoolFromEditSubsectionDOM();
   }
 
   // 其他页面（如章节编辑页）：尝试 AJAX
-  console.info("[NASGE] 尝试通过 AJAX 拉取图片池");
+  loggers.bridge.info("尝试通过 AJAX 拉取图片池");
 
   let sessionId: string | undefined;
   let consumerAppId: string | undefined;
@@ -315,7 +323,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     consumerAppId = readFormField(form, "consumer_app_id");
     guideId = readFormField(form, "publishedfileid") ?? readFormField(form, "id");
   } catch (error) {
-    console.warn("[NASGE] 无法从上传表单读取字段，尝试其他方式", error);
+    loggers.bridge.warn("无法从上传表单读取字段，尝试其他方式", error);
   }
 
   // 从 URL 获取 guideId
@@ -330,7 +338,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
       const sessionInput = form.querySelector<HTMLInputElement>('input[name="sessionid"]');
       if (sessionInput?.value) {
         sessionId = sessionInput.value;
-        console.info("[NASGE] 从表单中提取 sessionid");
+        loggers.bridge.info("从表单中提取 sessionid");
         break;
       }
     }
@@ -341,7 +349,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     const match = document.cookie.match(/sessionid=([^;]+)/);
     if (match) {
       sessionId = decodeURIComponent(match[1]);
-      console.info("[NASGE] 从 cookie 中提取 sessionid");
+      loggers.bridge.info("从 cookie 中提取 sessionid");
     }
   }
 
@@ -380,14 +388,14 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
       const appIdMatch = html.match(/consumer_appid["\s:=]+(\d+)/i);
       if (appIdMatch) {
         consumerAppId = appIdMatch[1];
-        console.info("[NASGE] 从指南详情页提取 appid", consumerAppId);
+        loggers.bridge.info("从指南详情页提取 appid", consumerAppId);
       }
     } catch (error) {
-      console.warn("[NASGE] 无法从指南详情页提取 appid", error);
+      loggers.bridge.warn("无法从指南详情页提取 appid", error);
     }
   }
 
-  console.info("[NASGE] 收集到的上下文信息", {
+  loggers.bridge.info("收集到的上下文信息", {
     sessionId: sessionId ? "存在" : "缺失",
     consumerAppId,
     guideId
@@ -398,7 +406,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
   }
 
   if (!consumerAppId) {
-    console.warn("[NASGE] 无法自动获取 consumer_app_id，这可能导致图片池为空");
+    loggers.bridge.warn("无法自动获取 consumer_app_id，这可能导致图片池为空");
     consumerAppId = "";
   }
 
@@ -417,7 +425,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     params.set("filetype", "4");
     params.set("p", String(currentPage));
 
-    console.info("[NASGE] 发起 AJAX 请求", { page: currentPage, params: params.toString() });
+    loggers.bridge.info("发起 AJAX 请求", { page: currentPage, params: params.toString() });
 
     const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
       method: "POST",
@@ -434,10 +442,10 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     }
 
     const html = await response.text();
-    console.info("[NASGE] AJAX 响应长度", { page: currentPage, length: html.length });
+    loggers.bridge.info("AJAX 响应长度", { page: currentPage, length: html.length });
 
     const pageImages = parseGuideImagePool(html);
-    console.info("[NASGE] 本页图片数量", { page: currentPage, count: pageImages.length });
+    loggers.bridge.info("本页图片数量", { page: currentPage, count: pageImages.length });
 
     if (pageImages.length === 0) {
       // 没有更多图片了
@@ -448,7 +456,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     currentPage++;
   }
 
-  console.info("[NASGE] AJAX 加载完成，共", allImages.length, "张图片");
+  loggers.bridge.info("AJAX 加载完成，共", allImages.length, "张图片");
   return allImages;
 }
 
@@ -569,7 +577,7 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     // 通过 postMessage 请求 MAIN world 刷新数据
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(() => {
-        console.warn('[NASGE Content Script] 刷新请求超时，使用现有数据');
+        loggers.bridge.warn('刷新请求超时，使用现有数据');
         resolve();
       }, 500);
 
@@ -591,14 +599,14 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     if (attr && attr !== 'null') {
       globalVar = JSON.parse(attr);
     } else {
-      console.warn('[NASGE Content Script] ❌ gPreviewImages 不存在或为空');
+      loggers.bridge.warn('gPreviewImages 不存在或为空');
     }
   } catch (error) {
-    console.error('[NASGE] 读取页面桥接数据失败:', error);
+    loggers.bridge.error('读取页面桥接数据失败:', error);
   }
 
   if (Array.isArray(globalVar) && globalVar.length > 0) {
-    console.info('[NASGE] ✅ 从全局变量 gPreviewImages 解析图片池');
+    loggers.bridge.info('从全局变量 gPreviewImages 解析图片池');
 
     for (const item of globalVar) {
       if (item.previewid) {
@@ -614,12 +622,12 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     }
 
     // 成功使用 gPreviewImages，直接返回
-    console.info(`[NASGE] 从 gPreviewImages 解析到 ${images.size} 张图片`);
+    loggers.bridge.info(`从 gPreviewImages 解析到 ${images.size} 张图片`);
     return Array.from(images.values());
   }
 
   // Fallback: 从 DOM 解析
-  console.warn('[NASGE] ❌ gPreviewImages 不可用，尝试从 DOM 解析');
+  loggers.bridge.warn('gPreviewImages 不可用，尝试从 DOM 解析');
 
   const imageContainers = document.querySelectorAll('.manageSortablePreview, .guide_preview_image_small, .preview_image, [data-previewid]');
 
@@ -708,11 +716,11 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
       globalVarFinal = JSON.parse(attr);
     }
   } catch (error) {
-    console.warn('[NASGE] 最终检查失败:', error);
+    loggers.bridge.warn('最终检查失败:', error);
   }
 
   if (Array.isArray(globalVarFinal) && globalVarFinal.length > 0) {
-    console.log('[NASGE] ✅ 最终检查：发现 gPreviewImages，合并透明URL');
+    loggers.bridge.verbose('最终检查：发现 gPreviewImages，合并透明URL');
     for (const item of globalVarFinal) {
       if (item.previewid && item.url) {
         const existing = images.get(item.previewid);
@@ -732,7 +740,7 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
     }
   }
 
-  console.info(`[NASGE] 从 DOM 解析到 ${images.size} 张图片`);
+  loggers.bridge.info(`从 DOM 解析到 ${images.size} 张图片`);
   return Array.from(images.values());
 }
 
@@ -741,12 +749,12 @@ function parseGuideImagePoolFromEditSubsectionDOM(): SteamGuideImage[] {
 
   const previewImagesContainer = document.querySelector('#PreviewImages');
   if (!previewImagesContainer) {
-    console.warn('[NASGE] 未找到 #PreviewImages 容器');
+    loggers.bridge.warn('未找到 #PreviewImages 容器');
     return [];
   }
 
   const imageElements = previewImagesContainer.querySelectorAll('img[id][src*="steamusercontent"]');
-  console.info(`[NASGE] 在 #PreviewImages 中找到 ${imageElements.length} 张图片`);
+  loggers.bridge.info(`在 #PreviewImages 中找到 ${imageElements.length} 张图片`);
 
   for (const img of Array.from(imageElements)) {
     const previewId = img.id;
@@ -764,12 +772,12 @@ function parseGuideImagePoolFromEditSubsectionDOM(): SteamGuideImage[] {
     }
   }
 
-  console.info(`[NASGE] 从 editguidesubsection DOM 解析到 ${images.size} 张图片`, Array.from(images.values()));
+  loggers.bridge.info(`从 editguidesubsection DOM 解析到 ${images.size} 张图片`, Array.from(images.values()));
   return Array.from(images.values());
 }
 
 export async function deleteGuideImage(scope: UploadScope, previewId: string): Promise<void> {
-  console.info("[NASGE] 准备删除图片", { scope, previewId });
+  loggers.bridge.info("准备删除图片", { scope, previewId });
 
   let sessionId: string | undefined;
   let guideId: string | undefined;
@@ -779,11 +787,11 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
     sessionId = readFormField(form, "sessionid");
     guideId = readFormField(form, "id") ?? readFormField(form, "publishedfileid");
   } catch (error) {
-    console.warn("[NASGE] 无法从表单读取删除参数，尝试其他方式", error);
+    loggers.bridge.warn("无法从表单读取删除参数，尝试其他方式", error);
   }
 
   if (!sessionId) {
-    sessionId = (window as any).g_sessionID;
+    sessionId = window.g_sessionID;
   }
 
   if (!guideId) {
@@ -791,7 +799,7 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
   }
 
   if (!sessionId || !guideId) {
-    console.error("[NASGE] 删除图片失败：缺少必要参数", { sessionId: !!sessionId, guideId });
+    loggers.bridge.error("删除图片失败：缺少必要参数", { sessionId: !!sessionId, guideId });
     throw new Error("无法收集删除图片所需的上下文信息（sessionid/id）。");
   }
 
@@ -801,7 +809,7 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
   params.set("previewid", previewId);
   params.set("ajax", "true");
 
-  console.info("[NASGE] 发送删除请求", {
+  loggers.bridge.info("发送删除请求", {
     url: "https://steamcommunity.com/sharedfiles/removepreview",
     params: params.toString()
   });
@@ -818,18 +826,18 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
   });
 
   if (!response.ok) {
-    console.error("[NASGE] 删除请求失败", { status: response.status, statusText: response.statusText });
+    loggers.bridge.error("删除请求失败", { status: response.status, statusText: response.statusText });
     throw new Error(`删除图片失败：HTTP ${response.status}`);
   }
 
   const result = await response.json();
-  console.info("[NASGE] 删除请求响应", result);
+  loggers.bridge.info("删除请求响应", result);
 
   if (result.success !== 1) {
     throw new Error("Steam 删除图片失败，请刷新页面后重试。");
   }
 
-  console.info("[NASGE] 成功删除图片，开始清理 DOM", previewId);
+  loggers.bridge.info("成功删除图片，开始清理 DOM", previewId);
 
   const isEditSubsectionPage = window.location.href.includes("/editguidesubsection/");
   if (isEditSubsectionPage) {
@@ -838,17 +846,17 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
       const container = imgElement.closest('.previewImage, div[class*="preview"]');
       if (container) {
         container.remove();
-        console.info("[NASGE] 已从 DOM 中移除图片容器", previewId);
+        loggers.bridge.info("已从 DOM 中移除图片容器", previewId);
       } else {
         imgElement.remove();
-        console.info("[NASGE] 已从 DOM 中移除图片元素", previewId);
+        loggers.bridge.info("已从 DOM 中移除图片元素", previewId);
       }
     } else {
-      console.warn("[NASGE] 未在 DOM 中找到要移除的图片", previewId);
+      loggers.bridge.warn("未在 DOM 中找到要移除的图片", previewId);
     }
   }
 
-  console.info("[NASGE] 图片删除完成", previewId);
+  loggers.bridge.info("图片删除完成", previewId);
 }
 
 function resolveUploadElements(scope: UploadScope): {
@@ -938,13 +946,13 @@ async function waitForSteamPreparation(
       const resolved = resolveUploadElements(scope);
       if (resolved.form !== currentForm) {
         currentForm = resolved.form;
-        console.info("[NASGE] 发现新的 Steam 上传表单节点，已切换。");
+        loggers.bridge.info("发现新的 Steam 上传表单节点，已切换。");
       }
       if (resolved.fileInput !== currentInput) {
         currentInput = resolved.fileInput;
         registerInput(currentInput, registry);
         attachDebugListener(currentInput);
-        console.info("[NASGE] 发现新的 Steam 文件输入控件，尝试同步文件。");
+        loggers.bridge.info("发现新的 Steam 文件输入控件，尝试同步文件。");
       }
     } catch {
       // 如果在握手过程中短暂找不到表单，沿用前一次引用即可。
@@ -953,7 +961,7 @@ async function waitForSteamPreparation(
     if (!currentInput.files || !currentInput.files.length || currentInput.files[0]?.size !== file.size) {
       if (assignFileToInput(currentInput, file)) {
         fireUpdateEvents(currentInput);
-        console.info("[NASGE] 已向最新的 Steam 输入控件写入文件以继续握手。");
+        loggers.bridge.info("已向最新的 Steam 输入控件写入文件以继续握手。");
       }
     }
 
@@ -970,7 +978,7 @@ async function waitForSteamPreparation(
     const sizeParsed = parseSize(sizeRaw);
     const sizeReady = sizeParsed === file.size;
     if (prefix && token && sizeReady) {
-      console.info("[NASGE] Steam 准备完成", {
+      loggers.bridge.info("Steam 准备完成", {
         prefix,
         sizeRaw,
         sizeParsed,
@@ -983,7 +991,7 @@ async function waitForSteamPreparation(
     await delay(120);
   }
 
-  console.info("[NASGE] Steam 自动准备在时限内未完成，启用后备方案。", {
+  loggers.bridge.info("Steam 自动准备在时限内未完成，启用后备方案。", {
     lastContext
   });
   return null;
@@ -1008,7 +1016,7 @@ function manualPrepareUpload(
 
   const context = extractUploadContext(scope, form);
 
-  console.info("[NASGE] 手动填充 Steam 上传字段", {
+  loggers.bridge.info("手动填充 Steam 上传字段", {
     cloudfilenameprefix:
       context.fields["cloudfilenameprefix"] ?? context.fields["cloudfilenameprefix[]"],
     fileSizeField:

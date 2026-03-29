@@ -108,7 +108,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     });
     const body = filtered
       .map((child, index) =>
-        serializeNode(child as any, {
+        serializeNode(child, {
           isLastSibling: index === filtered.length - 1
         })
       )

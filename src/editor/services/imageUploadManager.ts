@@ -1,5 +1,6 @@
 import type { UploadResult, UploadScope } from "../../shared/messages";
 import { uploadSteamImage } from "./steamBridge";
+import { loggers } from "../../shared/logger";
 import {
   useImageUploadStore,
   type ImageUploadMetadata,
@@ -27,7 +28,7 @@ export async function uploadImageViaSteam(
   const record = prepare(file, scope, metadata);
   hooks?.onPrepared?.(record);
 
-  console.info("[NASGE] uploadImageViaSteam -> 准备上传文件", {
+  loggers.image.info("uploadImageViaSteam -> 准备上传文件", {
     name: file.name,
     size: file.size,
     type: file.type

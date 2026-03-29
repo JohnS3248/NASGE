@@ -53,6 +53,7 @@ async function getSessionId(): Promise<string> {
   const results = await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     world: "MAIN",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runs in Steam page context where g_sessionID exists
     func: () => {
       return (window as any).g_sessionID;
     }
@@ -190,7 +191,8 @@ export async function createChapterOnSteam(guideId: string): Promise<string> {
     args: ['https://steamcommunity.com/sharedfiles/setguidesubsection', params.toString()]
   });
 
-  const response = results[0]?.result as any;
+  // Steam setguidesubsection API response shape
+  const response = results[0]?.result as { success?: number; sectionid?: string; timeSaved?: string } | undefined;
 
   if (!response || response.success !== 1) {
     throw new Error('创建章节失败');
@@ -201,7 +203,7 @@ export async function createChapterOnSteam(guideId: string): Promise<string> {
     timeSaved: response.timeSaved
   });
 
-  return response.sectionid;
+  return response.sectionid ?? "";
 }
 
 /**
@@ -279,7 +281,8 @@ export async function reorderChaptersOnSteam(
     args: ['https://steamcommunity.com/sharedfiles/setguidesubsectionorder', formData.toString()]
   });
 
-  const response = results[0]?.result as any;
+  // Steam setguidesubsectionorder API response shape
+  const response = results[0]?.result as { success?: number } | undefined;
 
   if (!response || response.success !== 1) {
     throw new Error('章节排序保存失败');

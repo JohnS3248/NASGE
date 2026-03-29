@@ -16,11 +16,12 @@ declare global {
   }
 }
 
-// 必须有export让文件成为模块
-export {};
+import { loggers, setDebugMode } from "../shared/logger";
+
+setDebugMode(false);
 
 (function() {
-  console.log('[NASGE 页面桥接 MAIN] 开始执行');
+  loggers.bridge.verbose('页面桥接 MAIN 开始执行');
 
   function exposeGPreviewImages() {
     try {
@@ -30,14 +31,14 @@ export {};
           'data-nasge-gpreview-bridge',
           JSON.stringify(data)
         );
-        console.log('[NASGE 页面桥接 MAIN] ✅ gPreviewImages 已写入 DOM，共', data.length, '张图片');
+        loggers.bridge.verbose('gPreviewImages 已写入 DOM，共', data.length, '张图片');
         return data.length;
       } else {
-        console.warn('[NASGE 页面桥接 MAIN] ⚠️ gPreviewImages 不存在或为空');
+        loggers.bridge.warn('gPreviewImages 不存在或为空');
         return 0;
       }
     } catch (error) {
-      console.error('[NASGE 页面桥接 MAIN] ❌ 错误:', error);
+      loggers.bridge.error('页面桥接错误:', error);
       return -1;
     }
   }
@@ -47,7 +48,7 @@ export {};
     if (event.source !== window) return;
     if (event.data?.channel !== 'nasge:gpreview' || event.data?.action !== 'refresh') return;
 
-    console.log('[NASGE 页面桥接 MAIN] 收到刷新请求');
+    loggers.bridge.verbose('页面桥接 MAIN 收到刷新请求');
     const count = exposeGPreviewImages();
 
     // 回复确认
@@ -70,5 +71,5 @@ export {};
   setTimeout(exposeGPreviewImages, 500);
   setTimeout(exposeGPreviewImages, 1000);
 
-  console.log('[NASGE 页面桥接 MAIN] 已设置延迟尝试和消息监听');
+  loggers.bridge.verbose('页面桥接 MAIN 已设置延迟尝试和消息监听');
 })();

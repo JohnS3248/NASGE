@@ -2,6 +2,8 @@
  * 从 Steam 指南管理页面提取指南信息
  */
 
+import { loggers } from "../shared/logger";
+
 export type GuideInfoResult = {
   id: string;
   title: string;
@@ -19,7 +21,7 @@ export type GuideInfoResult = {
  * @returns 指南信息
  */
 export async function fetchGuideInfo(guideId: string): Promise<GuideInfoResult> {
-  console.info('[NASGE] 开始拉取指南信息', { guideId });
+  loggers.content.info('开始拉取指南信息', { guideId });
 
   const url = `https://steamcommunity.com/sharedfiles/manageguide/?id=${guideId}`;
 
@@ -84,7 +86,7 @@ export async function fetchGuideInfo(guideId: string): Promise<GuideInfoResult> 
     }
   });
 
-  console.info('[NASGE] 指南信息拉取成功', {
+  loggers.content.info('指南信息拉取成功', {
     title,
     hasCover: !!coverUrl,
     chaptersCount: chapters.length

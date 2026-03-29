@@ -836,7 +836,7 @@ function resolveImageStyle(dimensions: RenderDimensions): React.CSSProperties {
     // Steam 官方使用 object-fit: fill
     objectFit: "fill",
     // 覆盖prose等全局样式
-    margin: "0 !important" as any,
+    margin: "0 !important" as unknown as string, // React CSSProperties doesn't allow !important
     // 确保图片宽度不会溢出容器
     width: "100%"
   };

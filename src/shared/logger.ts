@@ -7,7 +7,7 @@
 export type LogLevel = 'verbose' | 'info' | 'warn' | 'error';
 
 // 日志配置（在 Store 初始化前使用的临时存储）
-let _debugMode = true; // 默认开启，开发阶段
+let _debugMode = false; // 默认关闭，生产环境
 
 /**
  * 设置调试模式
@@ -108,5 +108,8 @@ export const loggers = {
   image: createLogger('NASGE Image'),
   sync: createLogger('NASGE Sync'),
   config: createLogger('NASGE Config'),
-  bridge: createLogger('NASGE Bridge')
+  bridge: createLogger('NASGE Bridge'),
+  popup: createLogger('NASGE Popup'),
+  background: createLogger('NASGE Background'),
+  content: createLogger('NASGE Content')
 };

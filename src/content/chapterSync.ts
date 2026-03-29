@@ -2,6 +2,15 @@
  * 章节同步功能：从 Steam 拉取章节内容，保存章节内容到 Steam
  */
 
+import { loggers } from "../shared/logger";
+
+declare global {
+  interface Window {
+    /** Steam page global — session ID */
+    g_sessionID?: string;
+  }
+}
+
 export type ChapterContent = {
   title: string;
   description: string; // BBCode 格式的章节内容
@@ -17,7 +26,7 @@ export async function fetchChapterFromSteam(
   guideId: string,
   sectionId: string
 ): Promise<ChapterContent> {
-  console.info("[NASGE] 开始拉取章节内容", { guideId, sectionId });
+  loggers.sync.info("开始拉取章节内容", { guideId, sectionId });
 
   const url = `https://steamcommunity.com/sharedfiles/editguidesubsection/?id=${guideId}&sectionid=${sectionId}`;
 
@@ -42,7 +51,7 @@ export async function fetchChapterFromSteam(
   const descTextarea = doc.querySelector<HTMLTextAreaElement>('textarea[name="description"]');
   const description = descTextarea?.value || "";
 
-  console.info("[NASGE] 章节内容拉取成功", {
+  loggers.sync.info("章节内容拉取成功", {
     title,
     descriptionLength: description.length
   });
@@ -66,10 +75,10 @@ export async function saveChapterToSteam(
   description: string,
   sessionId?: string
 ): Promise<string> {
-  console.info("[NASGE] 开始保存章节内容", { guideId, sectionId, title });
+  loggers.sync.info("开始保存章节内容", { guideId, sectionId, title });
 
   // 使用传递的 sessionid，如果没有则尝试从 window 获取（兼容旧调用方式）
-  const finalSessionId = sessionId || (window as any).g_sessionID;
+  const finalSessionId = sessionId || window.g_sessionID;
   if (!finalSessionId) {
     throw new Error("无法获取 sessionid，请确保已登录 Steam");
   }
@@ -108,7 +117,7 @@ export async function saveChapterToSteam(
 
   const savedSectionId = sectionId || result.sectionid;
 
-  console.info("[NASGE] 章节保存成功", {
+  loggers.sync.info("章节保存成功", {
     sectionId: savedSectionId,
     timeSaved: result.timeSaved
   });
@@ -126,7 +135,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
   title: string;
   order: number;
 }>> {
-  console.info("[NASGE] 开始拉取章节列表", { guideId });
+  loggers.sync.info("开始拉取章节列表", { guideId });
 
   const url = `https://steamcommunity.com/sharedfiles/manageguide/?id=${guideId}`;
 
@@ -166,7 +175,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
     }
   });
 
-  console.info("[NASGE] 章节列表拉取成功", { count: chapters.length });
+  loggers.sync.info("章节列表拉取成功", { count: chapters.length });
 
   return chapters;
 }

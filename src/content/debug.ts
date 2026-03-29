@@ -13,11 +13,13 @@ declare global {
       fetchChapter: (guideId: string, sectionId: string) => Promise<{ title: string; description: string }>;
       saveChapter: (guideId: string, sectionId: string | undefined, title: string, description: string) => Promise<string>;
     };
+    /** Steam page global — session ID */
+    g_sessionID?: string;
   }
 }
 
 (() => {
-  (window as any).__NASGE_DEBUG__ = {
+  window.__NASGE_DEBUG__ = {
     async fetchChapterList(guideId: string) {
       return new Promise((resolve, reject) => {
         const requestId = "debug-" + Date.now() + "-" + Math.random();
@@ -109,7 +111,7 @@ declare global {
         window.addEventListener("message", handler);
 
         // 从页面主世界获取 sessionid
-        const sessionId = (window as any).g_sessionID;
+        const sessionId = window.g_sessionID;
         if (!sessionId) {
           reject(new Error("无法获取 sessionid，请确保已登录 Steam"));
           return;

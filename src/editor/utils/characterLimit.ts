@@ -5,6 +5,7 @@
 import { Editor } from "@tiptap/core";
 import { htmlToBBCode } from "./bbcode";
 import { WARNING_THRESHOLD_PERCENT } from "../constants/limits";
+import { loggers } from "../../shared/logger";
 
 export type CharacterLimitInfo = {
   /** 当前 BBCode 字符数 */
@@ -32,7 +33,7 @@ export function getBBCodeLength(editor: Editor | null): number {
     const bbcode = htmlToBBCode(html);
     return bbcode.length;
   } catch (error) {
-    console.error('[characterLimit] 计算 BBCode 长度失败:', error);
+    loggers.editor.error('计算 BBCode 长度失败:', error);
     return 0;
   }
 }

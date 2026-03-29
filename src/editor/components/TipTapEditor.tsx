@@ -162,7 +162,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
   // DEBUG: 暴露 editor 实例用于控制台测试
   useEffect(() => {
-    if (editor) (window as any).__editor = editor;
+    if (editor) window.__editor = editor;
   }, [editor]);
 
   // === 图片节点状态 (新 Store 优先，旧 Store 兜底) ===
@@ -766,7 +766,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 editor.commands.focus();
               }
 
-              console.log('[DEBUG 右键菜单] 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
+              loggers.editor.verbose('右键菜单 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
 
               // 计算菜单位置（图片菜单较高，预估 320px）
               const imageMenuPos = calcMenuPosition(event.clientX, event.clientY, 180, 320);

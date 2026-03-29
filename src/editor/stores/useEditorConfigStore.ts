@@ -436,7 +436,7 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         // 同步更新全局 logger 状态
         setDebugMode(enabled);
         // 这条日志在关闭调试模式时也会输出（因为还没生效）
-        console.info("[NASGE Config] 调试模式:", enabled ? "开启" : "关闭");
+        loggers.config.info("调试模式:", enabled ? "开启" : "关闭");
         set({ debugMode: enabled });
       },
       setShortcut: (key, value) => {

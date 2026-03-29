@@ -12,7 +12,7 @@ declare global {
 }
 
 (() => {
-  (window as any).__NASGE_INSPECT__ = () => {
+  window.__NASGE_INSPECT__ = () => {
     console.log("=== Steam 全局变量检查 ===");
 
     // 检查常见的 sessionid 变量名
@@ -26,8 +26,10 @@ declare global {
       'g_rgGlobals'
     ];
 
+    // Steam page globals — dynamic access requires index signature cast
+    const win = window as unknown as Record<string, unknown>;
     for (const name of possibleNames) {
-      const value = (window as any)[name];
+      const value = win[name];
       if (value !== undefined) {
         console.log(`✓ window.${name}:`, typeof value === 'object' ? JSON.stringify(value, null, 2) : value);
       } else {
@@ -39,7 +41,7 @@ declare global {
     console.log("\n=== 包含 'session' 的全局变量 ===");
     for (const key in window) {
       if (key.toLowerCase().includes('session')) {
-        console.log(`window.${key}:`, (window as any)[key]);
+        console.log(`window.${key}:`, win[key]);
       }
     }
   };

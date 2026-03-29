@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useCurrentPage } from "./hooks/useCurrentPage";
+import { loggers } from "../shared/logger";
 
 const runtime = chrome?.runtime;
 
@@ -10,7 +11,7 @@ const App: React.FC = () => {
 
   const openEditor = useCallback((mode: string, guideId?: string, appId?: string) => {
     if (!editorUrl) {
-      console.warn("[NASGE] 无法生成编辑器链接");
+      loggers.popup.warn("无法生成编辑器链接");
       return;
     }
 
@@ -24,7 +25,7 @@ const App: React.FC = () => {
       url.searchParams.set('appId', appId);
     }
 
-    console.log('[NASGE] 打开编辑器:', { mode, guideId, appId, url: url.toString() });
+    loggers.popup.verbose('打开编辑器:', { mode, guideId, appId, url: url.toString() });
 
     if (chrome?.tabs) {
       chrome.tabs.create({ url: url.toString() });

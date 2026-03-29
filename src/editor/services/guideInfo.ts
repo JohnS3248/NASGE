@@ -4,12 +4,13 @@
  */
 
 import type { GuideInfo } from "../stores/useGuideStore";
+import { loggers } from "../../shared/logger";
 
 /**
  * 从 Steam 拉取指南信息（封面、标题、章节列表）
  */
 export async function fetchGuideInfo(guideId: string): Promise<GuideInfo> {
-  console.log('[NASGE Editor] 请求拉取指南信息', { guideId });
+  loggers.editor.verbose('请求拉取指南信息', { guideId });
 
   const response = await chrome.runtime.sendMessage({
     channel: 'nasge:steam',
@@ -21,7 +22,7 @@ export async function fetchGuideInfo(guideId: string): Promise<GuideInfo> {
     throw new Error(response.error || "拉取指南信息失败");
   }
 
-  console.log('[NASGE Editor] 指南信息拉取成功', response.data);
+  loggers.editor.verbose('指南信息拉取成功', response.data);
 
   return {
     id: response.data.id,
