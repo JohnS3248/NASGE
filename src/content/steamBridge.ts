@@ -34,15 +34,8 @@ export async function handleUploadRequest(
   request: SteamUploadRequest
 ): Promise<UploadResult> {
   const rawData = request.file.data;
-  const byteLength = Array.isArray(rawData)
-    ? rawData.length
-    : typeof rawData?.byteLength === "number"
-      ? rawData.byteLength
-      : null;
-
   loggers.bridge.info("handleUploadRequest 收到文件数据", {
     name: request.file.name,
-    byteLength,
     type: request.file.type
   });
 
@@ -52,95 +45,68 @@ export async function handleUploadRequest(
     lastModified: Date.now()
   });
 
-  loggers.bridge.verbose("上传桥接：创建文件对象", {
-    name: file.name,
-    size: file.size,
-    type: file.type
-  });
+  // 1. 获取 Steam 表单和文件输入控件
+  const { form, fileInput } = resolveUploadElements(request.scope);
 
-  const { form: initialForm, fileInput: initialFileInput } = resolveUploadElements(request.scope);
-  const managedInputs = new Map<HTMLInputElement, string>();
-
-  registerInput(initialFileInput, managedInputs);
-
-  attachDebugListener(initialFileInput);
-
-  if (initialFileInput.files && initialFileInput.files.length) {
-    initialFileInput.value = "";
+  if (fileInput.files?.length) {
+    fileInput.value = "";
   }
 
-  if (!assignFileToInput(initialFileInput, file)) {
+  // 2. 通过 DataTransfer 注入文件
+  if (!assignFileToInput(fileInput, file)) {
     throw new Error("未能写入上传文件，请重试。");
   }
-  fireUpdateEvents(initialFileInput);
+  fireUpdateEvents(fileInput);
 
-  let preparation =
-    await waitForSteamPreparation(
-      request.scope,
-      initialForm,
-      initialFileInput,
-      file,
-      managedInputs
-    );
+  // 3. 手动填充 Steam 所需的隐藏字段
+  ensureFileSizeFields(form, file.size);
+  ensureCloudFilenamePrefix(form);
 
-  if (!preparation) {
-    loggers.bridge.info("Steam 自动准备未在时限内完成，改用手动补齐流程。");
-    preparation = manualPrepareUpload(request.scope, file, managedInputs);
-  }
+  const context = extractUploadContext(request.scope, form);
 
-  const { context, form: activeForm, fileInput: activeFileInput } = preparation;
-  const { action, fields, fileFieldName } = context;
-
-  loggers.bridge.verbose("Steam 准备完成字段", {
-    action,
-    fileFieldName,
-    file_size: fields["file_size"] ?? fields["file_size[]"] ?? fields["filesize"],
-    cloudfilenameprefix: maskForLog(fields["cloudfilenameprefix"]),
-    token: maskForLog(fields["token"])
+  loggers.bridge.verbose("Steam 上传字段已就绪", {
+    action: context.action,
+    fileFieldName: context.fileFieldName,
+    file_size: context.fields["file_size"] ?? context.fields["file_size[]"],
+    cloudfilenameprefix: maskForLog(context.fields["cloudfilenameprefix"])
   });
 
-  const originalTarget = activeForm.getAttribute("target");
-  const originalEnctype = activeForm.enctype;
-  const originalMethod = activeForm.method;
-
+  // 4. 读取图片尺寸并写入表单
   const dimensions = await readImageDimensions(file);
+  ensureDimensionInputs(form, dimensions);
 
-  const frame = createUploadFrame();
+  // 5. 创建 iframe 接收响应，保存/恢复表单属性
+  const originalTarget = form.getAttribute("target");
+  const originalEnctype = form.enctype;
+  const originalMethod = form.method;
 
-  activeForm.target = frame.name;
-  activeForm.enctype = "multipart/form-data";
-  activeForm.method = "POST";
+  const frame = document.createElement("iframe");
+  frame.name = `nasge_upload_${Date.now().toString(36)}`;
+  frame.style.display = "none";
+  document.body.appendChild(frame);
 
-  ensureDimensionInputs(activeForm, dimensions);
+  form.target = frame.name;
+  form.enctype = "multipart/form-data";
+  form.method = "POST";
 
+  // 6. 提交表单并等待响应
   return new Promise<UploadResult>((resolve, reject) => {
     let settled = false;
 
     const cleanup = () => {
       frame.removeEventListener("load", handleLoad);
-      if (frame.dataset.nasgeManaged === "true") {
-        frame.remove();
-      }
+      frame.remove();
 
       if (originalTarget) {
-        activeForm.setAttribute("target", originalTarget);
+        form.setAttribute("target", originalTarget);
       } else {
-        activeForm.removeAttribute("target");
+        form.removeAttribute("target");
       }
-      activeForm.enctype = originalEnctype;
-      activeForm.method = originalMethod;
+      form.enctype = originalEnctype;
+      form.method = originalMethod;
 
-      for (const [input, value] of managedInputs.entries()) {
-        if (!input.isConnected) {
-          continue;
-        }
-        // 文件输入框只能设置为空字符串（浏览器安全限制）
-        if (input.type === 'file') {
-          input.value = "";
-        } else {
-          input.value = value ?? "";
-        }
-      }
+      // 清空文件输入框（浏览器安全限制只能设为空字符串）
+      fileInput.value = "";
     };
 
     const timeout = window.setTimeout(() => {
@@ -181,65 +147,13 @@ export async function handleUploadRequest(
     frame.addEventListener("load", handleLoad);
 
     try {
-      loggers.bridge.verbose("准备提交 Steam 上传表单", {
-        action: activeForm.action,
-        target: activeForm.target,
-        hasFile: Boolean(activeFileInput.files?.length),
-        fileSize: activeFileInput.files?.[0]?.size ?? 0
-      });
-
-      const submitter = findSubmitButton(activeForm);
-      if (submitter) {
-        submitter.click();
-      } else if (typeof activeForm.requestSubmit === "function") {
-        activeForm.requestSubmit();
-      } else {
-        activeForm.submit();
-      }
+      form.submit();
     } catch (error) {
       window.clearTimeout(timeout);
       cleanup();
       reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
-}
-
-function findSubmitButton(
-  form: HTMLFormElement
-): HTMLButtonElement | HTMLInputElement | null {
-  const submitSelector = "button[type='submit'], input[type='submit'], input[type='image']";
-  const submitter = form.querySelector<HTMLButtonElement | HTMLInputElement>(submitSelector);
-  return submitter ?? null;
-}
-
-function attachDebugListener(input: HTMLInputElement): void {
-  if (input.dataset.nasgeDebugAttached === "true") {
-    return;
-  }
-  input.dataset.nasgeDebugAttached = "true";
-  input.addEventListener(
-    "change",
-    (event) => {
-      const files = (event.target as HTMLInputElement)?.files;
-      const file = files && files.length ? files[0] : null;
-      loggers.bridge.info("捕获到 Steam 表单 change 事件", {
-        isTrusted: event.isTrusted,
-        fileName: file?.name,
-        fileSize: file?.size,
-        filesLength: files?.length
-      });
-    },
-    { capture: true }
-  );
-}
-
-function registerInput(
-  input: HTMLInputElement,
-  registry: Map<HTMLInputElement, string>
-): void {
-  if (!registry.has(input)) {
-    registry.set(input, input.value ?? "");
-  }
 }
 
 function assignFileToInput(input: HTMLInputElement | null, file: File): boolean {
@@ -260,20 +174,6 @@ function maskForLog(value?: string | null): string | undefined {
     return value;
   }
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
-
-function parseSize(value?: string): number | null {
-  if (!value) {
-    return null;
-  }
-
-  const match = value.match(/(\d+)/);
-  if (!match) {
-    return null;
-  }
-
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function interpretUploadRedirect(url: string): { previewIds: string[] } {
@@ -909,128 +809,9 @@ async function readImageDimensions(file: File): Promise<{
   }
 }
 
-function createUploadFrame(): HTMLIFrameElement {
-  const frame = document.createElement("iframe");
-  frame.name = `nasge_upload_${Date.now().toString(36)}`;
-  frame.style.display = "none";
-  frame.setAttribute("data-nasge-managed", "true");
-  document.body.appendChild(frame);
-  return frame;
-}
-
 function fireUpdateEvents(input: HTMLInputElement): void {
   input.dispatchEvent(new Event("input", { bubbles: true }));
   input.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-type PreparationResult = {
-  context: UploadContext;
-  form: HTMLFormElement;
-  fileInput: HTMLInputElement;
-};
-
-async function waitForSteamPreparation(
-  scope: UploadScope,
-  initialForm: HTMLFormElement,
-  initialInput: HTMLInputElement,
-  file: File,
-  registry: Map<HTMLInputElement, string>
-): Promise<PreparationResult | null> {
-  const deadline = Date.now() + 7_000;
-  let lastContext: UploadContext | null = null;
-  let currentForm = initialForm;
-  let currentInput = initialInput;
-
-  while (Date.now() < deadline) {
-    try {
-      const resolved = resolveUploadElements(scope);
-      if (resolved.form !== currentForm) {
-        currentForm = resolved.form;
-        loggers.bridge.info("发现新的 Steam 上传表单节点，已切换。");
-      }
-      if (resolved.fileInput !== currentInput) {
-        currentInput = resolved.fileInput;
-        registerInput(currentInput, registry);
-        attachDebugListener(currentInput);
-        loggers.bridge.info("发现新的 Steam 文件输入控件，尝试同步文件。");
-      }
-    } catch {
-      // 如果在握手过程中短暂找不到表单，沿用前一次引用即可。
-    }
-
-    if (!currentInput.files || !currentInput.files.length || currentInput.files[0]?.size !== file.size) {
-      if (assignFileToInput(currentInput, file)) {
-        fireUpdateEvents(currentInput);
-        loggers.bridge.info("已向最新的 Steam 输入控件写入文件以继续握手。");
-      }
-    }
-
-    const context = extractUploadContext(scope, currentForm);
-    lastContext = context;
-
-    const sizeRaw =
-      context.fields["file_size"] ??
-      context.fields["file_size[]"] ??
-      context.fields["filesize"];
-    const prefix = context.fields["cloudfilenameprefix"] ?? context.fields["cloudfilenameprefix[]"];
-    const token = context.fields["token"] ?? context.fields["token[]"];
-
-    const sizeParsed = parseSize(sizeRaw);
-    const sizeReady = sizeParsed === file.size;
-    if (prefix && token && sizeReady) {
-      loggers.bridge.info("Steam 准备完成", {
-        prefix,
-        sizeRaw,
-        sizeParsed,
-        expectedSize: file.size,
-        token: token.slice?.(0, 8)
-      });
-      return { context, form: currentForm, fileInput: currentInput };
-    }
-
-    await delay(120);
-  }
-
-  loggers.bridge.info("Steam 自动准备在时限内未完成，启用后备方案。", {
-    lastContext
-  });
-  return null;
-}
-
-function manualPrepareUpload(
-  scope: UploadScope,
-  file: File,
-  registry: Map<HTMLInputElement, string>
-): PreparationResult {
-  const { form, fileInput } = resolveUploadElements(scope);
-  registerInput(fileInput, registry);
-  attachDebugListener(fileInput);
-
-  if (!assignFileToInput(fileInput, file)) {
-    throw new Error("未能为 Steam 表单附加上传文件，请确认页面状态后重试。");
-  }
-
-  fireUpdateEvents(fileInput);
-  ensureFileSizeFields(form, file.size);
-  ensureCloudFilenamePrefix(form);
-
-  const context = extractUploadContext(scope, form);
-
-  loggers.bridge.info("手动填充 Steam 上传字段", {
-    cloudfilenameprefix:
-      context.fields["cloudfilenameprefix"] ?? context.fields["cloudfilenameprefix[]"],
-    fileSizeField:
-      context.fields["file_size"] ??
-      context.fields["file_size[]"] ??
-      context.fields["filesize"],
-    action: context.action
-  });
-
-  return { context, form, fileInput };
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function ensureDimensionInputs(
@@ -1126,68 +907,4 @@ function extractUploadContext(scope: UploadScope, explicitForm?: HTMLFormElement
   };
 }
 
-function createUploadForm(
-  context: UploadContext,
-  file: File,
-  target: string,
-  dimensions: { width: number; height: number }
-): HTMLFormElement {
-  const form = document.createElement("form");
-  form.action = context.action;
-  form.method = "POST";
-  form.enctype = "multipart/form-data";
-  form.target = target;
-  form.style.display = "none";
 
-  for (const [key, value] of Object.entries(context.fields)) {
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-
-    if (key === "image_width") {
-      input.value = String(dimensions.width ?? 0);
-    } else if (key === "image_height") {
-      input.value = String(dimensions.height ?? 0);
-    } else {
-      input.value = value;
-    }
-
-    form.appendChild(input);
-  }
-
-  if (!("image_width" in context.fields)) {
-    const widthInput = document.createElement("input");
-    widthInput.type = "hidden";
-    widthInput.name = "image_width";
-    widthInput.value = String(dimensions.width ?? 0);
-    form.appendChild(widthInput);
-  }
-
-  if (!("image_height" in context.fields)) {
-    const heightInput = document.createElement("input");
-    heightInput.type = "hidden";
-    heightInput.name = "image_height";
-    heightInput.value = String(dimensions.height ?? 0);
-    form.appendChild(heightInput);
-  }
-
-  const fileInput = document.createElement("input");
-  fileInput.type = "file";
-  fileInput.name = context.fileFieldName || "file";
-  fileInput.style.display = "none";
-  if (context.fileInputMultiple) {
-    fileInput.multiple = true;
-  }
-
-  const transfer = new DataTransfer();
-  transfer.items.add(file);
-  fileInput.files = transfer.files;
-
-  if (!fileInput.files || fileInput.files.length === 0) {
-    throw new Error("未能构造上传文件，请重试。");
-  }
-
-  form.appendChild(fileInput);
-
-  return form;
-}

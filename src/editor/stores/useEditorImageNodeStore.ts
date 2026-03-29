@@ -1,9 +1,17 @@
 import { create } from "zustand";
 import type { UploadResult } from "../../shared/messages";
-import type {
-  ImageUploadMetadata,
-  ImageUploadRecord
-} from "./useImageUploadStore";
+
+// 内联类型定义（原从 useImageUploadStore 导入，该 Store 已移除）
+export type ImageUploadSource = "paste" | "drop" | "file-input" | "clipboard-url";
+export type ImageUploadMetadata = {
+  source?: ImageUploadSource;
+  cursorPosition?: number;
+};
+export type ImageUploadRecord = {
+  id: string;
+  generatedName?: string;
+  originalName: string;
+};
 
 export type ImageNodeStatus =
   | "intake"

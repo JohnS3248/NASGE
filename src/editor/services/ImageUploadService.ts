@@ -8,16 +8,15 @@
  *
  * 数据流：
  * - 新 Store (useImageStore): 本服务直接更新
- * - 旧 Store (useImageUploadStore): 通过 imageUploadManager 更新
  * - 编辑器节点 (useEditorImageNodeStore): 本服务双写更新
  */
 
 import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
-import { uploadImageViaSteam } from "./imageUploadManager";
+import { uploadSteamImage } from "./steamBridge";
+import { formatUploadErrorMessage } from "./imageUploadManager";
 import type { SteamImageUrls, ImageSource } from "../types/image";
-import type { ImageUploadSource } from "../stores/useImageUploadStore";
 import { loggers } from "../../shared/logger";
 
 // ============================================================================
@@ -153,64 +152,29 @@ class ImageUploadServiceImpl {
         fileSize: file.size
       });
 
-      // 调用 Steam 上传 API
-      // 转换 ImageSource 到 ImageUploadSource（旧类型系统）
-      const legacySource: ImageUploadSource | undefined =
-        image.source === "steam-pool" || image.source === "bbcode"
-          ? "paste"  // 映射到合法的旧类型
-          : image.source as ImageUploadSource;
+      // 直接调用 Steam 上传 API
+      const uploadResult = await uploadSteamImage("chapter-preview", file, image.fileName);
+      const steamPreviewId = uploadResult.previewIds[0];
 
-      const uploadResponse = await uploadImageViaSteam(
-        file,
-        "chapter-preview",
-        { source: legacySource },
-        {
-          onPrepared: (uploadRecord) => {
-            // 双写：附加上传记录到旧 Store
-            if (!options.skipLegacySync && image.sourceNodeId) {
-              useEditorImageNodeStore.getState().attachUploadRecord(
-                image.sourceNodeId,
-                uploadRecord
-              );
-            }
-          },
-          onUploading: () => {
-            loggers.image.verbose("ImageUploadService Steam 正在处理上传...");
-          },
-          onUploaded: (uploadRecord, uploadResult) => {
-            const steamPreviewId = uploadResult.previewIds[0];
-            const steamUrls: SteamImageUrls = {
-              // Steam 上传结果可能不包含 URL，等待图片池刷新
-            };
-
-            // 更新新 Store
-            store.markUploaded(imageId, steamPreviewId, steamUrls);
-
-            // 双写：更新旧 Store
-            if (!options.skipLegacySync && image.sourceNodeId) {
-              useEditorImageNodeStore.getState().markUploaded(image.sourceNodeId, {
-                record: uploadRecord,
-                result: uploadResult
-              });
-              // 刷新图片池
-              useSteamGuideImageStore.getState().refresh();
-            }
-          },
-          onFailed: (_, errorMessage) => {
-            // 更新新 Store
-            store.markError(imageId, errorMessage);
-
-            // 双写：更新旧 Store
-            if (!options.skipLegacySync && image.sourceNodeId) {
-              useEditorImageNodeStore.getState().markFailed(image.sourceNodeId, errorMessage);
-            }
-          }
-        }
-      );
-
-      const steamPreviewId = uploadResponse.result.previewIds[0];
       if (!steamPreviewId) {
         throw new Error("Steam 上传成功但未返回 previewId");
+      }
+
+      const steamUrls: SteamImageUrls = {
+        // Steam 上传结果可能不包含 URL，等待图片池刷新
+      };
+
+      // 更新新 Store
+      store.markUploaded(imageId, steamPreviewId, steamUrls);
+
+      // 双写：更新旧 Store
+      if (!options.skipLegacySync && image.sourceNodeId) {
+        useEditorImageNodeStore.getState().markUploaded(image.sourceNodeId, {
+          record: { id: imageId, generatedName: file.name, originalName: image.originalName },
+          result: uploadResult
+        });
+        // 刷新图片池
+        useSteamGuideImageStore.getState().refresh();
       }
 
       loggers.image.info("ImageUploadService 上传成功", {
@@ -224,10 +188,10 @@ class ImageUploadServiceImpl {
         steamPreviewId
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = formatUploadErrorMessage(error);
       loggers.image.error("ImageUploadService 上传失败", { imageId, error: errorMessage });
 
-      // 确保状态已更新（可能在 onFailed 回调中已处理）
+      // 确保状态已更新
       const currentImage = store.getImageById(imageId);
       if (currentImage?.status !== "error") {
         store.markError(imageId, errorMessage);
@@ -236,7 +200,6 @@ class ImageUploadServiceImpl {
       // 双写：确保旧 Store 状态更新
       if (!options.skipLegacySync && image.sourceNodeId) {
         const legacyNode = useEditorImageNodeStore.getState().nodes[image.sourceNodeId];
-        // 旧 Store 使用 "error" 状态（不是 "failed"）
         if (legacyNode?.status !== "error") {
           useEditorImageNodeStore.getState().markFailed(image.sourceNodeId, errorMessage);
         }
@@ -262,7 +225,7 @@ class ImageUploadServiceImpl {
    *
    * 用于迁移期间的向后兼容
    *
-   * @param nodeId 旧 Store 中的节点 ID
+   * @param nodeId 旧 Store 的 nodeId
    * @param options 上传选项
    * @returns 上传结果
    */
@@ -409,68 +372,4 @@ class ImageUploadServiceImpl {
 // Singleton Export
 // ============================================================================
 
-/**
- * 图片上传服务单例
- *
- * 使用方式：
- * ```typescript
- * import { ImageUploadService } from "./services/ImageUploadService";
- *
- * // 上传单张图片（新 Store）
- * const result = await ImageUploadService.uploadByImageId(imageId);
- *
- * // 上传单张图片（旧 Store，迁移兼容）
- * const result = await ImageUploadService.uploadByNodeId(nodeId);
- *
- * // 批量上传
- * const results = await ImageUploadService.uploadMultiple([id1, id2, id3]);
- *
- * // 上传所有待上传图片
- * const results = await ImageUploadService.uploadAllPending();
- * ```
- */
 export const ImageUploadService = new ImageUploadServiceImpl();
-
-// ============================================================================
-// Legacy Compatibility Functions
-// ============================================================================
-
-/**
- * 兼容函数：使用旧的 nodeId 上传
- *
- * @deprecated 迁移完成后请使用 ImageUploadService.uploadByImageId
- */
-export async function uploadSingleImage(imageNodeId: string): Promise<string> {
-  const result = await ImageUploadService.uploadByNodeId(imageNodeId);
-
-  if (!result.success || !result.steamPreviewId) {
-    throw new Error(result.error || "上传失败");
-  }
-
-  return result.steamPreviewId;
-}
-
-/**
- * 兼容函数：批量上传（使用旧的 nodeId）
- *
- * @deprecated 迁移完成后请使用 ImageUploadService.uploadMultiple
- */
-export async function uploadMultipleImages(imageNodeIds: string[]): Promise<{
-  success: Array<{ imageNodeId: string; previewId: string }>;
-  failed: Array<{ imageNodeId: string; error: string }>;
-}> {
-  const result = await ImageUploadService.uploadMultiple(imageNodeIds, {
-    useNodeId: true
-  });
-
-  return {
-    success: result.success.map((r) => ({
-      imageNodeId: r.imageId,
-      previewId: r.steamPreviewId
-    })),
-    failed: result.failed.map((r) => ({
-      imageNodeId: r.imageId,
-      error: r.error
-    }))
-  };
-}

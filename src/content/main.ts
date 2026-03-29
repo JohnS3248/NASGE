@@ -146,14 +146,6 @@ async function dispatchSteamBridgeMessage(
         sendResponse({ ok: true, data: guideInfo });
         break;
       }
-      case "collect-upload-context": {
-        // 暂未开放单独的上下文采集接口，如有需要可在后续迭代补充。
-        sendResponse({
-          ok: false,
-          error: "暂未实现 collect-upload-context 操作。"
-        });
-        break;
-      }
       default: {
         sendResponse({
           ok: false,

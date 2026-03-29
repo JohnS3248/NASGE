@@ -18,11 +18,6 @@ export type SteamUploadRequest = BridgeBase & {
   file: SerializedFilePayload;
 };
 
-export type SteamCollectContextRequest = BridgeBase & {
-  action: "collect-upload-context";
-  scope: UploadScope;
-};
-
 export type SteamPingRequest = BridgeBase & {
   action: "ping";
 };
@@ -109,7 +104,6 @@ export type SteamSubmitReviewRequest = BridgeBase & {
 
 export type SteamBridgeRequest =
   | SteamUploadRequest
-  | SteamCollectContextRequest
   | SteamPingRequest
   | SteamFetchGuideImagesRequest
   | SteamDeleteImageRequest

@@ -5,7 +5,7 @@ import { createEditorExtensions } from '../utils/editorExtensions';
 import { titleHasImage } from '../utils/titleHelpers';
 import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
 import { processIncomingImages } from '../services/imageIntake';
-import { uploadSingleImage } from '../services/ImageUploadService';
+import { ImageUploadService } from '../services/ImageUploadService';
 import { useImageStore } from '../stores/useImageStore';
 import { useEditorImageNodeStore } from '../stores/useEditorImageNodeStore';
 import type { ImageSizePreset, ImageAlignment } from '../types/image';
@@ -195,7 +195,10 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     }
 
     try {
-      await uploadSingleImage(contextMenu.payload.imageNodeId);
+      const result = await ImageUploadService.uploadByNodeId(contextMenu.payload.imageNodeId);
+      if (!result.success) {
+        throw new Error(result.error || "上传失败");
+      }
       loggers.image.info('TitleEditor 图片上传成功');
     } catch (error) {
       loggers.image.error('TitleEditor 图片上传失败:', error);

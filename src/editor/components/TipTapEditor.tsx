@@ -4,7 +4,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { processIncomingImages } from "../services/imageIntake";
-import { uploadSingleImage } from "../services/ImageUploadService";
+import { ImageUploadService } from "../services/ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
 import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
@@ -393,8 +393,11 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
     try {
       loggers.image.info('TipTapEditor 开始上传图片:', nodeId);
-      const previewId = await uploadSingleImage(nodeId);
-      loggers.image.info('TipTapEditor 图片上传成功，预览码:', previewId);
+      const result = await ImageUploadService.uploadByNodeId(nodeId);
+      if (!result.success) {
+        throw new Error(result.error || "上传失败");
+      }
+      loggers.image.info('TipTapEditor 图片上传成功，预览码:', result.steamPreviewId);
 
       // 静默成功，无需弹窗
     } catch (error) {
