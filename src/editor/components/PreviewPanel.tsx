@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { previewChapterFromSteam } from "../services/chapterSync";
 import { useGuideStore } from "../stores/useGuideStore";
+import { useDraftStore } from "../stores/useDraftStore";
 import { loggers } from "../../shared/logger";
 
 /**
@@ -335,7 +336,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
   const lastRequestRef = useRef<string>("");
 
   const guideInfo = useGuideStore((s) => s.guideInfo);
-  const activeDraft = useGuideStore((s) => {
+  const activeDraft = useDraftStore((s) => {
     const drafts = s.drafts;
     const activeId = s.activeDraftId;
     return drafts.find((d) => d.id === activeId) ?? drafts[0];

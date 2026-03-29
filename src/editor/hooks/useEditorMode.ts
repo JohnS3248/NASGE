@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useGuideStore, type EditorMode } from '../stores/useGuideStore';
+import { useDraftStore } from '../stores/useDraftStore';
 import { fetchGuideInfo } from '../services/guideInfo';
 import { loggers } from '../../shared/logger';
 import { bbcodeToHtml } from '../utils/bbcode';
@@ -70,17 +71,17 @@ export function useEditorMode() {
             const extensions = createEditorExtensions({ reviewMode: true });
             const contentJson = generateJSON(html, extensions);
 
-            const store = useGuideStore.getState();
-            const existingDraft = store.drafts.find(d =>
+            const draftStore = useDraftStore.getState();
+            const existingDraft = draftStore.drafts.find(d =>
               d.draftType === 'review' && !d.linkedGuideId
             );
 
             if (existingDraft) {
-              store.updateDraft(existingDraft.id, { content: contentJson });
-              useGuideStore.setState({ activeDraftId: existingDraft.id });
+              draftStore.updateDraft(existingDraft.id, { content: contentJson });
+              useDraftStore.setState({ activeDraftId: existingDraft.id });
             } else {
-              const newDraft = store.addDraft(data.gameName || '评测');
-              store.updateDraft(newDraft.id, { content: contentJson });
+              const newDraft = draftStore.addDraft({ title: data.gameName || '评测', draftType: 'review' });
+              draftStore.updateDraft(newDraft.id, { content: contentJson });
             }
           }
 

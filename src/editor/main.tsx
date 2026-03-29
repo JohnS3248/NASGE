@@ -12,6 +12,9 @@ declare global {
     __uploadService?: unknown;
     __editorConfigStore?: unknown;
     __toastStore?: unknown;
+    __guideStore?: unknown;
+    __draftStore?: unknown;
+    __archiveStore?: unknown;
     __reviewStore?: unknown;
     __bbcodeToHtml?: unknown;
     __htmlToBBCode?: unknown;
@@ -48,6 +51,15 @@ import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
   window.__editorConfigStore = useEditorConfigStore;
   import("./stores/useToastStore").then(({ useToastStore }) => {
     window.__toastStore = useToastStore;
+  });
+  import("./stores/useGuideStore").then(({ useGuideStore }) => {
+    window.__guideStore = useGuideStore;
+  });
+  import("./stores/useDraftStore").then(({ useDraftStore }) => {
+    window.__draftStore = useDraftStore;
+  });
+  import("./stores/useArchiveStore").then(({ useArchiveStore }) => {
+    window.__archiveStore = useArchiveStore;
   });
   import("./stores/useReviewStore").then(({ useReviewStore }) => {
     window.__reviewStore = useReviewStore;

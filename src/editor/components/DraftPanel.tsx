@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useGuideStore } from '../stores/useGuideStore';
+import { useGuideStore, isReviewMode } from '../stores/useGuideStore';
+import { useDraftStore } from '../stores/useDraftStore';
+import { useArchiveStore } from '../stores/useArchiveStore';
 import { extractTitleText } from '../utils/titleHelpers';
 
 // ============================================================================
 // Types & Helpers
 // ============================================================================
 
-type DraftItem = ReturnType<typeof useGuideStore.getState>['drafts'][number];
+type DraftItem = ReturnType<typeof useDraftStore.getState>['drafts'][number];
 
 const formatDate = (ts: number) =>
   new Date(ts).toLocaleString('zh-CN', {
@@ -151,9 +153,11 @@ const DraftPanel: React.FC = () => {
     updateDraft,
     deleteDraft,
     duplicateDraft,
-    currentArchiveId,
-    getCurrentArchive,
-  } = useGuideStore();
+  } = useDraftStore();
+
+  const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
+  const mode = useGuideStore((s) => s.mode);
+  const currentArchive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
@@ -163,14 +167,20 @@ const DraftPanel: React.FC = () => {
   const panelRef = useRef<HTMLDivElement>(null);
   const floatingRef = useRef<HTMLDivElement>(null);
 
-  const currentArchive = getCurrentArchive();
-
   const displayedDrafts = useMemo(() => {
+    const inReview = isReviewMode(mode);
+
+    // 先按草稿类型过滤
+    const typeFiltered = drafts.filter((d) =>
+      inReview ? d.draftType === 'review' : d.draftType !== 'review'
+    );
+
+    // 再按存档过滤
     if (!currentArchiveId) {
-      return drafts.filter((d) => !d.linkedGuideId);
+      return typeFiltered.filter((d) => !d.linkedGuideId);
     }
-    return drafts.filter((d) => d.linkedGuideId === currentArchiveId);
-  }, [drafts, currentArchiveId]);
+    return typeFiltered.filter((d) => d.linkedGuideId === currentArchiveId);
+  }, [drafts, currentArchiveId, mode]);
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
 
@@ -182,9 +192,13 @@ const DraftPanel: React.FC = () => {
   }, [selectDraft]);
 
   const handleAddDraft = useCallback(() => {
-    const newDraft = addDraft();
+    const inReview = isReviewMode(mode);
+    const newDraft = addDraft({
+      draftType: inReview ? 'review' : 'guide',
+      linkedGuideId: inReview ? undefined : (currentArchiveId ?? undefined),
+    });
     if (newDraft) selectDraft(newDraft.id);
-  }, [addDraft, selectDraft]);
+  }, [addDraft, selectDraft, mode, currentArchiveId]);
 
   const handleRename = useCallback((id: string, currentName: string) => {
     const newName = window.prompt('重命名草稿', currentName);

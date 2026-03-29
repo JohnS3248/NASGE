@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useGuideStore, type GuideArchive, isReviewMode } from '../stores/useGuideStore';
+import { useArchiveStore } from '../stores/useArchiveStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { SettingsModal } from './SettingsModal';
 import { ArchiveManageModal } from './ArchiveManageModal';
@@ -30,10 +31,10 @@ const BreadcrumbSep: React.FC = () => (
 const EditorHeader: React.FC = () => {
   const mode = useGuideStore((s) => s.mode);
   const guideInfo = useGuideStore((s) => s.guideInfo);
-  const archives = useGuideStore((s) => s.archives);
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const switchArchive = useGuideStore((s) => s.switchArchive);
-  const getCurrentArchive = useGuideStore((s) => s.getCurrentArchive);
+  const archives = useArchiveStore((s) => s.archives);
+  const currentArchive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -44,7 +45,6 @@ const EditorHeader: React.FC = () => {
   const reviewAppId = useReviewStore((s) => s.appId);
   const inReviewMode = isReviewMode(mode);
 
-  const currentArchive = getCurrentArchive();
   const archiveList = Object.values(archives);
   const modeConf = MODE_CONFIG[mode] ?? MODE_CONFIG['guide'];
 

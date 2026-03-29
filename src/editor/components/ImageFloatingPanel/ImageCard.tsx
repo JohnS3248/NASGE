@@ -6,7 +6,8 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
-import { useGuideStore, ImageTag } from "../../stores/useGuideStore";
+import { useGuideStore, type ImageTag } from "../../stores/useGuideStore";
+import { useArchiveStore } from "../../stores/useArchiveStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { queueImageUpload } from "../../services/uploadQueue";
 import { XIcon, CheckIcon } from "./icons";
@@ -63,13 +64,12 @@ const ImageCard: React.FC<ImageCardProps> = ({
     removePendingUploadAfterRename
   } = useImagePanelStore();
   const { renameImage, getImageById } = useSteamGuideImageStore();
+  const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const {
-    currentArchiveId,
-    getCurrentArchive,
     getTagsForImage,
     addTagToImage,
     removeTagFromImage
-  } = useGuideStore();
+  } = useArchiveStore();
   const thumbnailSize = getThumbnailSizePixels();
   const [imageError, setImageError] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -80,7 +80,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
   // 获取当前图片的标签
   const imageId = image.previewId || image.fileName;
   const imageTags = currentArchiveId ? getTagsForImage(currentArchiveId, imageId) : [];
-  const archive = getCurrentArchive();
+  const archive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
   const allTags = archive?.imageTags || [];
 
   const canRename = image.state === "pending";

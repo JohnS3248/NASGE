@@ -7,6 +7,7 @@ import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useIm
 import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { useGuideStore } from "../../stores/useGuideStore";
+import { useArchiveStore } from "../../stores/useArchiveStore";
 import { queueImageUpload } from "../../services/uploadQueue";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
@@ -57,7 +58,7 @@ const ImageFloatingPanel: React.FC = () => {
   const { items: images, status: imagePoolStatus, refresh: refreshImagePool, addLocalImage, getImagesByGuide } = useSteamGuideImageStore();
 
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
-  const currentArchive = useGuideStore((state) => state.getCurrentArchive());
+  const currentArchive = useArchiveStore((state) => currentArchiveId ? state.archives[currentArchiveId] : undefined);
 
   const archiveImages = useMemo(() => {
     return getImagesByGuide(currentArchiveId);

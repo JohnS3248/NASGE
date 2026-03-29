@@ -4,6 +4,7 @@ import type { SteamGuideImage } from "../../shared/messages";
 import { fetchSteamGuideImages } from "../services/steamBridge";
 import { useImageStore } from "./useImageStore";
 import { useGuideStore } from "./useGuideStore";
+import { useArchiveStore } from "./useArchiveStore";
 import { loggers } from "../../shared/logger";
 
 type FetchStatus = "idle" | "loading" | "ready" | "error";
@@ -137,7 +138,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
 
               // 保存图片元数据到存档缓存
               if (currentArchiveId) {
-                useGuideStore.getState().updateArchive(currentArchiveId, {
+                useArchiveStore.getState().updateArchive(currentArchiveId, {
                   cachedImages: list,
                   imagesUpdatedAt: Date.now()
                 });
@@ -375,7 +376,7 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
         }
 
         // 从存档加载缓存的图片
-        const archive = useGuideStore.getState().getArchive(guideId);
+        const archive = useArchiveStore.getState().getArchive(guideId);
         const cachedImages = archive?.cachedImages || [];
 
         // 将缓存的图片转换为 ImageWithState

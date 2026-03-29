@@ -4,6 +4,7 @@ import TipTapEditor from "./components/TipTapEditor";
 import EditorToolbar from "./components/EditorToolbar";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
 import { useGuideStore, isReviewMode as checkReviewMode, isOnlineMode } from "./stores/useGuideStore";
+import { useDraftStore } from "./stores/useDraftStore";
 import { JSONContent } from "@tiptap/core";
 import { createEditorExtensions, createEmptyDoc } from "./utils/editorExtensions";
 import { generateHTML, generateJSON } from "@tiptap/html";
@@ -37,7 +38,7 @@ const App: React.FC = () => {
   const [isUploadPreviewing, setIsUploadPreviewing] = useState(false);
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 
-  const { drafts, activeDraftId, updateDraft } = useGuideStore();
+  const { drafts, activeDraftId, updateDraft } = useDraftStore();
 
   const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId), [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions({ reviewMode }), [reviewMode]);
@@ -295,8 +296,13 @@ const App: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      const store = useGuideStore.getState();
-                      store.addDraft();
+                      const guideState = useGuideStore.getState();
+                      const draftStore = useDraftStore.getState();
+                      const isReview = checkReviewMode(guideState.mode);
+                      draftStore.addDraft({
+                        draftType: isReview ? 'review' : 'guide',
+                        linkedGuideId: isReview ? undefined : (guideState.currentArchiveId ?? undefined),
+                      });
                     }}
                     style={{
                       padding: "0.8rem 2rem",

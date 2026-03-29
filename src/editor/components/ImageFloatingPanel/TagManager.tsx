@@ -3,7 +3,8 @@
  * 支持创建、重命名、删除、调色
  */
 import React, { useState, useRef, useEffect } from "react";
-import { useGuideStore, TAG_COLORS, ImageTag } from "../../stores/useGuideStore";
+import { useGuideStore, TAG_COLORS, type ImageTag } from "../../stores/useGuideStore";
+import { useArchiveStore } from "../../stores/useArchiveStore";
 import { PencilIcon, TrashIcon, XIcon, PlusIcon } from "./icons";
 
 interface TagManagerProps {
@@ -12,15 +13,9 @@ interface TagManagerProps {
 }
 
 const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
-  const {
-    currentArchiveId,
-    getCurrentArchive,
-    createTag,
-    updateTag,
-    deleteTag
-  } = useGuideStore();
-
-  const archive = getCurrentArchive();
+  const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
+  const { createTag, updateTag, deleteTag } = useArchiveStore();
+  const archive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
   const tags = archive?.imageTags || [];
 
   const [isCreating, setIsCreating] = useState(false);

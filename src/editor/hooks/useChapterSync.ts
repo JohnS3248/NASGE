@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useGuideStore } from '../stores/useGuideStore';
+import { useDraftStore } from '../stores/useDraftStore';
 import { fetchChapterFromSteam, saveChapterToSteam, reorderChaptersOnSteam } from '../services/chapterSync';
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import { bbcodeToHtml, htmlToBBCode } from '../utils/bbcode';
@@ -11,7 +12,8 @@ import { loggers } from '../../shared/logger';
 export type ChapterSyncStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export function useChapterSync() {
-  const { guideInfo, drafts, addDraft, updateDraft, selectDraft } = useGuideStore();
+  const guideInfo = useGuideStore((s) => s.guideInfo);
+  const { drafts, addDraft, updateDraft, selectDraft } = useDraftStore();
   const [syncStatus, setSyncStatus] = useState<Record<string, ChapterSyncStatus>>({});
   const [syncError, setSyncError] = useState<Record<string, string>>({});
 
@@ -61,12 +63,11 @@ export function useChapterSync() {
           loggers.sync.info('创建新草稿', { sectionId });
           // addDraft 接受字符串参数，但会自动转换为 JSON
           const titleText = extractTitleText(titleJson);
-          const newDraft = addDraft(titleText);
+          const newDraft = addDraft({ title: titleText, draftType: 'guide', linkedGuideId: guideInfo.id });
           updateDraft(newDraft.id, {
             title: titleJson, // 使用完整的 JSON（包含图片）
             content: contentJson,
             linkedChapterId: sectionId,
-            linkedGuideId: guideInfo.id,
             lastSyncedAt: Date.now()
           });
           selectDraft(newDraft.id);

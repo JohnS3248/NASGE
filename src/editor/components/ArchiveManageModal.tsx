@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
+import { useArchiveStore } from '../stores/useArchiveStore';
 
 interface ArchiveManageModalProps {
   visible: boolean;
@@ -10,13 +11,9 @@ interface ArchiveManageModalProps {
  * 存档管理弹窗 - 管理所有存档
  */
 export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible, onClose }) => {
-  const {
-    archives,
-    currentArchiveId,
-    createArchive,
-    deleteArchive,
-    switchArchive
-  } = useGuideStore();
+  const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
+  const switchArchive = useGuideStore((s) => s.switchArchive);
+  const { archives, createArchive, deleteArchive } = useArchiveStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [newArchiveName, setNewArchiveName] = useState('');
@@ -41,7 +38,6 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
 
     const offlineId = `offline-${Date.now()}`;
     createArchive(offlineId, {
-      id: offlineId,
       title: newArchiveName.trim(),
       coverUrl: '',
       chapters: []

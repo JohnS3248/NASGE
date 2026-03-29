@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useGuideStore, type ChapterInfo } from '../stores/useGuideStore';
+import { useArchiveStore } from '../stores/useArchiveStore';
+import { useDraftStore } from '../stores/useDraftStore';
 import { useChapterSync } from '../hooks/useChapterSync';
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
 import type { ImageState } from '../stores/useSteamGuideImageStore';
@@ -234,8 +236,9 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const mode = useGuideStore((state) => state.mode);
   const guideInfo = useGuideStore((state) => state.guideInfo);
   const reorderChapters = useGuideStore((state) => state.reorderChapters);
-  const getCurrentArchive = useGuideStore((state) => state.getCurrentArchive);
-  const getDraftByChapterId = useGuideStore((state) => state.getDraftByChapterId);
+  const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
+  const currentArchive = useArchiveStore((state) => currentArchiveId ? state.archives[currentArchiveId] : undefined);
+  const getDraftByChapterId = useDraftStore((state) => state.getDraftByChapterId);
 
   const { pullChapter, switchToChapter, getChapterDraft, syncStatus, syncChapterOrder } = useChapterSync();
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -243,8 +246,6 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const currentArchive = getCurrentArchive();
 
   const { chapters, isOfflineData, syncTime } = useMemo(() => {
     const isOfflineMode = mode === 'offline-guide' || mode === 'offline-review';

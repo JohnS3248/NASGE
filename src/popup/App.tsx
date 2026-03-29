@@ -50,6 +50,10 @@ const App: React.FC = () => {
     openEditor('offline-guide');
   }, [openEditor]);
 
+  const handleOpenOfflineReview = useCallback(() => {
+    openEditor('offline-review');
+  }, [openEditor]);
+
   // 根据页面类型显示提示信息
   const getStatusText = () => {
     if (!pageInfo) {
@@ -178,31 +182,59 @@ const App: React.FC = () => {
           </button>
         )}
 
-        {/* 打开编辑器按钮 - 总是显示 */}
-        <button
-          onClick={handleOpenOffline}
-          style={{
-            height: "2.5rem",
-            borderRadius: "0.75rem",
-            border: "1px solid rgba(102, 192, 244, 0.3)",
-            background: "rgba(21, 34, 52, 0.6)",
-            color: "#c7dff7",
-            fontSize: "0.95rem",
-            fontWeight: 600,
-            cursor: "pointer",
-            transition: "background 0.2s, border-color 0.2s"
-          }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "rgba(21, 34, 52, 0.85)";
-            e.currentTarget.style.borderColor = "rgba(102, 192, 244, 0.5)";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "rgba(21, 34, 52, 0.6)";
-            e.currentTarget.style.borderColor = "rgba(102, 192, 244, 0.3)";
-          }}
-        >
-          打开编辑器（离线模式）
-        </button>
+        {/* 离线模式按钮 - 总是显示 */}
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            onClick={handleOpenOffline}
+            style={{
+              flex: 1,
+              height: "2.5rem",
+              borderRadius: "0.75rem",
+              border: "1px solid rgba(102, 192, 244, 0.3)",
+              background: "rgba(21, 34, 52, 0.6)",
+              color: "#c7dff7",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "background 0.2s, border-color 0.2s"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(21, 34, 52, 0.85)";
+              e.currentTarget.style.borderColor = "rgba(102, 192, 244, 0.5)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(21, 34, 52, 0.6)";
+              e.currentTarget.style.borderColor = "rgba(102, 192, 244, 0.3)";
+            }}
+          >
+            离线指南
+          </button>
+          <button
+            onClick={handleOpenOfflineReview}
+            style={{
+              flex: 1,
+              height: "2.5rem",
+              borderRadius: "0.75rem",
+              border: "1px solid rgba(155, 89, 182, 0.3)",
+              background: "rgba(21, 34, 52, 0.6)",
+              color: "#d4b8e8",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              transition: "background 0.2s, border-color 0.2s"
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "rgba(21, 34, 52, 0.85)";
+              e.currentTarget.style.borderColor = "rgba(155, 89, 182, 0.5)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "rgba(21, 34, 52, 0.6)";
+              e.currentTarget.style.borderColor = "rgba(155, 89, 182, 0.3)";
+            }}
+          >
+            离线评测
+          </button>
+        </div>
       </div>
     </main>
   );
