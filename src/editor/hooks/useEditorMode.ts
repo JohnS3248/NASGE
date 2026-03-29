@@ -2,6 +2,9 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { useGuideStore, type EditorMode } from '../stores/useGuideStore';
 import { fetchGuideInfo } from '../services/guideInfo';
 import { loggers } from '../../shared/logger';
+import { bbcodeToHtml } from '../utils/bbcode';
+import { generateJSON } from '@tiptap/html';
+import { createEditorExtensions } from '../utils/editorExtensions';
 
 const VALID_MODES = new Set<string>(['guide', 'review', 'offline-guide', 'offline-review', 'offline']);
 
@@ -45,14 +48,43 @@ export function useEditorMode() {
       ? resolveMode(urlModeRaw)
       : mode;
 
+    // 离线模式：始终调用 setMode 触发状态清理（即使 mode 值没变）
+    if (resolved === 'offline-guide' || resolved === 'offline-review') {
+      setMode(resolved);
+      hasInitialized.current = true;
+      return;
+    }
+
     // 如果是评测模式且有 appId，初始化评测信息
     if (resolved === 'review' && appId) {
       import('../services/reviewBridge').then(({ fetchReviewForm }) => {
         fetchReviewForm().then((data) => {
+          // 1. 保存评测设置
           import('../stores/useReviewStore').then(({ useReviewStore }) => {
             useReviewStore.getState().setReviewInfo(data);
-            loggers.editor.info('评测信息导入成功', data);
           });
+
+          // 2. 将评测文本导入草稿
+          if (data.text) {
+            const html = bbcodeToHtml(data.text);
+            const extensions = createEditorExtensions({ reviewMode: true });
+            const contentJson = generateJSON(html, extensions);
+
+            const store = useGuideStore.getState();
+            const existingDraft = store.drafts.find(d =>
+              d.draftType === 'review' && !d.linkedGuideId
+            );
+
+            if (existingDraft) {
+              store.updateDraft(existingDraft.id, { content: contentJson });
+              useGuideStore.setState({ activeDraftId: existingDraft.id });
+            } else {
+              const newDraft = store.addDraft(data.gameName || '评测');
+              store.updateDraft(newDraft.id, { content: contentJson });
+            }
+          }
+
+          loggers.editor.info('评测信息导入成功', data);
         }).catch((error) => {
           loggers.editor.error('评测信息导入失败', error);
         });

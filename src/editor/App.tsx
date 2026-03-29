@@ -39,7 +39,7 @@ const App: React.FC = () => {
 
   const { drafts, activeDraftId, updateDraft } = useGuideStore();
 
-  const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId) ?? drafts[0], [drafts, activeDraftId]);
+  const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId), [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions({ reviewMode }), [reviewMode]);
 
   // 草稿是否为空
@@ -354,7 +354,6 @@ const App: React.FC = () => {
             top: "14rem",
             bottom: "1rem",
             zIndex: 100,
-            overflowY: "auto",
             pointerEvents: "auto"
           }}
         >
@@ -383,8 +382,8 @@ const App: React.FC = () => {
       {/* 悬浮工具栏 */}
       {activeDraft && <EditorToolbar editor={editorInstance} />}
 
-      {/* 图片悬浮窗 - 仅指南模式 */}
-      {!reviewMode && <ImageFloatingPanel />}
+      {/* 图片悬浮窗 - 仅在线指南模式（离线模式无图片池管线） */}
+      {mode === 'guide' && <ImageFloatingPanel />}
     </div>
   );
 };
