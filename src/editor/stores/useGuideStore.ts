@@ -84,7 +84,15 @@ export const useGuideStore = create<SessionState>()(
         const afterState = get();
         const isReview = mode === 'review' || mode === 'offline-review';
         import("./useDraftStore").then(({ useDraftStore }) => {
-          useDraftStore.getState().selectBestDraft(afterState.currentArchiveId, isReview);
+          if (isReview) {
+            // review 模式：从 useReviewStore 获取 appId
+            import("./useReviewStore").then(({ useReviewStore }) => {
+              const reviewAppId = useReviewStore.getState().appId;
+              useDraftStore.getState().selectBestDraft(null, true, reviewAppId);
+            });
+          } else {
+            useDraftStore.getState().selectBestDraft(afterState.currentArchiveId, false);
+          }
         });
       },
 

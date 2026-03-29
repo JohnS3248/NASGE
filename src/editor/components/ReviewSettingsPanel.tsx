@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { useReviewStore } from "../stores/useReviewStore";
+import { useDraftStore } from "../stores/useDraftStore";
 import { useGuideStore, isOnlineMode } from "../stores/useGuideStore";
 import { toast } from "../stores/useToastStore";
 import { htmlToBBCode } from "../utils/bbcode";
@@ -34,6 +35,16 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
   const online = isOnlineMode(mode);
 
   const handleSubmit = useCallback(async () => {
+    // 跨游戏提交安全检查
+    const activeDraft = useDraftStore.getState().drafts.find(
+      (d) => d.id === useDraftStore.getState().activeDraftId
+    );
+    const currentAppId = useReviewStore.getState().appId;
+    if (activeDraft?.linkedAppId && currentAppId && activeDraft.linkedAppId !== currentAppId) {
+      toast.error(`此草稿绑定的游戏 (${activeDraft.linkedAppName || activeDraft.linkedAppId}) 与当前评测页面不一致，请切换到正确的草稿`);
+      return;
+    }
+
     if (settings.ratedUp === null) {
       toast.warning("请先选择推荐或不推荐");
       return;

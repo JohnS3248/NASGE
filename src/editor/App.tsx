@@ -287,10 +287,12 @@ const App: React.FC = () => {
                     }}
                   >
                     <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text-primary, #d7e8ff)" }}>
-                      暂无草稿
+                      {reviewMode ? '还没有评测草稿' : '暂无草稿'}
                     </div>
                     <div style={{ fontSize: "0.95rem" }}>
-                      请先创建一个新草稿，或从章节导航中拉取现有章节
+                      {reviewMode
+                        ? '在 Steam 游戏页面点击「编辑此评测」开始，或创建一个新草稿'
+                        : '请先创建一个新草稿，或从章节导航中拉取现有章节'}
                     </div>
                   </div>
                   <button
@@ -299,10 +301,21 @@ const App: React.FC = () => {
                       const guideState = useGuideStore.getState();
                       const draftStore = useDraftStore.getState();
                       const isReview = checkReviewMode(guideState.mode);
-                      draftStore.addDraft({
-                        draftType: isReview ? 'review' : 'guide',
-                        linkedGuideId: isReview ? undefined : (guideState.currentArchiveId ?? undefined),
-                      });
+                      if (isReview) {
+                        import('./stores/useReviewStore').then(({ useReviewStore }) => {
+                          const reviewState = useReviewStore.getState();
+                          draftStore.addDraft({
+                            draftType: 'review',
+                            linkedAppId: reviewState.appId ?? undefined,
+                            linkedAppName: reviewState.gameName || undefined,
+                          });
+                        });
+                      } else {
+                        draftStore.addDraft({
+                          draftType: 'guide',
+                          linkedGuideId: guideState.currentArchiveId ?? undefined,
+                        });
+                      }
                     }}
                     style={{
                       padding: "0.8rem 2rem",

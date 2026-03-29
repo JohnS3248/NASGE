@@ -22,6 +22,8 @@ export type Draft = {
   linkedGuideId?: string;
   lastSyncedAt?: number;
   draftType?: 'guide' | 'review';
+  linkedAppId?: string;     // 绑定 Steam 游戏 appId（review 专用）
+  linkedAppName?: string;   // 游戏名（方便离线模式显示）
 };
 
 // ============================================================================
@@ -42,7 +44,7 @@ type DraftState = {
 
   // 草稿 CRUD
   selectDraft: (id: string) => void;
-  addDraft: (options?: { title?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string }) => Draft;
+  addDraft: (options?: { title?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string; linkedAppId?: string; linkedAppName?: string }) => Draft;
   updateDraft: (id: string, patch: Partial<Draft>) => void;
   deleteDraft: (id: string) => void;
   duplicateDraft: (id: string) => Draft | null;
@@ -58,9 +60,10 @@ type DraftState = {
   getDraftByChapterId: (chapterId: string) => Draft | undefined;
   getDraftsByArchive: (guideId: string | null) => Draft[];
   getUnlinkedDrafts: () => Draft[];
+  getDraftsByAppId: (appId: string) => Draft[];
 
   // 统一草稿选择
-  selectBestDraft: (archiveId: string | null, isReview: boolean) => void;
+  selectBestDraft: (archiveId: string | null, isReview: boolean, appId?: string | null) => void;
 };
 
 export const useDraftStore = create<DraftState>()(
@@ -88,6 +91,8 @@ export const useDraftStore = create<DraftState>()(
           updatedAt: Date.now(),
           linkedGuideId,
           draftType,
+          linkedAppId: options?.linkedAppId,
+          linkedAppName: options?.linkedAppName,
         };
 
         set((s) => ({
@@ -186,14 +191,30 @@ export const useDraftStore = create<DraftState>()(
 
       getUnlinkedDrafts: () => get().drafts.filter((d) => !d.linkedGuideId),
 
+      getDraftsByAppId: (appId) =>
+        get().drafts.filter((d) => d.draftType === 'review' && d.linkedAppId === appId),
+
       // 统一草稿选择逻辑（原来在 setMode/setGuideInfo/switchArchive 中重复 3 次）
-      selectBestDraft: (archiveId, isReview) => {
+      selectBestDraft: (archiveId, isReview, appId) => {
         const { drafts } = get();
-        const matching = drafts.filter(d => {
-          const typeMatch = isReview ? d.draftType === 'review' : d.draftType !== 'review';
-          const archiveMatch = archiveId ? d.linkedGuideId === archiveId : !d.linkedGuideId;
-          return typeMatch && archiveMatch;
-        });
+
+        let matching: Draft[];
+        if (isReview) {
+          // review 模式：按 appId 过滤
+          if (appId) {
+            matching = drafts.filter(d => d.draftType === 'review' && d.linkedAppId === appId);
+          } else {
+            // offline-review（无 appId）：选最近的 review 草稿
+            matching = drafts.filter(d => d.draftType === 'review');
+          }
+        } else {
+          // guide 模式：按 archiveId 过滤
+          matching = drafts.filter(d => {
+            const typeMatch = d.draftType !== 'review';
+            const archiveMatch = archiveId ? d.linkedGuideId === archiveId : !d.linkedGuideId;
+            return typeMatch && archiveMatch;
+          });
+        }
 
         if (matching.length > 0) {
           const mostRecent = matching.sort((a, b) => b.updatedAt - a.updatedAt)[0];
@@ -205,7 +226,7 @@ export const useDraftStore = create<DraftState>()(
     }),
     {
       name: "nasge-drafts",
-      version: 1,
+      version: 2,
       storage: (() => {
         let debounceTimer: ReturnType<typeof setTimeout> | null = null;
         let pendingValue: { name: string; value: unknown } | null = null;
@@ -254,13 +275,15 @@ export const useDraftStore = create<DraftState>()(
         };
       },
 
-      migrate: (persisted: unknown, _version: number) => {
+      migrate: (persisted: unknown, version: number) => {
         const state = persisted as Partial<DraftState> | null;
         if (!state) return { drafts: [], activeDraftId: null, nextDraftNumber: 1 };
 
-        if (!state.nextDraftNumber) {
+        // v0 → v1: nextDraftNumber
+        if (version < 1 && !state.nextDraftNumber) {
           state.nextDraftNumber = (state.drafts?.length ?? 0) + 1;
         }
+        // v1 → v2: linkedAppId/linkedAppName added to Draft — additive, no conversion needed
         return state;
       },
 

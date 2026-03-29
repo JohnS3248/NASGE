@@ -65,24 +65,34 @@ export function useEditorMode() {
             useReviewStore.getState().setReviewInfo(data);
           });
 
-          // 2. 将评测文本导入草稿
-          if (data.text) {
-            const html = bbcodeToHtml(data.text);
+          // 2. 按 linkedAppId 查找草稿
+          const draftStore = useDraftStore.getState();
+          const existingDraft = draftStore.drafts.find(d =>
+            d.draftType === 'review' && d.linkedAppId === appId
+          );
+
+          if (existingDraft) {
+            // 已有该游戏的草稿 → 激活，不覆盖本地内容
+            useDraftStore.setState({ activeDraftId: existingDraft.id });
+            loggers.editor.info('激活已有评测草稿', { appId, draftId: existingDraft.id });
+          } else {
+            // 没有该游戏草稿 → 创建新草稿，导入 Steam 内容
             const extensions = createEditorExtensions({ reviewMode: true });
-            const contentJson = generateJSON(html, extensions);
+            const contentJson = data.text
+              ? generateJSON(bbcodeToHtml(data.text), extensions)
+              : undefined;
 
-            const draftStore = useDraftStore.getState();
-            const existingDraft = draftStore.drafts.find(d =>
-              d.draftType === 'review' && !d.linkedGuideId
-            );
+            const newDraft = draftStore.addDraft({
+              title: data.gameName || '评测',
+              draftType: 'review',
+              linkedAppId: appId,
+              linkedAppName: data.gameName || undefined,
+            });
 
-            if (existingDraft) {
-              draftStore.updateDraft(existingDraft.id, { content: contentJson });
-              useDraftStore.setState({ activeDraftId: existingDraft.id });
-            } else {
-              const newDraft = draftStore.addDraft({ title: data.gameName || '评测', draftType: 'review' });
+            if (contentJson) {
               draftStore.updateDraft(newDraft.id, { content: contentJson });
             }
+            loggers.editor.info('创建新评测草稿', { appId, draftId: newDraft.id });
           }
 
           loggers.editor.info('评测信息导入成功', data);

@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useGuideStore, isReviewMode } from '../stores/useGuideStore';
+import { useGuideStore, isReviewMode, isOnlineMode } from '../stores/useGuideStore';
 import { useDraftStore } from '../stores/useDraftStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
+import { useReviewStore } from '../stores/useReviewStore';
 import { extractTitleText } from '../utils/titleHelpers';
 
 // ============================================================================
@@ -158,6 +159,7 @@ const DraftPanel: React.FC = () => {
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const mode = useGuideStore((s) => s.mode);
   const currentArchive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
+  const reviewAppId = useReviewStore((s) => s.appId);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
@@ -170,17 +172,23 @@ const DraftPanel: React.FC = () => {
   const displayedDrafts = useMemo(() => {
     const inReview = isReviewMode(mode);
 
-    // 先按草稿类型过滤
-    const typeFiltered = drafts.filter((d) =>
-      inReview ? d.draftType === 'review' : d.draftType !== 'review'
-    );
-
-    // 再按存档过滤
-    if (!currentArchiveId) {
-      return typeFiltered.filter((d) => !d.linkedGuideId);
+    if (inReview) {
+      const reviewDrafts = drafts.filter((d) => d.draftType === 'review');
+      // online review + 有 appId → 只显示该游戏的草稿
+      if (isOnlineMode(mode) && reviewAppId) {
+        return reviewDrafts.filter((d) => d.linkedAppId === reviewAppId);
+      }
+      // offline review → 显示所有 review 草稿
+      return reviewDrafts;
     }
-    return typeFiltered.filter((d) => d.linkedGuideId === currentArchiveId);
-  }, [drafts, currentArchiveId, mode]);
+
+    // guide 模式：按存档过滤
+    const guideFiltered = drafts.filter((d) => d.draftType !== 'review');
+    if (!currentArchiveId) {
+      return guideFiltered.filter((d) => !d.linkedGuideId);
+    }
+    return guideFiltered.filter((d) => d.linkedGuideId === currentArchiveId);
+  }, [drafts, currentArchiveId, mode, reviewAppId]);
 
   const activeDraft = drafts.find((d) => d.id === activeDraftId);
 
@@ -193,9 +201,12 @@ const DraftPanel: React.FC = () => {
 
   const handleAddDraft = useCallback(() => {
     const inReview = isReviewMode(mode);
+    const reviewState = useReviewStore.getState();
     const newDraft = addDraft({
       draftType: inReview ? 'review' : 'guide',
       linkedGuideId: inReview ? undefined : (currentArchiveId ?? undefined),
+      linkedAppId: inReview ? (reviewState.appId ?? undefined) : undefined,
+      linkedAppName: inReview ? (reviewState.gameName || undefined) : undefined,
     });
     if (newDraft) selectDraft(newDraft.id);
   }, [addDraft, selectDraft, mode, currentArchiveId]);
@@ -328,9 +339,11 @@ const DraftPanel: React.FC = () => {
           <div className="max-h-72 overflow-y-auto p-1.5">
             {displayedDrafts.length === 0 ? (
               <div className="py-6 text-center text-text-muted text-xs">
-                {currentArchive?.guideName
-                  ? `"${currentArchive.guideName}" 下没有草稿`
-                  : '点击「新建」开始编辑'}
+                {isReviewMode(mode)
+                  ? '还没有评测草稿。在 Steam 游戏页面点击「编辑此评测」开始'
+                  : currentArchive?.guideName
+                    ? `"${currentArchive.guideName}" 下没有草稿`
+                    : '点击「新建」开始编辑'}
               </div>
             ) : (
               displayedDrafts.map((draft) => {
@@ -382,7 +395,11 @@ const DraftPanel: React.FC = () => {
                         {getDraftDisplayTitle(draft)}
                       </span>
                       <span className="text-[11px] text-text-muted">
-                        {draft.draftName} · {formatDate(draft.updatedAt)}
+                        {draft.draftName}
+                        {!isOnlineMode(mode) && draft.draftType === 'review' && (draft.linkedAppName || draft.linkedAppId) && (
+                          <> · {draft.linkedAppName || `App ${draft.linkedAppId}`}</>
+                        )}
+                        {' · '}{formatDate(draft.updatedAt)}
                       </span>
                     </div>
 
