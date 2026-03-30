@@ -44,7 +44,7 @@ type DraftState = {
 
   // 草稿 CRUD
   selectDraft: (id: string) => void;
-  addDraft: (options?: { title?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string; linkedAppId?: string; linkedAppName?: string }) => Draft;
+  addDraft: (options?: { title?: string; draftName?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string; linkedAppId?: string; linkedAppName?: string }) => Draft;
   updateDraft: (id: string, patch: Partial<Draft>) => void;
   deleteDraft: (id: string) => void;
   duplicateDraft: (id: string) => Draft | null;
@@ -85,7 +85,7 @@ export const useDraftStore = create<DraftState>()(
 
         const draft: Draft = {
           id: crypto.randomUUID(),
-          draftName: `草稿 ${draftNumber}`,
+          draftName: options?.draftName || `草稿 ${draftNumber}`,
           title: title ? createTitleFromText(title) : createEmptyTitle(),
           content: createEmptyDoc(),
           updatedAt: Date.now(),

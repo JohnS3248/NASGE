@@ -78,6 +78,13 @@ export const useGuideStore = create<SessionState>()(
           updates.currentChapterId = null;
         }
 
+        // 进入 offline-review 时清除旧连接信息（在线 review 会通过 setReviewInfo 重填）
+        if (mode === 'offline-review') {
+          import("./useReviewStore").then(({ useReviewStore }) => {
+            useReviewStore.getState().clearConnection();
+          });
+        }
+
         set(updates);
 
         // 委托 useDraftStore 选择最佳草稿

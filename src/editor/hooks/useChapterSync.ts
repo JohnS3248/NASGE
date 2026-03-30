@@ -63,7 +63,7 @@ export function useChapterSync() {
           loggers.sync.info('创建新草稿', { sectionId });
           // addDraft 接受字符串参数，但会自动转换为 JSON
           const titleText = extractTitleText(titleJson);
-          const newDraft = addDraft({ title: titleText, draftType: 'guide', linkedGuideId: guideInfo.id });
+          const newDraft = addDraft({ title: titleText, draftName: titleText || undefined, draftType: 'guide', linkedGuideId: guideInfo.id });
           updateDraft(newDraft.id, {
             title: titleJson, // 使用完整的 JSON（包含图片）
             content: contentJson,

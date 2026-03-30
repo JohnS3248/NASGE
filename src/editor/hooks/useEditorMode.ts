@@ -84,6 +84,7 @@ export function useEditorMode() {
 
             const newDraft = draftStore.addDraft({
               title: data.gameName || '评测',
+              draftName: data.gameName || '评测',
               draftType: 'review',
               linkedAppId: appId,
               linkedAppName: data.gameName || undefined,

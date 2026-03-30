@@ -23,7 +23,7 @@ const getDraftDisplayTitle = (draft: DraftItem | undefined) => {
   if (!draft) return '';
   const titleText = extractTitleText(draft.title);
   if (titleText) return titleText;
-  return draft.lastSyncedAt ? '未命名章节' : '本地未命名章节';
+  return draft.draftName;
 };
 
 // 蓝色按钮样式（跟"导出草稿"风格一致：bg-accent/15 + text-accent + border-accent/30）
@@ -200,9 +200,17 @@ const DraftPanel: React.FC = () => {
   }, [selectDraft]);
 
   const handleAddDraft = useCallback(() => {
+    const { nextDraftNumber } = useDraftStore.getState();
+    const defaultName = `未命名草稿 ${nextDraftNumber}`;
+    const name = window.prompt('新建草稿', defaultName);
+    if (name === null) return;
+
+    const finalName = name.trim() || defaultName;
     const inReview = isReviewMode(mode);
     const reviewState = useReviewStore.getState();
+
     const newDraft = addDraft({
+      draftName: finalName,
       draftType: inReview ? 'review' : 'guide',
       linkedGuideId: inReview ? undefined : (currentArchiveId ?? undefined),
       linkedAppId: inReview ? (reviewState.appId ?? undefined) : undefined,
@@ -396,9 +404,6 @@ const DraftPanel: React.FC = () => {
                       </span>
                       <span className="text-[11px] text-text-muted">
                         {draft.draftName}
-                        {!isOnlineMode(mode) && draft.draftType === 'review' && (draft.linkedAppName || draft.linkedAppId) && (
-                          <> · {draft.linkedAppName || `App ${draft.linkedAppId}`}</>
-                        )}
                         {' · '}{formatDate(draft.updatedAt)}
                       </span>
                     </div>

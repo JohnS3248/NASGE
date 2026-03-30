@@ -300,11 +300,17 @@ const App: React.FC = () => {
                     onClick={() => {
                       const guideState = useGuideStore.getState();
                       const draftStore = useDraftStore.getState();
+                      const defaultName = `未命名草稿 ${draftStore.nextDraftNumber}`;
+                      const name = window.prompt('新建草稿', defaultName);
+                      if (name === null) return;
+                      const finalName = name.trim() || defaultName;
+
                       const isReview = checkReviewMode(guideState.mode);
                       if (isReview) {
                         import('./stores/useReviewStore').then(({ useReviewStore }) => {
                           const reviewState = useReviewStore.getState();
                           draftStore.addDraft({
+                            draftName: finalName,
                             draftType: 'review',
                             linkedAppId: reviewState.appId ?? undefined,
                             linkedAppName: reviewState.gameName || undefined,
@@ -312,6 +318,7 @@ const App: React.FC = () => {
                         });
                       } else {
                         draftStore.addDraft({
+                          draftName: finalName,
                           draftType: 'guide',
                           linkedGuideId: guideState.currentArchiveId ?? undefined,
                         });

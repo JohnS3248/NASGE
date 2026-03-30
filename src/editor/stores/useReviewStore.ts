@@ -24,6 +24,7 @@ type ReviewState = {
   // Actions
   setReviewInfo: (data: ReviewFormData) => void;
   updateSettings: (partial: Partial<ReviewSettings>) => void;
+  clearConnection: () => void;
   reset: () => void;
 };
 
@@ -66,6 +67,15 @@ export const useReviewStore = create<ReviewState>()(
         set((state) => ({
           settings: { ...state.settings, ...partial },
         }));
+      },
+
+      clearConnection: () => {
+        set({
+          appId: null,
+          gameName: "",
+          hasExistingReview: false,
+          recommendationId: null,
+        });
       },
 
       reset: () => {
