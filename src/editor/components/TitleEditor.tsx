@@ -7,7 +7,6 @@ import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput
 import { processIncomingImages } from '../services/imageIntake';
 import { ImageUploadService } from '../services/ImageUploadService';
 import { useImageStore } from '../stores/useImageStore';
-import { useEditorImageNodeStore } from '../stores/useEditorImageNodeStore';
 import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
 import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
@@ -80,42 +79,39 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     warning: false,
     limit: TITLE_CHARACTER_LIMIT
   }));
-  // === 图片节点存储 (新 Store 优先，旧 Store 兜底) ===
-  // 新 Store 方法
-  const updateImageDisplayNew = useImageStore((state) => state.updateDisplay);
-  const removeImageNew = useImageStore((state) => state.removeImage);
-  // 旧 Store 方法（双写）
-  const updateImageDisplayLegacy = useEditorImageNodeStore((state) => state.updateDisplay);
-  const removeImageNodeLegacy = useEditorImageNodeStore((state) => state.removeNode);
-  const imageNodesLegacy = useEditorImageNodeStore((state) => state.nodes);
-  const imageEntities = useImageStore((state) => state.images);
+  // === 图片节点存储 ===
+  const updateImageDisplayStore = useImageStore((state) => state.updateDisplay);
+  const removeImageStore = useImageStore((state) => state.removeImage);
 
-  // 合并的更新方法
+  // 通过 imageNodeId 解析图片实体
+  const resolveImage = useCallback((nodeId: string) => {
+    const store = useImageStore.getState();
+    return (
+      store.getImageById(nodeId) ??
+      store.getImageBySourceNodeId(nodeId) ??
+      store.getImageBySteamPreviewId(nodeId)
+    );
+  }, []);
+
   const updateImageDisplay = useCallback(
     (nodeId: string, patch: Partial<{ preset: ImageDisplayPreset; alignment: ImageAlignment; customWidthPx?: number }>) => {
-      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      const imageEntity = resolveImage(nodeId);
       if (imageEntity) {
-        updateImageDisplayNew(imageEntity.id, patch);
+        updateImageDisplayStore(imageEntity.id, patch);
       }
-      updateImageDisplayLegacy(nodeId, patch);
     },
-    [updateImageDisplayNew, updateImageDisplayLegacy]
+    [updateImageDisplayStore, resolveImage]
   );
 
-  // 合并的删除方法
   const removeImageNode = useCallback(
     (nodeId: string) => {
-      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      const imageEntity = resolveImage(nodeId);
       if (imageEntity) {
-        removeImageNew(imageEntity.id);
+        removeImageStore(imageEntity.id);
       }
-      removeImageNodeLegacy(nodeId);
     },
-    [removeImageNew, removeImageNodeLegacy]
+    [removeImageStore, resolveImage]
   );
-
-  // 合并的 imageNodes（兼容旧代码）
-  const imageNodes = imageNodesLegacy;
 
   // 创建 TipTap 编辑器实例
   const editor = useEditor({
@@ -160,8 +156,17 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   }, []);
 
   // 获取当前右键菜单对应的图片节点
-  const contextMenuImageNode = contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
-    ? imageNodes[contextMenu.payload.imageNodeId]
+  const contextMenuImageEntity = contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
+    ? resolveImage(contextMenu.payload.imageNodeId)
+    : undefined;
+  const contextMenuImageNode = contextMenuImageEntity
+    ? {
+        display: {
+          preset: contextMenuImageEntity.display.preset,
+          alignment: contextMenuImageEntity.display.alignment,
+          customWidthPx: contextMenuImageEntity.display.customWidthPx
+        }
+      }
     : undefined;
 
   // 应用图片尺寸预设
@@ -204,7 +209,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       loggers.image.error('TitleEditor 图片上传失败:', error);
       toast.error(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
     }
-  }, [contextMenu.payload?.imageNodeId]);
+  }, [contextMenu.payload]);
 
   // 处理拖拽/粘贴的图片
   const handleIncomingFiles = useCallback(

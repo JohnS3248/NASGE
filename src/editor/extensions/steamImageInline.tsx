@@ -2,31 +2,29 @@ import React, { useEffect, useMemo, useState, useCallback, useRef } from "react"
 import { mergeAttributes, Node } from "@tiptap/core";
 import { NodeViewWrapper, ReactNodeViewRenderer } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
-import {
-  DEFAULT_IMAGE_PRESET,
-  useEditorImageNodeStore
-} from "../stores/useEditorImageNodeStore";
-import type { EditorImageNode } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { useImageStore } from "../stores/useImageStore";
-import type { ImageEntity, ImageSource, ImageSizePreset, ImageAlignment } from "../types/image";
+import type { ImageEntity, ImageSizePreset, ImageAlignment } from "../types/image";
+import { DEFAULT_IMAGE_PRESET } from "../types/image";
 import { loggers } from "../../shared/logger";
 
-// Steam 尺寸常量 (来自 Steam 实际测量 2025-12-31，与 steamImage.tsx 保持一致)
+// Steam 尺寸常量
 const STEAM_CONTENT_WIDTH = 638;
 const STEAM_THUMB_WIDTH = 311;
 
 /**
- * 从新 Store 获取图片实体
+ * 从 useImageStore 获取图片实体
  */
-function useImageFromNewStore(
+function useImageFromStore(
   imageNodeId: string | null,
   previewId: string | null
 ): ImageEntity | undefined {
   return useImageStore((state) => {
     if (imageNodeId) {
-      const byNodeId = state.getImageBySourceNodeId(imageNodeId);
-      if (byNodeId) return byNodeId;
+      const byId = state.getImageById(imageNodeId);
+      if (byId) return byId;
+      const bySourceNodeId = state.getImageBySourceNodeId(imageNodeId);
+      if (bySourceNodeId) return bySourceNodeId;
     }
     if (previewId) {
       const byPreviewId = state.getImageBySteamPreviewId(previewId);
@@ -37,69 +35,19 @@ function useImageFromNewStore(
 }
 
 /**
- * 将旧 Store 的 EditorImageNode 同步到新 Store
+ * 确保图片在 useImageStore 中有记录
  */
-function syncToNewStore(
-  imageNode: EditorImageNode | undefined,
+function ensureInStore(
   steamPoolImage: { previewId: string; fileName: string; thumbnailUrl?: string; originalUrl?: string } | undefined,
   attrPreviewId: string | null,
   displaySettings?: { preset?: string; alignment?: string }
 ): void {
-  const newStore = useImageStore.getState();
-
-  if (imageNode) {
-    const existing = newStore.getImageBySourceNodeId(imageNode.nodeId);
-    if (!existing) {
-      const sourceMap: Record<string, ImageSource> = {
-        paste: "paste",
-        drop: "drop",
-        clipboard: "paste",
-        "file-input": "file-input",
-        import: "steam-pool"
-      };
-      const metadataSource = imageNode.metadata.source ?? "paste";
-
-      const newImage = newStore.addLocalImage({
-        fileName: imageNode.fileName ?? imageNode.originalName ?? "unknown",
-        originalName: imageNode.originalName ?? "unknown",
-        fileSize: imageNode.fileSize ?? 0,
-        mimeType: "image/unknown",
-        source: sourceMap[metadataSource] ?? "paste",
-        localPreviewUrl: imageNode.metadata.previewDataUrl,
-        dimensions: imageNode.originalSize,
-        display: {
-          preset: imageNode.display.preset as ImageSizePreset,
-          alignment: "inline" as ImageAlignment,
-          customWidthPx: imageNode.display.customWidthPx
-        }
-      });
-
-      newStore.updateSourceNodeId(newImage.id, imageNode.nodeId);
-
-      if (imageNode.previewId) {
-        newStore.markUploaded(newImage.id, imageNode.previewId, {
-          thumbnailUrl: imageNode.cdnUrl,
-          originalUrl: imageNode.cdnUrl
-        });
-      } else if (imageNode.status === "uploading") {
-        newStore.markUploading(newImage.id);
-      } else if (imageNode.status === "error") {
-        newStore.markError(newImage.id, imageNode.error ?? "Unknown error");
-      }
-
-      loggers.image.verbose("SteamImageInline 同步到新 Store (from imageNode)", {
-        oldNodeId: imageNode.nodeId,
-        newImageId: newImage.id,
-        status: newImage.status
-      });
-    }
-    return;
-  }
+  const store = useImageStore.getState();
 
   if (steamPoolImage) {
-    const existing = newStore.getImageBySteamPreviewId(steamPoolImage.previewId);
+    const existing = store.getImageBySteamPreviewId(steamPoolImage.previewId);
     if (!existing) {
-      const newImage = newStore.importFromSteamPool({
+      store.importFromSteamPool({
         steamPreviewId: steamPoolImage.previewId,
         fileName: steamPoolImage.fileName,
         thumbnailUrl: steamPoolImage.thumbnailUrl,
@@ -109,26 +57,16 @@ function syncToNewStore(
           alignment: "inline" as ImageAlignment
         } : undefined
       });
-      loggers.image.verbose("SteamImageInline 同步到新 Store (from steamPool)", {
-        previewId: steamPoolImage.previewId,
-        newImageId: newImage.id,
-        display: displaySettings
-      });
     }
     return;
   }
 
   if (attrPreviewId) {
-    const existing = newStore.getImageBySteamPreviewId(attrPreviewId);
+    const existing = store.getImageBySteamPreviewId(attrPreviewId);
     if (!existing) {
-      const newImage = newStore.importFromBBCode({
+      store.importFromBBCode({
         steamPreviewId: attrPreviewId,
         fileName: `image-${attrPreviewId}`
-      });
-      loggers.image.verbose("SteamImageInline 同步到新 Store (from BBCode, orphaned)", {
-        previewId: attrPreviewId,
-        newImageId: newImage.id,
-        status: "uploaded (待验证)"
       });
     }
   }
@@ -144,7 +82,7 @@ const SteamImageInline = Node.create({
   inline: true,
   atom: true,
   selectable: true,
-  draggable: false, // 内联节点不支持拖拽
+  draggable: false,
 
   addAttributes() {
     return {
@@ -251,24 +189,17 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
   const attrFileName = node.attrs.fileName as string | null;
   const attrPreviewDataUrl = node.attrs.previewDataUrl as string | null;
 
-  // 新 Store 读取
-  const imageEntity = useImageFromNewStore(imageNodeId, attrPreviewId);
+  const imageEntity = useImageFromStore(imageNodeId, attrPreviewId);
 
-  // 旧 Store 读取（兼容）
-  const imageNode = useEditorImageNodeStore(
-    (state) => (imageNodeId ? state.nodes[imageNodeId] : undefined)
-  );
-
-  // Steam 图片池
   const steamPoolImage = useSteamGuideImageStore(
     (state) => {
-      if (imageNode) return undefined;
+      if (imageEntity) return undefined;
       if (!attrPreviewId) return undefined;
       return state.items.find((item) => item.previewId === attrPreviewId);
     }
   );
 
-  // 双写同步
+  // 确保图片在 Store 中
   const hasSyncedRef = useRef(false);
   useEffect(() => {
     if (imageEntity) {
@@ -276,32 +207,29 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       return;
     }
     if (hasSyncedRef.current) return;
-    if (!imageNode && !steamPoolImage && !attrPreviewId) return;
+    if (!steamPoolImage && !attrPreviewId) return;
 
     hasSyncedRef.current = true;
-    syncToNewStore(imageNode, steamPoolImage, attrPreviewId, {
+    ensureInStore(steamPoolImage, attrPreviewId, {
       preset: attrSizePreset as string,
       alignment: attrAlignment as string
     });
-  }, [imageEntity, imageNode, steamPoolImage, attrPreviewId, attrSizePreset, attrAlignment]);
+  }, [imageEntity, steamPoolImage, attrPreviewId, attrSizePreset, attrAlignment]);
 
   // 同步属性
   useEffect(() => {
-    const effectivePreviewId =
-      imageEntity?.steamPreviewId ?? imageNode?.previewId ?? null;
+    const effectivePreviewId = imageEntity?.steamPreviewId ?? null;
 
-    if (!imageNode && !imageEntity) {
-      return;
-    }
+    if (!imageEntity) return;
 
     const nextAttrs = {
-      imageNodeId: imageNode?.nodeId ?? imageEntity?.sourceNodeId ?? null,
-      uploadId: imageNode?.uploadId ?? null,
+      imageNodeId: imageEntity.sourceNodeId ?? imageEntity.id,
+      uploadId: null,
       previewId: effectivePreviewId,
-      sizePreset: attrSizePreset ?? imageEntity?.display.preset ?? imageNode?.display.preset ?? "original",
-      alignment: attrAlignment ?? imageNode?.display.alignment ?? imageEntity?.display.alignment ?? "inline",
-      fileName: imageNode?.fileName ?? imageNode?.originalName ?? imageEntity?.fileName ?? null,
-      previewDataUrl: imageNode?.metadata.previewDataUrl ?? imageEntity?.localPreviewUrl ?? null
+      sizePreset: attrSizePreset ?? imageEntity.display.preset ?? "original",
+      alignment: attrAlignment ?? imageEntity.display.alignment ?? "inline",
+      fileName: imageEntity.fileName ?? null,
+      previewDataUrl: imageEntity.localPreviewUrl ?? null
     };
 
     const currentAttrs = {
@@ -325,41 +253,34 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
     if (changed) {
       updateAttributes(nextAttrs);
     }
-  }, [imageNode, imageEntity, imageNodeId, attrUploadId, attrPreviewId, attrSizePreset, attrAlignment, attrFileName, attrPreviewDataUrl, updateAttributes]);
+  }, [imageEntity, imageNodeId, attrUploadId, attrPreviewId, attrSizePreset, attrAlignment, attrFileName, attrPreviewDataUrl, updateAttributes]);
 
   // 计算样式
   const { containerStyle, imageStyle, statusLabel } = useMemo(() => {
     const effectiveSizePreset = attrSizePreset || DEFAULT_IMAGE_PRESET;
 
-    // 内联图片容器样式 - 参考 Steam 官方渲染
-    // Steam 实际行为：使用 baseline（默认值），而非文档声称的 middle
     const containerStyle: React.CSSProperties = {
       display: "inline",
       verticalAlign: "baseline",
       position: "relative",
     };
 
-    // 图片样式 - 对齐 Steam 官方: display=inline, vAlign=baseline, margin=0
     const imageStyle: React.CSSProperties = {
       display: "inline",
       verticalAlign: "baseline",
     };
 
-    // 根据 preset 设置尺寸限制（与 steamImage.tsx 保持一致）
     if (effectiveSizePreset === "original") {
-      // sizeOriginal: 原始尺寸，仅限制不超过内容区宽度
       imageStyle.maxWidth = "100%";
     } else if (effectiveSizePreset === "half") {
-      // sizeThumb: 缩略图模式，max-width: 311px
       imageStyle.maxWidth = `${STEAM_THUMB_WIDTH}px`;
     } else if (effectiveSizePreset === "full") {
-      // sizeFull: 全宽模式，max-width: 638px
       imageStyle.maxWidth = `${STEAM_CONTENT_WIDTH}px`;
     }
 
     let statusLabel: string | undefined;
 
-    if (!imageNode && !imageEntity && !steamPoolImage) {
+    if (!imageEntity && !steamPoolImage) {
       if (attrPreviewId) {
         statusLabel = `验证中... (ID: ${attrPreviewId})`;
       } else {
@@ -371,26 +292,23 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       statusLabel = `图片失效`;
     }
 
-    // 计算上传状态：有 previewId 表示已上传
-    const isUploaded = !!(attrPreviewId || imageNode?.previewId || imageEntity?.steamPreviewId);
+    const isUploaded = !!(attrPreviewId || imageEntity?.steamPreviewId);
 
-    // 未上传状态使用低亮度
     if (!isUploaded) {
       imageStyle.opacity = 0.5;
       imageStyle.filter = "grayscale(30%)";
     }
 
     return { containerStyle, imageStyle, statusLabel };
-  }, [imageNode, imageEntity, steamPoolImage, attrPreviewId, attrSizePreset]);
+  }, [imageEntity, steamPoolImage, attrPreviewId, attrSizePreset]);
 
   // CDN URL fallback
   const [cdnUrlLoadFailed, setCdnUrlLoadFailed] = useState(false);
 
   useEffect(() => {
     setCdnUrlLoadFailed(false);
-  }, [imageNode?.cdnUrl]);
+  }, [imageEntity?.steamUrls?.originalUrl]);
 
-  // 图片 URL
   const src = useMemo(() => {
     const attrPreview = attrPreviewDataUrl ?? undefined;
 
@@ -406,20 +324,12 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
       );
     }
 
-    if (imageNode) {
-      const localPreviewUrl = imageNode.metadata.previewDataUrl ?? attrPreview;
-      if (cdnUrlLoadFailed && localPreviewUrl) {
-        return localPreviewUrl;
-      }
-      return imageNode.cdnUrl ?? localPreviewUrl;
-    }
-
     if (steamPoolImage) {
       return steamPoolImage.originalUrl ?? steamPoolImage.thumbnailUrl;
     }
 
     return attrPreview;
-  }, [imageEntity, imageNode, steamPoolImage, attrPreviewDataUrl, cdnUrlLoadFailed]);
+  }, [imageEntity, steamPoolImage, attrPreviewDataUrl, cdnUrlLoadFailed]);
 
   const handleImageLoad = useCallback(() => {
     if (imageEntity && imageEntity.status === "uploaded" && imageEntity.source === "bbcode") {
@@ -428,7 +338,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
   }, [imageEntity]);
 
   const handleImageLoadError = useCallback(() => {
-    if (imageNode?.cdnUrl && !cdnUrlLoadFailed) {
+    if (!cdnUrlLoadFailed && imageEntity?.steamUrls?.originalUrl) {
       setCdnUrlLoadFailed(true);
       return;
     }
@@ -438,16 +348,16 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
         useImageStore.getState().markOrphaned(imageEntity.id);
       }
     }
-  }, [imageNode?.cdnUrl, cdnUrlLoadFailed, imageEntity, attrPreviewDataUrl]);
+  }, [cdnUrlLoadFailed, imageEntity, attrPreviewDataUrl]);
 
-  const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? imageNode?.fileName ?? imageNode?.originalName ?? steamPoolImage?.fileName ?? attrFileName ?? "内联图片";
+  const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? steamPoolImage?.fileName ?? attrFileName ?? "内联图片";
 
   return (
     <NodeViewWrapper
       as="span"
       className="nasge-image-inline-wrapper"
-      data-image-node-id={imageNodeId ?? attrPreviewId ?? imageNode?.previewId}
-      data-preview-id={attrPreviewId ?? imageNode?.previewId}
+      data-image-node-id={imageNodeId ?? attrPreviewId ?? undefined}
+      data-preview-id={attrPreviewId ?? undefined}
       data-size-preset={attrSizePreset || "original"}
       style={{ display: "inline", verticalAlign: "baseline" }}
     >

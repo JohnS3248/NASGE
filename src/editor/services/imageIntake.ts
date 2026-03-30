@@ -2,7 +2,6 @@ import type { Editor } from "@tiptap/react";
 import type { ImageSource } from "../types/image";
 import { ImageUploadService } from "./ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
-import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 import { loggers } from "../../shared/logger";
 
@@ -40,7 +39,6 @@ export async function processIncomingImages(
   );
 
   const imageStore = useImageStore.getState();
-  const imageNodeStore = useEditorImageNodeStore.getState();
 
   for (const file of files) {
     let previewDataUrl: string | undefined;
@@ -59,7 +57,6 @@ export async function processIncomingImages(
       loggers.image.warn("读取本地预览失败", error);
     }
 
-    // === 新 Store (主要) ===
     const imageEntity = imageStore.addLocalImage({
       fileName: file.name,
       originalName: file.name,
@@ -70,42 +67,21 @@ export async function processIncomingImages(
       dimensions: intrinsicSize
     });
 
-    // === 旧 Store (双写兼容) ===
-    const node = imageNodeStore.registerFromLocalFile({
-      file,
-      metadata: {
-        source: options.source,
-        cursorPosition: options.cursorPosition
-      },
-      previewDataUrl,
-      intrinsicSize
-    });
-
-    // 建立新旧 Store 之间的关联
-    imageStore.updateSourceNodeId(imageEntity.id, node.nodeId);
-
-    loggers.image.verbose("imageIntake 双写完成", {
-      newStoreId: imageEntity.id,
-      oldStoreNodeId: node.nodeId
-    });
-
     const inserted = editor
       .chain()
       .focus()
       .insertSteamImage({
-        imageNodeId: node.nodeId, // 继续使用旧 Store 的 nodeId（直到 UI 组件完全迁移）
+        imageNodeId: imageEntity.id,
         previewDataUrl
       })
       .run();
 
     if (!inserted) {
       loggers.image.warn(
-        "processIncomingImages 插入图片节点失败，撤销节点注册",
-        node.nodeId
+        "processIncomingImages 插入图片节点失败",
+        imageEntity.id
       );
-      // 清理两个 Store
       imageStore.removeImage(imageEntity.id);
-      imageNodeStore.removeNode(node.nodeId);
       continue;
     }
 
@@ -121,22 +97,20 @@ export async function processIncomingImages(
         {
           source: options.source,
           fileName: file.name,
-          nodeId: node.nodeId
+          imageId: imageEntity.id
         }
       );
-      // 节点保持 status: "intake" 状态，显示本地预览
       continue;
     }
 
-    // 自动上传到 Steam（使用统一上传服务）
+    // 自动上传到 Steam
     try {
-      const result = await ImageUploadService.uploadByNodeId(node.nodeId);
+      const result = await ImageUploadService.uploadByImageId(imageEntity.id);
       if (!result.success) {
         loggers.image.error("图片自动上传失败:", result.error);
       }
     } catch (error) {
       loggers.image.error("图片上传异常:", error);
-      // 不抛出错误，让其他图片继续处理
     }
   }
 }

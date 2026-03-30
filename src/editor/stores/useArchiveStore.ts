@@ -3,8 +3,6 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { loggers } from "../../shared/logger";
 import type { SteamGuideImage } from "../../shared/messages";
 
-// 触发旧 store 迁移（必须先于 store 创建）
-import "./migrateLegacyStore";
 
 // ============================================================================
 // 类型定义

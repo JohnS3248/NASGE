@@ -83,7 +83,7 @@ export interface ImageEntity {
   id: string;
   /** Steam 预览 ID，上传成功后获得，用于 BBCode 导出 */
   steamPreviewId?: string;
-  /** 旧 Store 的 nodeId，用于迁移期间的去重 */
+  /** TipTap 节点关联的 imageNodeId（用于 sourceNodeId 查找） */
   sourceNodeId?: string;
 
   // === 生命周期 ===
@@ -180,9 +180,11 @@ export interface BatchUploadResult {
 /**
  * 默认显示设置
  */
+export const DEFAULT_IMAGE_PRESET: ImageSizePreset = "original";
+export const DEFAULT_IMAGE_ALIGNMENT: ImageAlignment = "inline";
 export const DEFAULT_DISPLAY_SETTINGS: ImageDisplaySettings = {
-  preset: "original",
-  alignment: "inline"
+  preset: DEFAULT_IMAGE_PRESET,
+  alignment: DEFAULT_IMAGE_ALIGNMENT
 };
 
 /**

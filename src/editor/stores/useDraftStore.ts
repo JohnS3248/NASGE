@@ -5,8 +5,6 @@ import { createEmptyDoc } from "../utils/editorExtensions";
 import { createTitleFromText, createEmptyTitle } from "../utils/titleHelpers";
 import { loggers } from "../../shared/logger";
 
-// 触发旧 store 迁移（必须先于 store 创建）
-import "./migrateLegacyStore";
 
 // ============================================================================
 // 类型定义

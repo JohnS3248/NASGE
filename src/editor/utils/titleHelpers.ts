@@ -6,7 +6,6 @@ import { JSONContent } from "@tiptap/core";
 import { generateJSON } from "@tiptap/html";
 import { createEditorExtensions } from "./editorExtensions";
 import { useImageStore } from "../stores/useImageStore";
-import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { loggers } from "../../shared/logger";
@@ -83,7 +82,6 @@ export function createTitleFromHtml(html: string): JSONContent {
  */
 function registerImagesFromTitleJson(titleJson: JSONContent): void {
   const imageStore = useImageStore.getState();
-  const imageNodeStore = useEditorImageNodeStore.getState();
   const steamImagePool = useSteamGuideImageStore.getState();
 
   function traverse(node: JSONContent) {
@@ -104,7 +102,6 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
         : null;
 
       if (previewId && poolImage && poolImage.originalUrl && poolImage.thumbnailUrl) {
-        // === 新 Store (主要) ===
         const imageEntity = imageStore.importFromSteamPool({
           steamPreviewId: previewId,
           fileName: fileName || poolImage.fileName || "image.png",
@@ -118,37 +115,18 @@ function registerImagesFromTitleJson(titleJson: JSONContent): void {
           alignment: (alignment as ImageAlignment) || "floatLeft"
         });
 
-        // === 旧 Store (双写兼容) ===
-        const registeredNode = imageNodeStore.registerFromSteamPool({
-          previewId,
-          fileName: fileName || poolImage.fileName || "image.png",
-          uploadId: null,
-          originalUrl: poolImage.originalUrl,
-          thumbnailUrl: poolImage.thumbnailUrl
-        });
-
-        // 建立新旧 Store 关联
-        imageStore.updateSourceNodeId(imageEntity.id, registeredNode.nodeId);
-
-        // 更新节点属性以包含 imageNodeId
+        // 更新节点属性
         node.attrs = {
           ...node.attrs,
-          imageNodeId: registeredNode.nodeId,
+          imageNodeId: imageEntity.id,
           previewId,
           fileName: fileName || poolImage.fileName,
           sizePreset: sizePreset || "original",
           alignment: alignment || "floatLeft"
         };
 
-        // 设置旧 Store 显示属性
-        imageNodeStore.updateDisplay(registeredNode.nodeId, {
-          preset: (sizePreset as ImageSizePreset) || "original",
-          alignment: (alignment as ImageAlignment) || "floatLeft"
-        });
-
-        loggers.editor.verbose('titleHelpers 注册标题图片节点 (双写):', {
-          newStoreId: imageEntity.id,
-          oldStoreNodeId: registeredNode.nodeId,
+        loggers.editor.verbose('titleHelpers 注册标题图片节点:', {
+          imageId: imageEntity.id,
           previewId,
           fileName: fileName || poolImage.fileName
         });

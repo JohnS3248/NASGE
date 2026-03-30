@@ -6,7 +6,6 @@ import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput
 import { processIncomingImages } from "../services/imageIntake";
 import { ImageUploadService } from "../services/ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
-import { useEditorImageNodeStore } from "../stores/useEditorImageNodeStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import {
@@ -166,7 +165,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     if (editor) window.__editor = editor;
   }, [editor]);
 
-  // === 图片节点状态 (新 Store 优先，旧 Store 兜底) ===
+  // === 图片节点状态 ===
   const contextMenuImageEntity = useImageStore(
     useCallback(
       (state) => {
@@ -174,81 +173,60 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           return undefined;
         }
         const nodeId = contextMenu.payload.imageNodeId;
-        // 1. 先通过 sourceNodeId 查找（本地上传的图片）
-        const bySourceNodeId = state.getImageBySourceNodeId(nodeId);
-        if (bySourceNodeId) return bySourceNodeId;
-        // 2. 再通过 steamPreviewId 查找（BBCode 导入的图片，nodeId 可能是 previewId）
-        return state.getImageBySteamPreviewId(nodeId);
+        return (
+          state.getImageById(nodeId) ??
+          state.getImageBySourceNodeId(nodeId) ??
+          state.getImageBySteamPreviewId(nodeId)
+        );
       },
       [contextMenu]
     )
   );
 
-  // 旧 Store 兜底（迁移期间）
-  const contextMenuImageNodeLegacy = useEditorImageNodeStore(
-    useCallback(
-      (state) =>
-        contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
-          ? state.nodes[contextMenu.payload.imageNodeId]
-          : undefined,
-      [contextMenu]
-    )
-  );
-
-  // 合并的图片节点数据（用于 UI 显示）
+  // 图片节点数据（用于 UI 显示）
   const contextMenuImageNode = useMemo(() => {
-    if (contextMenuImageEntity) {
-      // 新 Store 有数据，转换为旧格式以兼容 UI
-      return {
-        nodeId: contextMenuImageEntity.sourceNodeId ?? contextMenuImageEntity.id,
-        display: {
-          preset: contextMenuImageEntity.display.preset,
-          alignment: contextMenuImageEntity.display.alignment,
-          customWidthPx: contextMenuImageEntity.display.customWidthPx
-        }
-      };
-    }
-    // 回退到旧 Store
-    return contextMenuImageNodeLegacy;
-  }, [contextMenuImageEntity, contextMenuImageNodeLegacy]);
+    if (!contextMenuImageEntity) return undefined;
+    return {
+      nodeId: contextMenuImageEntity.sourceNodeId ?? contextMenuImageEntity.id,
+      display: {
+        preset: contextMenuImageEntity.display.preset,
+        alignment: contextMenuImageEntity.display.alignment,
+        customWidthPx: contextMenuImageEntity.display.customWidthPx
+      }
+    };
+  }, [contextMenuImageEntity]);
 
-  // 新 Store 更新方法
-  const updateImageDisplayNew = useImageStore((state) => state.updateDisplay);
-  // 旧 Store 更新方法（双写）
-  const updateImageDisplayLegacy = useEditorImageNodeStore((state) => state.updateDisplay);
-  const removeImageNodeLegacy = useEditorImageNodeStore((state) => state.removeNode);
-  const removeImageNew = useImageStore((state) => state.removeImage);
+  const updateImageDisplayStore = useImageStore((state) => state.updateDisplay);
+  const removeImageStore = useImageStore((state) => state.removeImage);
 
-  // 合并的更新方法（保留用于其他场景）
+  // 通过 TipTap 节点的 imageNodeId 更新图片显示设置
   const updateImageDisplay = useCallback(
     (nodeId: string, patch: Partial<{ preset: ImageDisplayPreset; alignment: ImageAlignment; customWidthPx?: number }>) => {
-      // 先尝试用 sourceNodeId 查找，再尝试用 steamPreviewId 查找
-      let imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
-      if (!imageEntity) {
-        // BBCode 导入的图片可能只有 previewId，没有 sourceNodeId
-        imageEntity = useImageStore.getState().getImageBySteamPreviewId(nodeId);
-      }
+      const store = useImageStore.getState();
+      const imageEntity =
+        store.getImageById(nodeId) ??
+        store.getImageBySourceNodeId(nodeId) ??
+        store.getImageBySteamPreviewId(nodeId);
       if (imageEntity) {
-        updateImageDisplayNew(imageEntity.id, patch);
+        updateImageDisplayStore(imageEntity.id, patch);
       }
-      // 同时更新旧 Store（双写）
-      updateImageDisplayLegacy(nodeId, patch);
     },
-    [updateImageDisplayNew, updateImageDisplayLegacy]
+    [updateImageDisplayStore]
   );
 
-  // 合并的删除方法
+  // 通过 TipTap 节点的 imageNodeId 删除图片
   const removeImageNode = useCallback(
     (nodeId: string) => {
-      // 先尝试删除新 Store
-      const imageEntity = useImageStore.getState().getImageBySourceNodeId(nodeId);
+      const store = useImageStore.getState();
+      const imageEntity =
+        store.getImageById(nodeId) ??
+        store.getImageBySourceNodeId(nodeId) ??
+        store.getImageBySteamPreviewId(nodeId);
       if (imageEntity) {
-        removeImageNew(imageEntity.id);
+        removeImageStore(imageEntity.id);
       }
-      // 同时删除旧 Store（双写）
-      removeImageNodeLegacy(nodeId);
     },
-    [removeImageNew, removeImageNodeLegacy]
+    [removeImageStore]
   );
 
   const toggleLink = useCallback(async () => {
@@ -399,8 +377,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         throw new Error(result.error || "上传失败");
       }
       loggers.image.info('TipTapEditor 图片上传成功，预览码:', result.steamPreviewId);
-
-      // 静默成功，无需弹窗
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       loggers.image.error('TipTapEditor 图片上传失败:', errorMessage);

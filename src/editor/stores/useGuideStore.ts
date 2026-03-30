@@ -4,8 +4,6 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { loggers } from "../../shared/logger";
 
-// 触发旧 store 迁移（必须先于 store 创建）
-import "./migrateLegacyStore";
 
 // Re-export 子 store 的类型，保持向后兼容的 import 路径
 export type { Draft } from "./useDraftStore";
