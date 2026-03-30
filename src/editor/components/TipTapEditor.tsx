@@ -926,6 +926,9 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
               <MenuItem label="右侧插入列" onClick={() => editor.chain().focus().addColumnAfter().run()} onComplete={closeContextMenu} />
               <MenuItem label="删除当前列" onClick={() => editor.chain().focus().deleteColumn().run()} onComplete={closeContextMenu} danger />
               <MenuDivider />
+              <MenuSectionLabel label="嵌套" />
+              <MenuItem label="在单元格内插入表格" onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: false }).run()} onComplete={closeContextMenu} />
+              <MenuDivider />
               <MenuItem label="删除整个表格" onClick={() => editor.chain().focus().deleteTable().run()} onComplete={closeContextMenu} danger />
             </>
           ) : contextMenu.mode === "selection" ? (

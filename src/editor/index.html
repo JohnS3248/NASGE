@@ -205,8 +205,9 @@
         background: rgba(102, 192, 244, 0.08) !important;
       }
 
-      /* 表格 hover 行高亮 */
-      .nasge-table tr:hover td {
+      /* 表格 hover 行高亮（> td 防止嵌套表格被连带高亮） */
+      .nasge-table tr:hover > td,
+      .nasge-table tr:hover > th {
         background: rgba(102, 192, 244, 0.03);
       }
 
