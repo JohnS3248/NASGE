@@ -385,7 +385,7 @@ const DEFAULT_CONFIG: EditorConfig = {
   autoUploadInPanel: false, // 默认关闭悬浮窗自动上传
   promptRenameOnPaste: true, // 默认开启粘贴时重命名（内联编辑）
   promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
-  debugMode: true, // 默认开启调试模式（开发阶段），发布前改为 false
+  debugMode: false,
   shortcuts: DEFAULT_SHORTCUTS,
   // 主题默认值
   theme: 'steam-dark',

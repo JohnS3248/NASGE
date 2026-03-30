@@ -23,7 +23,6 @@ import type { GuideInfoResult } from "./guideInfo";
 import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./steamBridge";
 import { loggers, setDebugMode } from "../shared/logger";
 
-// Content script 无 EditorConfigStore，开发阶段始终开启日志
 setDebugMode(false);
 
 (() => {

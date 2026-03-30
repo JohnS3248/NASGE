@@ -1,6 +1,5 @@
 import { loggers, setDebugMode } from "../shared/logger";
 
-// Background 无 EditorConfigStore，开发阶段始终开启日志
 setDebugMode(false);
 
 chrome.runtime.onInstalled.addListener((details) => {

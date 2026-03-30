@@ -19,6 +19,11 @@ htmls/
 # 打包输出
 zips/
 
+# 敏感文件
+*.env
+.env*
+*.pem
+
 # 其他实验性内容
 others/
 .mcp.json

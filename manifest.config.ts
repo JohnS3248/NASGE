@@ -39,16 +39,6 @@ export default defineManifest({
       js: ["src/content/main.ts"]
     },
     {
-      matches: ["https://steamcommunity.com/*"],
-      js: ["src/content/debug.ts"],
-      world: "MAIN"
-    },
-    {
-      matches: ["https://steamcommunity.com/*"],
-      js: ["src/content/inspectGlobals.ts"],
-      world: "MAIN"
-    },
-    {
       matches: ["https://store.steampowered.com/app/*"],
       js: ["src/content/reviewMain.ts"]
     }
