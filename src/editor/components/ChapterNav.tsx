@@ -384,7 +384,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   /* ── 展开态 ────────────────────────────────────────────── */
 
   return (
-    <aside className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col h-fit max-h-[calc(100vh-200px)] sticky top-4 overflow-hidden">
+    <aside className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col max-h-full overflow-hidden">
       {/* 头部 */}
       <div className="px-2.5 py-2.5 border-b border-border-subtle bg-bg-app/60 flex justify-between items-center">
         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
