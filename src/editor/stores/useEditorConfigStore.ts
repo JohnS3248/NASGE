@@ -123,12 +123,6 @@ export type EditorAlignment = 'left' | 'center' | 'full';
  */
 export type ToolbarDockMode = 'side' | 'top' | 'floating';
 
-/**
- * 工具栏位置（已废弃，保留类型兼容迁移）
- * @deprecated 使用 toolbarPos 代替
- */
-export type ToolbarPosition = 'top' | 'left';
-
 // ==================== 右键菜单配置 ====================
 
 /**
@@ -334,12 +328,9 @@ export type EditorConfig = {
   smartLayoutHeightThreshold: number; // 大图高度阈值 (px)
   // 编辑器布局配置
   editorAlignment: EditorAlignment;   // 编辑器对齐方式：靠左/居中
-  toolbarPosition: ToolbarPosition;   // @deprecated 工具栏位置（已废弃）
   toolbarPos: { x: number; y: number }; // 悬浮工具栏位置
   toolbarDockMode: ToolbarDockMode;   // 工具栏停靠模式
   showPreview: boolean;               // 实时预览开关
-  // 图片池配置（旧版，保留兼容）
-  imageContextMenuEnabled: boolean;   // 图片池右键菜单开关（已废弃，使用 imagePoolMenuConfig.enabled）
   // 右键菜单配置
   imageMenuConfig: ImageMenuConfig;         // 编辑器图片菜单
   selectionMenuConfig: ContextMenuConfig;   // 文字选择菜单
@@ -365,12 +356,9 @@ type EditorConfigState = EditorConfig & {
   setSmartLayoutHeightThreshold: (value: number) => void;
   // 编辑器布局相关
   setEditorAlignment: (alignment: EditorAlignment) => void;
-  setToolbarPosition: (position: ToolbarPosition) => void;
   setToolbarPos: (pos: { x: number; y: number }) => void;
   setToolbarDockMode: (mode: ToolbarDockMode) => void;
   setShowPreview: (enabled: boolean) => void;
-  // 图片池相关（旧版）
-  setImageContextMenuEnabled: (enabled: boolean) => void;
   // 右键菜单配置相关
   setContextMenuEnabled: (menuType: ContextMenuType, enabled: boolean) => void;
   setMenuItemEnabled: (menuType: ContextMenuType, itemId: string, enabled: boolean, groupId?: 'preset' | 'align' | 'action') => void;
@@ -395,12 +383,9 @@ const DEFAULT_CONFIG: EditorConfig = {
   smartLayoutHeightThreshold: 600, // 默认 600px
   // 编辑器布局默认值
   editorAlignment: 'center',        // 默认居中
-  toolbarPosition: 'top',           // @deprecated
   toolbarPos: { x: -1, y: -1 },    // -1 表示使用默认位置
   toolbarDockMode: 'side',          // 默认侧边停靠
   showPreview: false,               // 默认关闭实时预览
-  // 图片池默认值（旧版兼容）
-  imageContextMenuEnabled: true,    // 默认开启右键菜单
   // 右键菜单配置默认值
   imageMenuConfig: DEFAULT_IMAGE_MENU_CONFIG,
   selectionMenuConfig: DEFAULT_SELECTION_MENU_CONFIG,
@@ -473,10 +458,6 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         loggers.config.info("设置编辑器对齐方式:", alignment);
         set({ editorAlignment: alignment });
       },
-      setToolbarPosition: (position) => {
-        loggers.config.info("设置工具栏位置:", position);
-        set({ toolbarPosition: position });
-      },
       setToolbarPos: (pos) => {
         set({ toolbarPos: pos });
       },
@@ -487,10 +468,6 @@ export const useEditorConfigStore = create<EditorConfigState>()(
       setShowPreview: (enabled) => {
         loggers.config.info("设置实时预览:", enabled ? "开启" : "关闭");
         set({ showPreview: enabled });
-      },
-      setImageContextMenuEnabled: (enabled) => {
-        loggers.config.info("设置图片池右键菜单:", enabled ? "开启" : "关闭");
-        set({ imageContextMenuEnabled: enabled });
       },
       // 右键菜单配置方法
       setContextMenuEnabled: (menuType, enabled) => {
@@ -505,8 +482,7 @@ export const useEditorConfigStore = create<EditorConfigState>()(
               return { emptyMenuConfig: { ...state.emptyMenuConfig, enabled } };
             case 'imagePool':
               return {
-                imagePoolMenuConfig: { ...state.imagePoolMenuConfig, enabled },
-                imageContextMenuEnabled: enabled // 同步旧字段
+                imagePoolMenuConfig: { ...state.imagePoolMenuConfig, enabled }
               };
             default:
               return {};
@@ -586,8 +562,7 @@ export const useEditorConfigStore = create<EditorConfigState>()(
               return { emptyMenuConfig: DEFAULT_EMPTY_MENU_CONFIG };
             case 'imagePool':
               return {
-                imagePoolMenuConfig: DEFAULT_IMAGE_POOL_MENU_CONFIG,
-                imageContextMenuEnabled: true
+                imagePoolMenuConfig: DEFAULT_IMAGE_POOL_MENU_CONFIG
               };
             default:
               return {};
@@ -622,12 +597,9 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           theme: persisted?.theme ?? DEFAULT_CONFIG.theme,
           // 确保编辑器布局字段有默认值
           editorAlignment: persisted?.editorAlignment ?? DEFAULT_CONFIG.editorAlignment,
-          toolbarPosition: persisted?.toolbarPosition ?? DEFAULT_CONFIG.toolbarPosition,
           toolbarPos: persisted?.toolbarPos ?? DEFAULT_CONFIG.toolbarPos,
           toolbarDockMode: persisted?.toolbarDockMode ?? DEFAULT_CONFIG.toolbarDockMode,
           showPreview: persisted?.showPreview ?? DEFAULT_CONFIG.showPreview,
-          // 确保图片池字段有默认值
-          imageContextMenuEnabled: persisted?.imageContextMenuEnabled ?? DEFAULT_CONFIG.imageContextMenuEnabled,
           // 深度合并右键菜单配置
           imageMenuConfig: mergeImageMenuConfig(persisted?.imageMenuConfig),
           selectionMenuConfig: mergeContextMenuConfig(persisted?.selectionMenuConfig, DEFAULT_SELECTION_MENU_CONFIG),

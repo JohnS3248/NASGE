@@ -34,9 +34,6 @@ export type GuideArchive = {
   chapters: ChapterInfo[];
   chaptersUpdatedAt: number;
 
-  // 图片分组（已废弃，保留兼容已持久化数据）
-  imageGroups?: unknown[];
-
   // 图片标签系统
   imageTags: ImageTag[];
   imageTagMap: Record<string, string[]>;

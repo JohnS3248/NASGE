@@ -50,7 +50,6 @@ type DraftState = {
   reorderDrafts: (newOrder: string[]) => void;
 
   // 脏标记
-  setDirty: (dirty: boolean) => void;
   markDirty: () => void;
   markClean: () => void;
 
@@ -174,7 +173,6 @@ export const useDraftStore = create<DraftState>()(
       },
 
       // 脏标记
-      setDirty: (dirty) => set({ isDirty: dirty }),
       markDirty: () => set({ isDirty: true }),
       markClean: () => set({ isDirty: false }),
 
