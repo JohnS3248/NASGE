@@ -304,7 +304,11 @@ async function findSteamTab(action?: string): Promise<chrome.tabs.Tab | undefine
 
   const tabs = await chrome.tabs.query({ url: urls });
   if (tabs.length) {
-    return tabs[0];
+    // 优先选择指南编辑相关页面（manageguide / editguidesubsection）
+    const guideTab = tabs.find((t) =>
+      t.url?.includes("/manageguide/") || t.url?.includes("/editguidesubsection/")
+    );
+    return guideTab ?? tabs[0];
   }
 
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
