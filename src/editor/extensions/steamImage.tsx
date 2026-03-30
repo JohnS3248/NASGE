@@ -5,6 +5,7 @@ import type { NodeViewProps } from "@tiptap/react";
 import type { CommandProps } from "@tiptap/core";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { useImageStore } from "../stores/useImageStore";
+import { useImageFromStore } from "../hooks/useImageFromStore";
 import type { ImageEntity, ImageSizePreset, ImageAlignment, ImageSource } from "../types/image";
 import { DEFAULT_IMAGE_PRESET, DEFAULT_IMAGE_ALIGNMENT } from "../types/image";
 import { loggers } from "../../shared/logger";
@@ -12,29 +13,6 @@ import { loggers } from "../../shared/logger";
 // Steam 尺寸常量 (来自 Steam 实际测量 2025-12-31)
 const STEAM_CONTENT_WIDTH = 638;
 const STEAM_THUMB_WIDTH = 311;
-
-/**
- * 从 useImageStore 获取图片实体
- * 支持多种 ID 查找：imageEntity.id、sourceNodeId、steamPreviewId
- */
-function useImageFromStore(
-  imageNodeId: string | null,
-  previewId: string | null
-): ImageEntity | undefined {
-  return useImageStore((state) => {
-    if (imageNodeId) {
-      const byId = state.getImageById(imageNodeId);
-      if (byId) return byId;
-      const bySourceNodeId = state.getImageBySourceNodeId(imageNodeId);
-      if (bySourceNodeId) return bySourceNodeId;
-    }
-    if (previewId) {
-      const byPreviewId = state.getImageBySteamPreviewId(previewId);
-      if (byPreviewId) return byPreviewId;
-    }
-    return undefined;
-  });
-}
 
 /**
  * 确保图片在 useImageStore 中有记录

@@ -87,14 +87,14 @@ export function decodePreviewImage(rawValue: string | null | undefined): Preview
   };
 }
 
-function parseSizeToken(token: string): ImageDisplayPreset {
+export function parseSizeToken(token: string): ImageDisplayPreset {
   const entry = Object.entries(SIZE_TOKENS).find(
     ([, value]) => value.toLowerCase() === token.toLowerCase()
   );
   return (entry?.[0] as ImageDisplayPreset) ?? DEFAULT_SIZE;
 }
 
-function parseAlignmentToken(token: string): ImageAlignment {
+export function parseAlignmentToken(token: string): ImageAlignment {
   const entry = Object.entries(ALIGNMENT_TOKENS).find(
     ([, value]) => value.toLowerCase() === token.toLowerCase()
   );

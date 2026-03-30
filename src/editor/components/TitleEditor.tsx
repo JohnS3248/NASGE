@@ -7,6 +7,7 @@ import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput
 import { processIncomingImages } from '../services/imageIntake';
 import { ImageUploadService } from '../services/ImageUploadService';
 import { useImageStore } from '../stores/useImageStore';
+import { MenuItem, MenuSectionLabel, MenuDivider } from './ContextMenuParts';
 import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
 import { TITLE_CHARACTER_LIMIT } from '../constants/limits';
@@ -486,46 +487,5 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     </div>
   );
 };
-
-// ===== 菜单组件 =====
-
-type MenuItemProps = {
-  label: string;
-  onClick: () => void;
-  onComplete: () => void;
-  active?: boolean;
-  danger?: boolean;
-  disabled?: boolean;
-};
-
-const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active, danger, disabled }) => (
-  <button
-    type="button"
-    disabled={disabled}
-    onClick={() => {
-      if (disabled) return;
-      onClick();
-      onComplete();
-    }}
-    className={`border-0 text-left px-3 py-2 rounded-md text-[0.85rem] ${
-      active ? 'bg-accent-muted font-semibold text-text-primary' : 'bg-transparent font-medium text-text-primary'
-    } ${danger ? '!text-[#ff8f8f]' : ''} ${disabled ? '!text-text-muted cursor-not-allowed' : 'cursor-pointer'}`}
-    onMouseDown={(event) => {
-      event.preventDefault();
-    }}
-  >
-    {label}
-  </button>
-);
-
-const MenuSectionLabel: React.FC<{ label: string }> = ({ label }) => (
-  <div className="px-3 pt-1 pb-0.5 text-[0.72rem] uppercase tracking-wider text-[rgba(173,205,244,0.7)]">
-    {label}
-  </div>
-);
-
-const MenuDivider: React.FC = () => (
-  <div className="h-px mx-2 my-1 bg-border-default" />
-);
 
 export default TitleEditor;

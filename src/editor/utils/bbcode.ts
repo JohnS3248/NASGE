@@ -1,4 +1,5 @@
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
+import { parseSizeToken, parseAlignmentToken } from './previewImageBBCode';
 import { loggers } from '../../shared/logger';
 
 const INLINE_MARKS: Record<string, { open: string; close: string }> = {
@@ -544,24 +545,3 @@ export function bbcodeToHtml(bbcode: string): string {
     .join("");
 }
 
-/**
- * 解析 BBCode 中的尺寸标记为内部使用的枚举值
- */
-function parseSizeToken(token: string): string {
-  const normalized = token.toLowerCase();
-  if (normalized === 'sizeoriginal') return 'original';
-  if (normalized === 'sizefull') return 'full';
-  if (normalized === 'sizehalf' || normalized === 'sizethumb') return 'half';
-  return 'original'; // 默认
-}
-
-/**
- * 解析 BBCode 中的对齐标记为内部使用的枚举值
- */
-function parseAlignmentToken(token: string): string {
-  const normalized = token.toLowerCase();
-  if (normalized === 'floatleft') return 'floatLeft';
-  if (normalized === 'floatright') return 'floatRight';
-  if (normalized === 'inline') return 'inline';
-  return 'floatLeft'; // 默认
-}
