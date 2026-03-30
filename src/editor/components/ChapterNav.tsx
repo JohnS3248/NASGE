@@ -3,8 +3,6 @@ import { useGuideStore, type ChapterInfo } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useDraftStore } from '../stores/useDraftStore';
 import { useChapterSync } from '../hooks/useChapterSync';
-import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
-import type { ImageState } from '../stores/useSteamGuideImageStore';
 import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
 import { toast } from '../stores/useToastStore';
@@ -77,76 +75,27 @@ interface ChapterNavProps {
 }
 
 /**
- * 迷你状态指示器组件（小圆点，用于章节标题缩略图）
- */
-const MiniStateIndicator: React.FC<{ state: ImageState }> = ({ state }) => {
-  // 只在非成功状态下显示（成功状态不显示，因为章节标题图片默认都是已上传的）
-  if (state === "success") return null;
-
-  const colorClass = state === "pending"
-    ? "bg-gray-500"
-    : state === "uploading"
-      ? "bg-warning"
-      : state === "error"
-        ? "bg-danger"
-        : "bg-gray-500";
-
-  return (
-    <div className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border-[1.5px] border-black/60 shadow-sm z-10 ${colorClass}`} />
-  );
-};
-
-/**
- * 章节标题图片组件（原尺寸）
- * 用于章节目录导航，显示原尺寸图片（模拟官方效果）
+ * 章节标题图片组件
+ * 直接使用从 preview 页解析的透明图片 URL，不依赖图片池
  */
 const ChapterTitleImage: React.FC<{
-  previewId: string;
+  url: string;
   fileName: string;
-  titleText?: string;
-}> = ({ previewId, fileName }) => {
-  const imagePool = useSteamGuideImageStore((state) => state.items);
-  const imagePoolStatus = useSteamGuideImageStore((state) => state.status);
+}> = ({ url, fileName }) => {
   const [imageError, setImageError] = useState(false);
 
-  const imageInfo = useMemo(() => {
-    return imagePool.find((img) => img.previewId === previewId);
-  }, [imagePool, previewId]);
-
-  const imageUrl = useMemo(() => {
-    const poolOriginal = imageInfo?.originalUrl;
-    const poolThumbnail = imageInfo?.thumbnailUrl;
-
-    loggers.editor.verbose('ChapterTitleImage building URL:', {
-      previewId, fileName, imageInfo, poolOriginal, poolThumbnail, imagePoolStatus,
-      finalUrl: poolOriginal || poolThumbnail || null
-    });
-
-    if (!imageInfo && (imagePoolStatus === "loading" || imagePoolStatus === "idle")) {
-      return null;
-    }
-
-    return poolOriginal || poolThumbnail || null;
-  }, [previewId, fileName, imageInfo, imagePoolStatus]);
-
-  const imageState: ImageState = imageInfo?.state || "success";
-  const showPlaceholder = imageError || !imageUrl;
-
   return (
-    <div className={`block relative w-full max-w-full overflow-hidden rounded-sm ${showPlaceholder ? 'bg-bg-app/60 border border-accent/20' : 'bg-transparent'}`}>
-      {!imageError && imageUrl ? (
-        <>
-          <img
-            src={imageUrl}
-            alt={fileName}
-            className="w-full h-auto block object-contain"
-            onError={() => setImageError(true)}
-          />
-          <MiniStateIndicator state={imageState} />
-        </>
+    <div className={`block relative w-full max-w-full overflow-hidden rounded-sm ${imageError ? 'bg-bg-app/60 border border-accent/20' : 'bg-transparent'}`}>
+      {!imageError ? (
+        <img
+          src={url}
+          alt={fileName}
+          className="w-full h-auto block object-contain"
+          onError={() => setImageError(true)}
+        />
       ) : (
         <div className="w-full min-h-[80px] flex items-center justify-center text-[32px] opacity-30">
-          {imagePoolStatus === "loading" || imagePoolStatus === "idle" ? '⏳' : '🖼️'}
+          🖼️
         </div>
       )}
     </div>
@@ -157,7 +106,7 @@ const ChapterTitleImage: React.FC<{
  * 单个章节项组件（使用 React.memo 避免不必要的重渲染）
  */
 const ChapterItem = React.memo<{
-  chapter: { sectionId: string; title: string };
+  chapter: { sectionId: string; title: string; titleImageUrl?: string };
   isLinked: boolean;
   isModified: boolean;
   isLoading: boolean;
@@ -171,7 +120,7 @@ const ChapterItem = React.memo<{
   onDragLeave: () => void;
   onDrop: (e: React.DragEvent, targetId: string) => void;
   onDragEnd: () => void;
-  renderTitle: (title: string) => React.ReactNode;
+  renderTitle: (chapter: { title: string; titleImageUrl?: string }) => React.ReactNode;
 }>(({
   chapter, isLinked, isModified, isLoading, isDragging, isDragOver,
   boundDraftName, onChapterClick, onPullChapter, onDragStart, onDragOver,
@@ -205,7 +154,7 @@ const ChapterItem = React.memo<{
         disabled={isLoading}
         className={`border-0 bg-transparent text-left py-2 px-2.5 text-sm flex-1 font-normal leading-relaxed overflow-hidden ${isLinked ? 'text-white' : 'text-[#c5c5c5]'} ${isLoading ? 'cursor-wait opacity-60' : 'cursor-pointer'}`}
       >
-        {isLoading ? '拉取中...' : renderTitle(chapter.title)}
+        {isLoading ? '拉取中...' : renderTitle(chapter)}
       </button>
 
       {/* 显示绑定的草稿名 */}
@@ -399,23 +348,20 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     return text.trim();
   };
 
-  const renderChapterTitle = (title: string) => {
-    const imageInfo = parseChapterTitleImage(title);
-
-    loggers.editor.verbose('renderChapterTitle', { title, imageInfo, rawTitle: title });
-
-    if (imageInfo) {
+  const renderChapterTitle = (chapter: { title: string; titleImageUrl?: string }) => {
+    // 优先使用从 preview 页解析的透明图片 URL
+    if (chapter.titleImageUrl) {
+      const imageInfo = parseChapterTitleImage(chapter.title);
       return (
         <ChapterTitleImage
-          previewId={imageInfo.previewId}
-          fileName={imageInfo.fileName}
-          titleText=""
+          url={chapter.titleImageUrl}
+          fileName={imageInfo?.fileName || ''}
         />
       );
     }
 
-    const titleText = getChapterTitleText(title);
-    return titleText || title;
+    const titleText = getChapterTitleText(chapter.title);
+    return titleText || chapter.title;
   };
 
   /* ── 折叠态 ────────────────────────────────────────────── */

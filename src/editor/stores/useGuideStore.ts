@@ -34,7 +34,7 @@ export type GuideInfo = {
   id: string;
   title: string;
   coverUrl?: string;
-  chapters: { sectionId: string; title: string; order: number }[];
+  chapters: { sectionId: string; title: string; order: number; titleImageUrl?: string }[];
 };
 
 // ============================================================================

@@ -67,7 +67,7 @@ type DispatchPayload =
   | SteamGuideImage[]
   | ChapterContent
   | { sectionId: string }
-  | { chapters: Array<{ sectionId: string; title: string; order: number }> }
+  | { chapters: Array<{ sectionId: string; title: string; order: number; titleImageUrl?: string }> }
   | GuideInfoResult;
 
 async function dispatchSteamBridgeMessage(
