@@ -8,6 +8,7 @@ import type { ImageState } from '../stores/useSteamGuideImageStore';
 import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
 import { toast } from '../stores/useToastStore';
+import { dialog } from '../stores/useDialogStore';
 
 /* ── Lucide SVG 图标 ─────────────────────────────────────── */
 
@@ -276,10 +277,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   if (mode === 'review') return null;
   if (chapters.length === 0) return null;
 
-  const handleChapterClick = (sectionId: string) => {
+  const handleChapterClick = async (sectionId: string) => {
     const switched = switchToChapter(sectionId);
     if (!switched) {
-      if (window.confirm('该章节尚未拉取，是否立即从 Steam 拉取内容？')) {
+      if (await dialog.confirm({ message: '该章节尚未拉取，是否立即从 Steam 拉取内容？' })) {
         pullChapter(sectionId);
       }
     }

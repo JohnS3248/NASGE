@@ -4,6 +4,7 @@ import { useDraftStore } from '../stores/useDraftStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { extractTitleText } from '../utils/titleHelpers';
+import { dialog } from '../stores/useDialogStore';
 
 // ============================================================================
 // Types & Helpers
@@ -212,10 +213,10 @@ const DraftPanel: React.FC = () => {
     setIsExpanded(false);
   }, [selectDraft]);
 
-  const handleAddDraft = useCallback(() => {
+  const handleAddDraft = useCallback(async () => {
     const { nextDraftNumber } = useDraftStore.getState();
     const defaultName = `未命名草稿 ${nextDraftNumber}`;
-    const name = window.prompt('新建草稿', defaultName);
+    const name = await dialog.prompt({ message: '新建草稿', defaultValue: defaultName });
     if (name === null) return;
 
     const finalName = name.trim() || defaultName;
@@ -232,8 +233,8 @@ const DraftPanel: React.FC = () => {
     if (newDraft) selectDraft(newDraft.id);
   }, [addDraft, selectDraft, mode, currentArchiveId]);
 
-  const handleRename = useCallback((id: string, currentName: string) => {
-    const newName = window.prompt('重命名草稿', currentName);
+  const handleRename = useCallback(async (id: string, currentName: string) => {
+    const newName = await dialog.prompt({ message: '重命名草稿', defaultValue: currentName });
     if (newName && newName.trim()) {
       updateDraft(id, { draftName: newName.trim() });
     }
@@ -244,15 +245,15 @@ const DraftPanel: React.FC = () => {
     if (newDraft) selectDraft(newDraft.id);
   }, [duplicateDraft, selectDraft]);
 
-  const handleDelete = useCallback((id: string, name: string) => {
-    if (window.confirm(`确定要删除草稿"${name}"吗？`)) {
+  const handleDelete = useCallback(async (id: string, name: string) => {
+    if (await dialog.confirm({ message: `确定要删除草稿"${name}"吗？`, danger: true })) {
       deleteDraft(id);
     }
   }, [deleteDraft]);
 
-  const handleBatchDelete = useCallback(() => {
+  const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (window.confirm(`确定要删除选中的 ${selectedIds.size} 个草稿吗？`)) {
+    if (await dialog.confirm({ message: `确定要删除选中的 ${selectedIds.size} 个草稿吗？`, danger: true })) {
       selectedIds.forEach((id) => deleteDraft(id));
       setSelectedIds(new Set());
       setBatchMode(false);

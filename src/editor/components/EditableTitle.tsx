@@ -4,7 +4,7 @@ interface EditableTitleProps {
   value: string;
   onChange: (newValue: string) => void;
   placeholder?: string;
-  style?: React.CSSProperties;
+  className?: string;
 }
 
 /**
@@ -19,7 +19,7 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
   value,
   onChange,
   placeholder = '无标题',
-  style = {}
+  className = ''
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -70,15 +70,7 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
         onChange={(e) => setEditValue(e.target.value)}
         onBlur={handleSave}
         onKeyDown={handleKeyDown}
-        style={{
-          ...style,
-          border: '1px solid #66c0f4',
-          background: 'rgba(13, 23, 36, 0.9)',
-          color: '#d7e8ff',
-          outline: 'none',
-          borderRadius: '0.3rem',
-          padding: '0.3rem 0.5rem'
-        }}
+        className={`border border-accent bg-[rgba(13,23,36,0.9)] text-text-primary outline-none rounded-sm px-2 py-1 ${className}`}
         maxLength={128}
       />
     );
@@ -87,19 +79,7 @@ const EditableTitle: React.FC<EditableTitleProps> = ({
   return (
     <div
       onDoubleClick={() => setIsEditing(true)}
-      style={{
-        ...style,
-        cursor: 'text',
-        padding: '0.3rem 0.5rem',
-        borderRadius: '0.3rem',
-        transition: 'background 0.15s ease'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(102, 192, 244, 0.1)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'transparent';
-      }}
+      className={`cursor-text px-2 py-1 rounded-sm transition-colors duration-150 hover:bg-accent/10 ${className}`}
       title="双击编辑"
     >
       {displayValue}

@@ -295,26 +295,11 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   }
 
   return (
-    <div style={{
-      position: 'relative',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'var(--bg-input, rgba(9, 15, 25, 0.55))',
-      border: '1px solid var(--border-accent, rgba(102, 192, 244, 0.25))',
-      borderRadius: '1rem',
-      padding: '1.25rem',
-      boxShadow: '0 18px 30px rgba(7, 11, 19, 0.45)'
-    }}>
+    <div className="relative flex flex-col bg-bg-input border border-border-accent rounded-xl p-5 shadow-xl">
       {/* 标题编辑器内容区 */}
       <div
-        style={{
-          width: '100%',
-          color: 'var(--color-primary, #66c0f4)',
-          fontSize: '18px',
-          fontWeight: 400,
-          fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif',
-          outline: 'none'
-        }}
+        className="w-full text-accent text-lg font-normal outline-none"
+        style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif' }}
         onContextMenu={(event) => {
           event.preventDefault();
           if (!editor) {
@@ -390,14 +375,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 
       {/* 字符数统计 */}
       <div
-        style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          marginTop: '0.5rem',
-          fontSize: '0.85rem',
-          fontWeight: 500,
-          color: getCharacterCountColor(characterInfo)
-        }}
+        className="flex justify-end mt-2 text-[0.85rem] font-medium"
+        style={{ color: getCharacterCountColor(characterInfo) }}
       >
         {getCharacterCountText(characterInfo)}
       </div>
@@ -405,21 +384,8 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       {/* 右键菜单 */}
       {contextMenu.visible && contextMenu.mode === "image" && contextMenuImageNode && (
         <div
-          style={{
-            position: "fixed",
-            top: contextMenu.y,
-            left: contextMenu.x,
-            background: "var(--bg-toolbar, rgba(15, 26, 41, 0.95))",
-            border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
-            borderRadius: "var(--radius-md, 0.75rem)",
-            padding: "0.35rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-            minWidth: "160px",
-            zIndex: 9999,
-            boxShadow: "0 16px 38px rgba(6, 12, 20, 0.55)"
-          }}
+          className="fixed bg-bg-overlay border border-border-accent rounded-lg p-1 flex flex-col gap-1 min-w-[160px] z-[9999] shadow-xl"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           <MenuSectionLabel label="尺寸" />
           {IMAGE_SIZE_OPTIONS.map((option) => (
@@ -536,17 +502,9 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active,
       onClick();
       onComplete();
     }}
-    style={{
-      border: "none",
-      background: active ? "rgba(102, 192, 244, 0.16)" : "transparent",
-      textAlign: "left",
-      padding: "0.55rem 0.75rem",
-      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "var(--text-bright, #e3edf9)" : "var(--text-primary, #d7e8ff)",
-      borderRadius: "var(--radius-sm, 0.6rem)",
-      fontSize: "0.85rem",
-      cursor: disabled ? "not-allowed" : "pointer",
-      fontWeight: active ? 600 : 500
-    }}
+    className={`border-0 text-left px-3 py-2 rounded-md text-[0.85rem] ${
+      active ? 'bg-accent-muted font-semibold text-text-primary' : 'bg-transparent font-medium text-text-primary'
+    } ${danger ? '!text-[#ff8f8f]' : ''} ${disabled ? '!text-text-muted cursor-not-allowed' : 'cursor-pointer'}`}
     onMouseDown={(event) => {
       event.preventDefault();
     }}
@@ -556,27 +514,13 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active,
 );
 
 const MenuSectionLabel: React.FC<{ label: string }> = ({ label }) => (
-  <div
-    style={{
-      padding: "0.3rem 0.75rem 0.15rem",
-      fontSize: "0.72rem",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      color: "rgba(173, 205, 244, 0.7)"
-    }}
-  >
+  <div className="px-3 pt-1 pb-0.5 text-[0.72rem] uppercase tracking-wider text-[rgba(173,205,244,0.7)]">
     {label}
   </div>
 );
 
 const MenuDivider: React.FC = () => (
-  <div
-    style={{
-      height: "1px",
-      margin: "0.25rem 0.5rem",
-      background: "var(--border-input, rgba(102, 192, 244, 0.18))"
-    }}
-  />
+  <div className="h-px mx-2 my-1 bg-border-default" />
 );
 
 export default TitleEditor;

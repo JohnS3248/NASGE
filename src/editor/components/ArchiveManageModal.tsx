@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
+import { dialog } from '../stores/useDialogStore';
 
 interface ArchiveManageModalProps {
   visible: boolean;
@@ -51,13 +52,13 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
   };
 
   // 删除存档（带确认）
-  const handleDeleteArchive = (archive: GuideArchive) => {
+  const handleDeleteArchive = async (archive: GuideArchive) => {
     const isOffline = archive.guideId.startsWith('offline-');
     const warningMsg = isOffline
       ? `确定要删除离线存档"${archive.guideName}"吗？\n\n该存档下的所有草稿将变为未关联状态。`
       : `确定要删除存档"${archive.guideName}"吗？\n\n注意：这只会删除本地缓存，不会影响 Steam 上的原始指南。该存档下的所有草稿将变为未关联状态。`;
 
-    if (window.confirm(warningMsg)) {
+    if (await dialog.confirm({ message: warningMsg, danger: true })) {
       deleteArchive(archive.guideId);
     }
   };
@@ -66,92 +67,36 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 10000
-      }}
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000]"
       onClick={onClose}
     >
       <div
-        style={{
-          background: 'rgba(13, 23, 36, 0.98)',
-          border: '1px solid rgba(102, 192, 244, 0.3)',
-          borderRadius: '1rem',
-          padding: '1.5rem',
-          width: '480px',
-          maxHeight: '80vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 16px 48px rgba(0, 0, 0, 0.5)'
-        }}
+        className="bg-[rgba(13,23,36,0.98)] border border-accent/30 rounded-xl p-6 w-[480px] max-h-[80vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.2rem',
-          paddingBottom: '0.8rem',
-          borderBottom: '1px solid rgba(102, 192, 244, 0.15)'
-        }}>
-          <h2 style={{
-            margin: 0,
-            fontSize: '1.2rem',
-            fontWeight: 600,
-            color: '#f6fbff'
-          }}>
-            📦 存档管理
+        <div className="flex justify-between items-center mb-5 pb-3 border-b border-border-default">
+          <h2 className="m-0 text-xl font-semibold text-text-primary">
+            存档管理
           </h2>
           <button
             type="button"
             onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#8aa4c7',
-              fontSize: '1.2rem',
-              cursor: 'pointer',
-              padding: '0.25rem'
-            }}
+            className="bg-transparent border-0 text-text-secondary text-xl cursor-pointer p-1 hover:text-text-primary nasge-transition-quick"
           >
             ✕
           </button>
         </div>
 
         {/* 存档统计 */}
-        <div style={{
-          fontSize: '0.85rem',
-          color: '#8aa4c7',
-          marginBottom: '1rem'
-        }}>
+        <div className="text-[0.85rem] text-text-secondary mb-4">
           共 {archiveList.length} 个存档
         </div>
 
         {/* 存档列表 */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          marginBottom: '1rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem'
-        }}>
+        <div className="flex-1 overflow-y-auto mb-4 flex flex-col gap-2">
           {archiveList.length === 0 ? (
-            <div style={{
-              padding: '2rem',
-              textAlign: 'center',
-              color: '#6b7f9a',
-              fontSize: '0.9rem'
-            }}>
+            <div className="py-8 text-center text-text-muted text-[0.9rem]">
               暂无存档，访问 Steam 指南或创建离线存档
             </div>
           ) : (
@@ -172,12 +117,9 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
         </div>
 
         {/* 新建离线存档区域 */}
-        <div style={{
-          borderTop: '1px solid rgba(102, 192, 244, 0.15)',
-          paddingTop: '1rem'
-        }}>
+        <div className="border-t border-border-default pt-4">
           {isCreating ? (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div className="flex gap-2">
               <input
                 type="text"
                 value={newArchiveName}
@@ -191,33 +133,17 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
                     setNewArchiveName('');
                   }
                 }}
-                style={{
-                  flex: 1,
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: '0.4rem',
-                  border: '1px solid rgba(102, 192, 244, 0.4)',
-                  background: 'rgba(8, 14, 23, 0.8)',
-                  color: '#d7e8ff',
-                  fontSize: '0.9rem',
-                  outline: 'none'
-                }}
+                className="flex-1 px-3 py-2.5 rounded-md border border-accent/40 bg-bg-input text-text-primary text-[0.9rem] outline-none focus:border-accent nasge-transition-quick"
               />
               <button
                 type="button"
                 onClick={handleCreateOfflineArchive}
                 disabled={!newArchiveName.trim()}
-                style={{
-                  padding: '0.6rem 1rem',
-                  borderRadius: '0.4rem',
-                  border: 'none',
-                  background: newArchiveName.trim()
-                    ? 'linear-gradient(135deg, rgba(102, 192, 244, 0.9), rgba(66, 139, 202, 0.9))'
-                    : 'rgba(102, 192, 244, 0.3)',
-                  color: newArchiveName.trim() ? '#06101e' : '#6b7f9a',
-                  fontWeight: 600,
-                  cursor: newArchiveName.trim() ? 'pointer' : 'not-allowed',
-                  fontSize: '0.85rem'
-                }}
+                className={`px-4 py-2.5 rounded-md border-0 font-semibold text-[0.85rem] ${
+                  newArchiveName.trim()
+                    ? 'bg-accent text-bg-app cursor-pointer hover:bg-accent-hover'
+                    : 'bg-accent/30 text-text-muted cursor-not-allowed'
+                } nasge-transition-quick`}
               >
                 创建
               </button>
@@ -227,15 +153,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
                   setIsCreating(false);
                   setNewArchiveName('');
                 }}
-                style={{
-                  padding: '0.6rem 0.8rem',
-                  borderRadius: '0.4rem',
-                  border: '1px solid rgba(255, 128, 128, 0.4)',
-                  background: 'transparent',
-                  color: '#ff8080',
-                  cursor: 'pointer',
-                  fontSize: '0.85rem'
-                }}
+                className="px-3 py-2.5 rounded-md border border-danger/40 bg-transparent text-danger cursor-pointer text-[0.85rem] hover:bg-danger/10 nasge-transition-quick"
               >
                 取消
               </button>
@@ -244,25 +162,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
             <button
               type="button"
               onClick={() => setIsCreating(true)}
-              style={{
-                width: '100%',
-                padding: '0.7rem 1rem',
-                borderRadius: '0.5rem',
-                border: '1px dashed rgba(102, 192, 244, 0.4)',
-                background: 'transparent',
-                color: '#66c0f4',
-                fontSize: '0.9rem',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(102, 192, 244, 0.1)';
-                e.currentTarget.style.borderStyle = 'solid';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.borderStyle = 'dashed';
-              }}
+              className="w-full py-3 px-4 rounded-lg border border-dashed border-accent/40 bg-transparent text-accent text-[0.9rem] cursor-pointer hover:bg-accent/10 hover:border-solid nasge-transition-quick"
             >
               + 新建离线存档
             </button>
@@ -287,37 +187,22 @@ const ArchiveListItem: React.FC<{
 
   return (
     <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.8rem',
-        padding: '0.8rem',
-        borderRadius: '0.5rem',
-        border: isActive ? '1px solid rgba(102, 192, 244, 0.4)' : '1px solid rgba(102, 192, 244, 0.15)',
-        background: isActive ? 'rgba(102, 192, 244, 0.1)' : 'rgba(8, 14, 23, 0.5)',
-        transition: 'all 0.15s ease'
-      }}
+      className={`flex items-center gap-3 p-3 rounded-lg border nasge-transition-quick ${
+        isActive
+          ? 'border-accent/40 bg-accent/10'
+          : 'border-border-default bg-[rgba(8,14,23,0.5)] hover:border-border-accent hover:bg-bg-hover'
+      }`}
     >
       {/* 封面或图标 */}
-      <div style={{
-        width: '48px',
-        height: '48px',
-        borderRadius: '0.4rem',
-        overflow: 'hidden',
-        flexShrink: 0,
-        background: 'rgba(20, 35, 55, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <div className="w-12 h-12 rounded-md overflow-hidden shrink-0 bg-[rgba(20,35,55,0.7)] flex items-center justify-center">
         {archive.coverUrl ? (
           <img
             src={archive.coverUrl}
             alt=""
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            className="w-full h-full object-cover"
           />
         ) : (
-          <span style={{ fontSize: '1.5rem' }}>
+          <span className="text-2xl">
             {isOffline ? '📝' : '📦'}
           </span>
         )}
@@ -325,45 +210,21 @@ const ArchiveListItem: React.FC<{
 
       {/* 信息区域 */}
       <div
-        style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}
+        className="flex-1 cursor-pointer min-w-0"
         onClick={onSelect}
       >
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          marginBottom: '0.25rem'
-        }}>
-          {isActive && <span style={{ color: '#66c0f4', fontSize: '0.8rem' }}>✓</span>}
-          <span style={{
-            fontSize: '0.95rem',
-            fontWeight: isActive ? 600 : 400,
-            color: '#d7e8ff',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap'
-          }}>
+        <div className="flex items-center gap-2 mb-1">
+          {isActive && <span className="text-accent text-[0.8rem]">✓</span>}
+          <span className={`text-[0.95rem] text-text-primary truncate ${isActive ? 'font-semibold' : 'font-normal'}`}>
             {archive.guideName}
           </span>
           {isOffline && (
-            <span style={{
-              padding: '0.1rem 0.4rem',
-              borderRadius: '0.25rem',
-              background: 'rgba(255, 193, 7, 0.2)',
-              color: '#FFC107',
-              fontSize: '0.65rem',
-              fontWeight: 500
-            }}>
+            <span className="px-1.5 py-0.5 rounded text-[0.65rem] font-medium bg-warning/20 text-warning">
               离线
             </span>
           )}
         </div>
-        <div style={{
-          fontSize: '0.75rem',
-          color: '#6b7f9a',
-          display: 'flex',
-          gap: '0.6rem'
-        }}>
+        <div className="text-xs text-text-muted flex gap-2.5">
           <span>{archive.chapters.length} 章节</span>
           <span>•</span>
           <span>创建于 {formatDate(archive.createdAt)}</span>
@@ -378,28 +239,7 @@ const ArchiveListItem: React.FC<{
           onDelete();
         }}
         title="删除存档"
-        style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '0.4rem',
-          border: 'none',
-          background: 'transparent',
-          color: '#6b7f9a',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '0.9rem',
-          transition: 'all 0.15s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 128, 128, 0.15)';
-          e.currentTarget.style.color = '#ff8080';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = '#6b7f9a';
-        }}
+        className="w-8 h-8 rounded-md border-0 bg-transparent text-text-muted cursor-pointer flex items-center justify-center text-[0.9rem] hover:bg-danger/15 hover:text-danger nasge-transition-quick"
       >
         🗑️
       </button>

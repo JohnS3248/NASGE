@@ -23,6 +23,7 @@ import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } fr
 import { CONTENT_CHARACTER_LIMIT } from "../constants/limits";
 import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
+import { dialog } from "../stores/useDialogStore";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
 
 // 类型别名，保持向后兼容
@@ -250,7 +251,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     [removeImageNew, removeImageNodeLegacy]
   );
 
-  const toggleLink = useCallback(() => {
+  const toggleLink = useCallback(async () => {
     if (!editor) return;
 
     const previousUrl = editor.getAttributes("link").href as string | undefined;
@@ -259,7 +260,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       editor.state.selection.to
     );
 
-    const url = window.prompt("请输入链接地址", previousUrl ?? "https://");
+    const url = await dialog.prompt({ message: "请输入链接地址", defaultValue: previousUrl ?? "https://" });
     if (url === null || url.trim() === "") {
       editor.chain().focus().unsetLink().run();
       return;
@@ -267,7 +268,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
     let label = selectionText;
     if (!label) {
-      label = window.prompt("显示文本（留空则使用链接本身）", url) ?? url;
+      label = (await dialog.prompt({ message: "显示文本（留空则使用链接本身）", defaultValue: url })) ?? url;
       editor
         .chain()
         .focus()
@@ -407,17 +408,17 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     }
   }, [contextMenu, editor]);
 
-  const insertImage = useCallback(() => {
+  const insertImage = useCallback(async () => {
     if (!editor) return;
-    const src = window.prompt("输入图片链接", "https://")?.trim();
+    const src = (await dialog.prompt({ message: "输入图片链接", defaultValue: "https://" }))?.trim();
     if (!src) return;
-    const alt = window.prompt("图片描述（可选）", "") ?? "";
+    const alt = (await dialog.prompt({ message: "图片描述（可选）", defaultValue: "" })) ?? "";
     editor.chain().focus().setImage({ src, alt }).run();
   }, [editor]);
 
-  const insertQuote = useCallback(() => {
+  const insertQuote = useCallback(async () => {
     if (!editor) return;
-    const author = window.prompt("引用来源（可选）", "") ?? "";
+    const author = (await dialog.prompt({ message: "引用来源（可选）", defaultValue: "" })) ?? "";
     editor
       .chain()
       .focus()
@@ -710,13 +711,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       </style>
       <div
         ref={editorContainerRef}
-        style={{
-          flex: 1,
-          minHeight: "260px",
-          overflowY: "auto",
-          position: "relative"
-        }}
-        className="nasge-editor-container"
+        className="nasge-editor-container flex-1 min-h-[260px] overflow-y-auto relative"
         onContextMenu={(event) => {
           if (!editor) {
             return;
@@ -831,20 +826,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
         {/* 字符数统计 - 固定在编辑器右下角 */}
         <div
-          style={{
-            position: "absolute",
-            bottom: "0.75rem",
-            right: "0.75rem",
-            fontSize: "0.8rem",
-            fontWeight: 500,
-            color: getCharacterCountColor(characterInfo),
-            background: "rgba(9, 15, 25, 0.85)",
-            padding: "0.35rem 0.65rem",
-            borderRadius: "0.5rem",
-            border: `1px solid ${characterInfo.exceeded ? 'rgba(239, 68, 68, 0.3)' : 'rgba(102, 192, 244, 0.2)'}`,
-            backdropFilter: "blur(4px)",
-            pointerEvents: "none"
-          }}
+          className={`absolute bottom-3 right-3 text-[0.8rem] font-medium bg-[rgba(9,15,25,0.85)] px-2.5 py-1.5 rounded-lg backdrop-blur-sm pointer-events-none border ${characterInfo.exceeded ? 'border-danger/30' : 'border-accent/20'}`}
+          style={{ color: getCharacterCountColor(characterInfo) }}
         >
           {getCharacterCountText(characterInfo)}
         </div>
@@ -852,21 +835,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
       {contextMenu.visible ? (
         <div
-          style={{
-            position: "fixed",
-            top: contextMenu.y,
-            left: contextMenu.x,
-            background: "var(--bg-toolbar, rgba(13, 21, 34, 0.95))",
-            border: "1px solid rgba(102, 192, 244, 0.3)",
-            borderRadius: "var(--radius-md, 0.75rem)",
-            padding: "0.35rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.25rem",
-            minWidth: "160px",
-            zIndex: 9999,
-            boxShadow: "0 16px 38px rgba(6, 12, 20, 0.55)"
-          }}
+          className="fixed bg-bg-overlay border border-border-accent rounded-lg p-1 flex flex-col gap-1 min-w-[160px] z-[9999] shadow-xl"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
         >
           {contextMenu.mode === "image" ? (
             contextMenuImageNode ? (
@@ -940,13 +910,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                 })}
               </>
             ) : (
-              <div
-                style={{
-                  padding: "0.6rem 0.75rem",
-                  color: "rgba(205, 226, 255, 0.75)",
-                  fontSize: "0.8rem"
-                }}
-              >
+              <div className="px-3 py-2.5 text-text-secondary text-[0.8rem]">
                 图片数据暂不可用。
               </div>
             )
@@ -1046,17 +1010,9 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active,
       onClick();
       onComplete();
     }}
-    style={{
-      border: "none",
-      background: active ? "rgba(102, 192, 244, 0.16)" : "transparent",
-      textAlign: "left",
-      padding: "0.55rem 0.75rem",
-      color: danger ? "#ff8f8f" : disabled ? "rgba(205, 226, 255, 0.45)" : active ? "#e5f3ff" : "#cde2ff",
-      borderRadius: "0.6rem",
-      fontSize: "0.85rem",
-      cursor: disabled ? "not-allowed" : "pointer",
-      fontWeight: active ? 600 : 500
-    }}
+    className={`border-0 text-left px-3 py-2 rounded-md text-[0.85rem] ${
+      active ? 'bg-accent-muted font-semibold text-text-primary' : 'bg-transparent font-medium text-text-primary'
+    } ${danger ? '!text-[#ff8f8f]' : ''} ${disabled ? '!text-text-muted cursor-not-allowed' : 'cursor-pointer'}`}
     onMouseDown={(event) => {
       event.preventDefault();
     }}
@@ -1066,27 +1022,13 @@ const MenuItem: React.FC<MenuItemProps> = ({ label, onClick, onComplete, active,
 );
 
 const MenuSectionLabel: React.FC<{ label: string }> = ({ label }) => (
-  <div
-    style={{
-      padding: "0.3rem 0.75rem 0.15rem",
-      fontSize: "0.72rem",
-      textTransform: "uppercase",
-      letterSpacing: "0.08em",
-      color: "rgba(173, 205, 244, 0.7)"
-    }}
-  >
+  <div className="px-3 pt-1 pb-0.5 text-[0.72rem] uppercase tracking-wider text-[rgba(173,205,244,0.7)]">
     {label}
   </div>
 );
 
 const MenuDivider: React.FC = () => (
-  <div
-    style={{
-      height: "1px",
-      margin: "0.25rem 0.5rem",
-      background: "rgba(102, 192, 244, 0.18)"
-    }}
-  />
+  <div className="h-px mx-2 my-1 bg-border-default" />
 );
 
 export default TipTapEditor;

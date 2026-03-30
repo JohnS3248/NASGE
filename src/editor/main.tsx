@@ -16,6 +16,7 @@ declare global {
     __draftStore?: unknown;
     __archiveStore?: unknown;
     __reviewStore?: unknown;
+    __dialogStore?: unknown;
     __bbcodeToHtml?: unknown;
     __htmlToBBCode?: unknown;
     __editor?: unknown;
@@ -51,6 +52,9 @@ import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
   window.__editorConfigStore = useEditorConfigStore;
   import("./stores/useToastStore").then(({ useToastStore }) => {
     window.__toastStore = useToastStore;
+  });
+  import("./stores/useDialogStore").then(({ useDialogStore }) => {
+    window.__dialogStore = useDialogStore;
   });
   import("./stores/useGuideStore").then(({ useGuideStore }) => {
     window.__guideStore = useGuideStore;

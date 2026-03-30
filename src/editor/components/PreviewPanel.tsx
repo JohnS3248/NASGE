@@ -401,46 +401,15 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
   }, [bbcode, title, fetchPreview]);
 
   return (
-    <div
-      style={{
-        borderRadius: "var(--radius-lg, 1.05rem)",
-        background: "var(--bg-surface, #0d1724)",
-        border: "1px solid var(--border-accent, rgba(102, 192, 244, 0.25))",
-        padding: "1.1rem",
-        boxShadow: "var(--shadow-panel, 0 24px 40px rgba(10, 18, 30, 0.45))",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        minWidth: "638px"
-      }}
-    >
+    <div className="rounded-lg bg-bg-surface border border-border-accent p-[1.1rem] shadow-panel flex flex-col overflow-hidden min-w-[638px]">
       {/* 预览内容区域 */}
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto"
-        }}
-      >
+      <div className="flex-1 overflow-auto">
         {error ? (
-          <div
-            style={{
-              color: "#ff6b6b",
-              fontSize: "0.85rem",
-              textAlign: "center",
-              padding: "2rem"
-            }}
-          >
+          <div className="text-danger text-[0.85rem] text-center p-8">
             {error}
           </div>
         ) : !activeDraft?.linkedChapterId ? (
-          <div
-            style={{
-              color: "rgba(205, 226, 255, 0.5)",
-              fontSize: "0.85rem",
-              textAlign: "center",
-              padding: "2rem"
-            }}
-          >
+          <div className="text-text-muted text-[0.85rem] text-center p-8">
             请先关联章节以启用预览
           </div>
         ) : previewHtml ? (
@@ -453,14 +422,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
             />
           </>
         ) : (
-          <div
-            style={{
-              color: "rgba(205, 226, 255, 0.4)",
-              fontSize: "0.85rem",
-              textAlign: "center",
-              padding: "2rem"
-            }}
-          >
+          <div className="text-text-muted text-[0.85rem] text-center p-8">
             {isLoading ? "正在获取预览..." : "编辑内容后将显示预览"}
           </div>
         )}

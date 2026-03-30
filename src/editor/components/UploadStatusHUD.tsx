@@ -1,12 +1,9 @@
 import React, { useMemo } from "react";
 import { useImageStore } from "../stores/useImageStore";
-import type { ImageLifecycleStatus } from "../types/image";
 
-const statusStyle: Record<string, React.CSSProperties> = {
-  uploading: { color: "var(--color-primary, #66c0f4)" },
-  uploaded: { color: "var(--color-success, #8ae68a)" },
-  error: { color: "var(--color-error, #ff7b7b)" },
-  local: { color: "var(--text-primary, #d7e8ff)" }
+const STATUS_COLOR: Record<string, string> = {
+  uploading: "text-accent",
+  error: "text-[#ff7b7b]",
 };
 
 const UploadStatusHUD: React.FC = () => {
@@ -27,54 +24,25 @@ const UploadStatusHUD: React.FC = () => {
   }
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        right: "1.5rem",
-        bottom: "1.5rem",
-        zIndex: 9999,
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.5rem",
-        minWidth: "220px"
-      }}
-    >
+    <div className="fixed right-6 bottom-6 z-[9999] flex flex-col gap-2 min-w-[220px]">
       {activeItems.map((image) => (
         <div
           key={image.id}
-          style={{
-            background: "rgba(10, 18, 30, 0.92)",
-            border: "1px solid rgba(102, 192, 244, 0.35)",
-            borderRadius: "var(--radius-md, 0.75rem)",
-            padding: "0.65rem 0.85rem",
-            boxShadow: "0 10px 22px rgba(4, 10, 18, 0.55)",
-            fontSize: "0.85rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.35rem"
-          }}
+          className="bg-[rgba(10,18,30,0.92)] border border-border-accent rounded-lg px-3.5 py-2.5 shadow-xl text-[0.85rem] flex flex-col gap-1.5"
         >
-          <div style={{ fontWeight: 600 }}>{image.originalName}</div>
-          <div style={statusStyle[image.status] ?? statusStyle.local}>
+          <div className="font-semibold text-text-primary">{image.originalName}</div>
+          <div className={STATUS_COLOR[image.status] ?? "text-text-primary"}>
             {image.status === "uploading" && "正在上传…"}
             {image.status === "error" && "上传失败，请重试或撤销。"}
           </div>
           {image.error ? (
-            <div style={{ fontSize: "0.75rem", color: "rgba(255, 123, 123, 0.85)" }}>{image.error}</div>
+            <div className="text-xs text-[rgba(255,123,123,0.85)]">{image.error}</div>
           ) : null}
           {image.status === "error" ? (
             <button
               type="button"
               onClick={() => removeImage(image.id)}
-              style={{
-                alignSelf: "flex-end",
-                padding: "0.25rem 0.6rem",
-                borderRadius: "0.45rem",
-                border: "none",
-                background: "rgba(255, 123, 123, 0.18)",
-                color: "#ff9a9a",
-                cursor: "pointer"
-              }}
+              className="self-end px-2.5 py-1 rounded-md border-0 bg-[rgba(255,123,123,0.18)] text-[#ff9a9a] cursor-pointer text-sm"
             >
               知道了
             </button>

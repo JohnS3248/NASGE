@@ -21,7 +21,9 @@ import { ImageFloatingPanel } from "./components/ImageFloatingPanel";
 import { useEditorConfigStore } from "./stores/useEditorConfigStore";
 import { PreviewPanel } from "./components/PreviewPanel";
 import ToastContainer from "./components/ToastContainer";
+import DialogContainer from "./components/ConfirmDialog";
 import { toast } from "./stores/useToastStore";
+import { dialog } from "./stores/useDialogStore";
 import ReviewSettingsPanel from "./components/ReviewSettingsPanel";
 
 const App: React.FC = () => {
@@ -79,7 +81,7 @@ const App: React.FC = () => {
     setCurrentHtml(docToHtml(nextDoc));
   }, [activeDraft?.content, activeDraft?.id, docToHtml]);
 
-  const handleExportBBCode = useCallback(() => {
+  const handleExportBBCode = useCallback(async () => {
     if (!currentHtml) {
       toast.error("当前章节为空，没有可导出的 BBCode。");
       return;
@@ -89,12 +91,12 @@ const App: React.FC = () => {
       void navigator.clipboard?.writeText(bbcode);
       toast.success("BBCode 已复制到剪贴板。");
     } catch {
-      window.prompt("复制以下 BBCode", bbcode);
+      await dialog.prompt({ message: "复制以下 BBCode", defaultValue: bbcode });
     }
   }, [currentHtml]);
 
-  const handleImportBBCode = useCallback(() => {
-    const input = window.prompt("粘贴要导入的 BBCode", "");
+  const handleImportBBCode = useCallback(async () => {
+    const input = await dialog.prompt({ message: "粘贴要导入的 BBCode", defaultValue: "" });
     if (input === null) return;
     const html = bbcodeToHtml(input);
     let doc: JSONContent;
@@ -297,11 +299,11 @@ const App: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const guideState = useGuideStore.getState();
                       const draftStore = useDraftStore.getState();
                       const defaultName = `未命名草稿 ${draftStore.nextDraftNumber}`;
-                      const name = window.prompt('新建草稿', defaultName);
+                      const name = await dialog.prompt({ message: '新建草稿', defaultValue: defaultName });
                       if (name === null) return;
                       const finalName = name.trim() || defaultName;
 
@@ -370,6 +372,7 @@ const App: React.FC = () => {
 
       <UploadStatusHUD />
       <ToastContainer />
+      <DialogContainer />
 
       {/* 章节导航 - 仅指南模式，固定在右侧边缘 */}
       {!reviewMode && (

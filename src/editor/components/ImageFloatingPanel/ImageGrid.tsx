@@ -16,6 +16,7 @@ import { SIZES } from "./styles";
 import { ImageIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
+import { dialog } from "../../stores/useDialogStore";
 
 interface ImageGridProps {
   images: ImageWithState[];
@@ -150,9 +151,9 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   }, [removeItem]);
 
   // 删除图片处理
-  const handleDeleteImage = useCallback((image: ImageWithState) => {
+  const handleDeleteImage = useCallback(async (image: ImageWithState) => {
     if (image.state === "success" && image.previewId) {
-      const confirmed = window.confirm(`确认删除 "${image.fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`);
+      const confirmed = await dialog.confirm({ message: `确认删除 "${image.fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`, danger: true });
       if (confirmed) {
         void doDeleteSteamImage(image);
       }
@@ -200,16 +201,18 @@ const ImageGrid: React.FC<ImageGridProps> = ({
           const msg = selectedImages.length === 1
             ? `确认删除 "${selectedImages[0].fileName}"？\n\n此操作将同时删除 Steam 服务器上的图片，无法撤销。`
             : `确认删除 ${selectedImages.length} 张图片？\n\n其中 ${uploadedImages.length} 张已上传到 Steam，删除后无法撤销。`;
-          if (window.confirm(msg)) {
-            for (const img of selectedImages) {
-              if (img.state === "success" && img.previewId) {
-                void doDeleteSteamImage(img);
-              } else {
-                doDeleteLocalImage(img);
+          void dialog.confirm({ message: msg, danger: true }).then((confirmed) => {
+            if (confirmed) {
+              for (const img of selectedImages) {
+                if (img.state === "success" && img.previewId) {
+                  void doDeleteSteamImage(img);
+                } else {
+                  doDeleteLocalImage(img);
+                }
               }
+              clearSelection();
             }
-            clearSelection();
-          }
+          });
         } else {
           for (const img of localImages) {
             doDeleteLocalImage(img);
