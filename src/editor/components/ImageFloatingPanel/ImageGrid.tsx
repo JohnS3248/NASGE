@@ -9,7 +9,7 @@ import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGu
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useEditorConfigStore, matchShortcut } from "../../stores/useEditorConfigStore";
 import { useGuideStore } from "../../stores/useGuideStore";
-import { queueImageUpload, queueBatchUpload, useUploadQueueState, uploadQueue } from "../../services/uploadQueue";
+import { ImageUploadService, usePoolUploadQueueState } from "../../services/ImageUploadService";
 import { deleteSteamImage } from "../../services/steamBridge";
 import ImageCard from "./ImageCard";
 import { SIZES } from "./styles";
@@ -52,7 +52,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   const { setImageState, removeItem } = useSteamGuideImageStore();
 
   // 订阅上传队列状态
-  const queueState = useUploadQueueState();
+  const queueState = usePoolUploadQueueState();
 
   // 计算分页
   const totalPages = useMemo(() => {
@@ -99,11 +99,11 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   const handleImageDoubleClick = useCallback((image: ImageWithState) => {
     if (image.state === "pending") {
       loggers.image.info("双击加入上传队列", { fileName: image.fileName });
-      queueImageUpload(image);
+      ImageUploadService.queuePoolUpload(image);
     } else if (image.state === "error") {
       loggers.image.info("双击重试上传", { fileName: image.fileName });
       setImageState(image.fileName, "pending");
-      queueImageUpload({ ...image, state: "pending", uploadError: undefined });
+      ImageUploadService.queuePoolUpload({ ...image, state: "pending", uploadError: undefined });
     } else {
       onImageDoubleClick(image);
     }
@@ -123,7 +123,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
   // 删除本地图片
   const doDeleteLocalImage = useCallback((image: ImageWithState) => {
     loggers.image.info("删除本地图片", { fileName: image.fileName });
-    uploadQueue.dequeue(image.fileName);
+    ImageUploadService.dequeuePoolImage(image.fileName);
     useSteamGuideImageStore.setState((state) => ({
       items: state.items.filter(item => item.fileName !== image.fileName)
     }));
@@ -320,7 +320,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
 
     if (autoUploadInPanel && addedImages.length > 0) {
       loggers.image.info("自动加入上传队列", { count: addedImages.length });
-      queueBatchUpload(addedImages);
+      ImageUploadService.queuePoolBatchUpload(addedImages);
     }
   }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange, currentArchiveId]);
 

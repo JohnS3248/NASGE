@@ -9,7 +9,7 @@ import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, type ImageTag } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
-import { queueImageUpload } from "../../services/uploadQueue";
+import { ImageUploadService } from "../../services/ImageUploadService";
 import { XIcon, CheckIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 
@@ -146,7 +146,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
         const updatedImage = getImageById(newFileName);
         if (updatedImage && updatedImage.state === "pending") {
           loggers.image.info("改名完成，触发自动上传", { fileName: newFileName });
-          queueImageUpload(updatedImage);
+          ImageUploadService.queuePoolUpload(updatedImage);
         } else {
           loggers.image.warn("改名后无法找到图片或图片已不是待上传状态", {
             newFileName, found: !!updatedImage, state: updatedImage?.state

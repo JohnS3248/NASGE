@@ -1,13 +1,16 @@
 /**
  * ImageUploadService - 统一图片上传服务
  *
- * 数据流：useImageStore 管理所有图片状态
+ * 两种上传路径：
+ * 1. 编辑器路径：uploadByImageId / uploadByNodeId — 通过 useImageStore 管理
+ * 2. 图片池路径：queuePoolUpload — 通过 useSteamGuideImageStore 管理
+ *    单线程顺序队列，支持 Error 29 (DuplicateRequest) 处理和自动重试
  */
 
+import { useState, useEffect } from "react";
 import { useImageStore } from "../stores/useImageStore";
-import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
+import { useSteamGuideImageStore, type ImageWithState } from "../stores/useSteamGuideImageStore";
 import { uploadSteamImage } from "./steamBridge";
-import { formatUploadErrorMessage } from "./imageUploadManager";
 import type { SteamImageUrls } from "../types/image";
 import { loggers } from "../../shared/logger";
 
@@ -25,6 +28,22 @@ export interface SingleUploadResult {
 export interface BatchUploadResult {
   success: Array<{ imageId: string; steamPreviewId: string }>;
   failed: Array<{ imageId: string; error: string }>;
+}
+
+export interface PoolQueueItem {
+  id: string;
+  image: ImageWithState;
+  retryCount: number;
+  addedAt: number;
+}
+
+export interface PoolQueueState {
+  status: "idle" | "processing";
+  queue: PoolQueueItem[];
+  currentItem: PoolQueueItem | null;
+  completedCount: number;
+  failedCount: number;
+  skippedCount: number;
 }
 
 // ============================================================================
@@ -60,11 +79,81 @@ function resolveImageEntity(nodeId: string) {
   );
 }
 
+/**
+ * 上传错误消息格式化
+ */
+function formatUploadErrorMessage(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : "";
+  if (rawMessage.includes("Could not establish connection") || rawMessage.includes("Receiving end does not exist")) {
+    return "未能连接到 Steam 页面，请确认已打开 Steam 指南编辑页并刷新后重试。";
+  }
+
+  if (rawMessage.includes("The message port closed before a response was received")) {
+    return "未收到 Steam 页面响应，请刷新相关页面后重试。";
+  }
+
+  if (rawMessage.includes("扩展尚未获得访问 Steam 网页的权限")) {
+    return rawMessage;
+  }
+
+  if (/错误码\s*8/.test(rawMessage)) {
+    return "Steam 返回错误 8：无法解析图片文件，请确认图片未损坏并重新尝试。";
+  }
+
+  if (/错误码\s*29/.test(rawMessage)) {
+    return "Steam 返回错误 29：Steam 会话可能已失效或账号当前不可上传，请刷新 Steam 页面后重试。";
+  }
+
+  if (rawMessage) {
+    return rawMessage;
+  }
+
+  return "上传失败，未知错误。";
+}
+
+/**
+ * 检查是否为 Error 29 (DuplicateRequest)
+ */
+function isDuplicateRequestError(error: unknown): boolean {
+  if (!error) return false;
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const lowerMessage = errorMessage.toLowerCase();
+  return (
+    /\b29\b/.test(errorMessage) ||
+    lowerMessage.includes("duplicaterequest") ||
+    lowerMessage.includes("duplicate") ||
+    lowerMessage.includes("already exists")
+  );
+}
+
+// ============================================================================
+// Pool Upload Queue Config
+// ============================================================================
+
+const POOL_QUEUE_CONFIG = {
+  uploadInterval: 1000,
+  maxRetries: 2,
+  retryDelay: 3000
+};
+
 // ============================================================================
 // Main Service Class
 // ============================================================================
 
 class ImageUploadServiceImpl {
+  // ---- Pool upload queue state ----
+  private poolQueue: PoolQueueItem[] = [];
+  private poolStatus: "idle" | "processing" = "idle";
+  private poolCurrentItem: PoolQueueItem | null = null;
+  private poolCompletedCount = 0;
+  private poolFailedCount = 0;
+  private poolSkippedCount = 0;
+  private poolListeners: Set<() => void> = new Set();
+
+  // ==================================================================
+  // Editor upload methods (useImageStore)
+  // ==================================================================
+
   /**
    * 上传单张图片（通过 imageId）
    */
@@ -237,6 +326,211 @@ class ImageUploadServiceImpl {
 
     return this.uploadMultiple(imageIds, options);
   }
+
+  // ==================================================================
+  // Pool upload queue (useSteamGuideImageStore)
+  // ==================================================================
+
+  /**
+   * 将图片添加到上传队列
+   */
+  queuePoolUpload(image: ImageWithState): void {
+    const store = useSteamGuideImageStore.getState();
+
+    // 已上传成功
+    if (image.previewId && image.state === "success") {
+      loggers.image.verbose("图片已上传成功，跳过入队", { fileName: image.fileName, previewId: image.previewId });
+      return;
+    }
+
+    // 图片池中已有同名已上传图片
+    const existingInPool = store.items.find(
+      item => item.fileName === image.fileName && item.state === "success" && item.previewId
+    );
+    if (existingInPool) {
+      loggers.image.info("图片池中已存在同名已上传图片，跳过", {
+        fileName: image.fileName,
+        existingPreviewId: existingInPool.previewId
+      });
+      store.setPreviewId(image.fileName, existingInPool.previewId);
+      this.poolSkippedCount++;
+      this.notifyPoolListeners();
+      return;
+    }
+
+    // 已在队列中
+    if (this.poolQueue.some(item => item.id === image.fileName)) {
+      loggers.image.verbose("图片已在队列中，跳过", { fileName: image.fileName });
+      return;
+    }
+
+    // 正在上传
+    if (this.poolCurrentItem?.id === image.fileName) {
+      loggers.image.verbose("图片正在上传中，跳过", { fileName: image.fileName });
+      return;
+    }
+
+    this.poolQueue.push({
+      id: image.fileName,
+      image,
+      retryCount: 0,
+      addedAt: Date.now()
+    });
+
+    loggers.image.info("图片加入上传队列", {
+      fileName: image.fileName,
+      queueLength: this.poolQueue.length
+    });
+
+    this.notifyPoolListeners();
+
+    if (this.poolStatus === "idle") {
+      void this.processPoolQueue();
+    }
+  }
+
+  /**
+   * 批量添加图片到上传队列
+   */
+  queuePoolBatchUpload(images: ImageWithState[]): void {
+    for (const image of images) {
+      this.queuePoolUpload(image);
+    }
+  }
+
+  /**
+   * 从队列中移除
+   */
+  dequeuePoolImage(id: string): void {
+    const index = this.poolQueue.findIndex(item => item.id === id);
+    if (index !== -1) {
+      this.poolQueue.splice(index, 1);
+      loggers.image.verbose("图片从队列移除", { id });
+      this.notifyPoolListeners();
+    }
+  }
+
+  /**
+   * 获取队列状态快照
+   */
+  getPoolQueueState(): PoolQueueState {
+    return {
+      status: this.poolStatus,
+      queue: [...this.poolQueue],
+      currentItem: this.poolCurrentItem,
+      completedCount: this.poolCompletedCount,
+      failedCount: this.poolFailedCount,
+      skippedCount: this.poolSkippedCount
+    };
+  }
+
+  /**
+   * 订阅队列状态变化
+   */
+  subscribePoolQueue(handler: () => void): () => void {
+    this.poolListeners.add(handler);
+    return () => { this.poolListeners.delete(handler); };
+  }
+
+  // ---- Pool queue internal ----
+
+  private notifyPoolListeners(): void {
+    this.poolListeners.forEach(fn => fn());
+  }
+
+  private async processPoolQueue(): Promise<void> {
+    this.poolStatus = "processing";
+    loggers.image.info("开始处理上传队列", { queueLength: this.poolQueue.length });
+
+    while (this.poolQueue.length > 0) {
+      const item = this.poolQueue.shift()!;
+      this.poolCurrentItem = item;
+      this.notifyPoolListeners();
+
+      try {
+        await this.uploadPoolItem(item);
+        this.poolCompletedCount++;
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        if (isDuplicateRequestError(error)) {
+          loggers.image.warn("图片已存在于 Steam (Error 29)", { fileName: item.id });
+          this.poolSkippedCount++;
+          const store = useSteamGuideImageStore.getState();
+          store.setImageState(item.id, "success");
+          void store.refresh();
+        } else if (item.retryCount < POOL_QUEUE_CONFIG.maxRetries) {
+          item.retryCount++;
+          this.poolQueue.push(item);
+          loggers.image.warn("上传失败，稍后重试", {
+            fileName: item.id,
+            retryCount: item.retryCount,
+            error: errorMessage
+          });
+          await this.delay(POOL_QUEUE_CONFIG.retryDelay);
+        } else {
+          this.poolFailedCount++;
+          const store = useSteamGuideImageStore.getState();
+          store.setImageState(item.id, "error", errorMessage);
+          loggers.image.error("上传失败，已达最大重试次数", {
+            fileName: item.id,
+            error: errorMessage
+          });
+        }
+      }
+
+      this.poolCurrentItem = null;
+      this.notifyPoolListeners();
+
+      if (this.poolQueue.length > 0) {
+        await this.delay(POOL_QUEUE_CONFIG.uploadInterval);
+      }
+    }
+
+    this.poolStatus = "idle";
+    loggers.image.info("上传队列处理完成", {
+      completed: this.poolCompletedCount,
+      failed: this.poolFailedCount,
+      skipped: this.poolSkippedCount
+    });
+    this.notifyPoolListeners();
+  }
+
+  private async uploadPoolItem(item: PoolQueueItem): Promise<void> {
+    const { image } = item;
+    const store = useSteamGuideImageStore.getState();
+
+    if (!image.localUrl) {
+      throw new Error("图片本地 URL 不存在");
+    }
+
+    store.setImageState(image.fileName, "uploading");
+    store.setUploadProgress(image.fileName, 0);
+
+    loggers.image.info("队列开始上传图片", { fileName: image.fileName });
+
+    const response = await fetch(image.localUrl);
+    const blob = await response.blob();
+    const file = new File([blob], image.fileName, { type: blob.type || "image/png" });
+
+    store.setUploadProgress(image.fileName, 30);
+
+    const result = await uploadSteamImage("chapter-preview", file, image.fileName);
+
+    store.setUploadProgress(image.fileName, 100);
+
+    const previewId = result.previewIds?.[0];
+    if (previewId) {
+      store.setPreviewId(image.fileName, previewId);
+      loggers.image.info("队列上传成功", { fileName: image.fileName, previewId });
+    } else {
+      throw new Error("上传成功但未返回 previewId");
+    }
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 
 // ============================================================================
@@ -244,3 +538,19 @@ class ImageUploadServiceImpl {
 // ============================================================================
 
 export const ImageUploadService = new ImageUploadServiceImpl();
+
+// ============================================================================
+// React Hook: 订阅图片池上传队列状态
+// ============================================================================
+
+export function usePoolUploadQueueState(): PoolQueueState {
+  const [state, setState] = useState<PoolQueueState>(() => ImageUploadService.getPoolQueueState());
+
+  useEffect(() => {
+    return ImageUploadService.subscribePoolQueue(() => {
+      setState(ImageUploadService.getPoolQueueState());
+    });
+  }, []);
+
+  return state;
+}

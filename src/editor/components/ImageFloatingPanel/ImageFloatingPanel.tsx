@@ -8,7 +8,7 @@ import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGu
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { useGuideStore } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
-import { queueImageUpload } from "../../services/uploadQueue";
+import { ImageUploadService } from "../../services/ImageUploadService";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
@@ -207,7 +207,7 @@ const ImageFloatingPanel: React.FC = () => {
           }
           if (autoUploadInPanel) {
             loggers.image.info('粘贴图片自动加入上传队列', { fileName: result.image.fileName });
-            queueImageUpload(result.image);
+            ImageUploadService.queuePoolUpload(result.image);
           }
         }
         break;
