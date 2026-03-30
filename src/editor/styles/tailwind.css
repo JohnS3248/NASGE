@@ -1,15 +1,9 @@
 /* ===== NASGE Tailwind CSS — Fusion Design Tokens ===== */
 /* Linear (interactions/animations) + Steam (color identity) */
-/* Skip full preflight to avoid breaking ProseMirror CSS,           */
-/* but apply box-sizing: border-box globally (required for w-full). */
 
+@import "tailwindcss/preflight" layer(base);
 @import "tailwindcss/theme" layer(theme);
 @import "tailwindcss/utilities" layer(utilities);
-
-/* === Minimal preflight: box-sizing fix === */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
 
 @theme {
   /* === Colors: Steam ecosystem palette === */
