@@ -97,10 +97,39 @@ export const useReviewStore = create<ReviewState>()(
       name: "nasge-review",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        appId: state.appId,
-        gameName: state.gameName,
         settings: state.settings,
+        // appId/gameName 由 sessionStorage 管理（标签页隔离）
       }),
+
+      merge: (persisted: unknown, current: ReviewState) => ({
+        ...current,
+        settings: (persisted as Partial<ReviewState>)?.settings ?? current.settings,
+      }),
+
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) return;
+        try {
+          const saved = sessionStorage.getItem('nasge-tab-review');
+          if (saved) {
+            const { appId, gameName } = JSON.parse(saved);
+            if (appId) useReviewStore.setState({ appId, gameName: gameName || '' });
+          }
+        } catch { /* ignore */ }
+      },
     }
   )
 );
+
+// 同步 appId/gameName 到 sessionStorage（标签页隔离）
+useReviewStore.subscribe((state, prev) => {
+  if (state.appId !== prev.appId || state.gameName !== prev.gameName) {
+    if (state.appId) {
+      sessionStorage.setItem('nasge-tab-review', JSON.stringify({
+        appId: state.appId,
+        gameName: state.gameName,
+      }));
+    } else {
+      sessionStorage.removeItem('nasge-tab-review');
+    }
+  }
+});

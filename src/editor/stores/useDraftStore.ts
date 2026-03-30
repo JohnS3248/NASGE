@@ -260,8 +260,8 @@ export const useDraftStore = create<DraftState>()(
 
       partialize: (state) => ({
         drafts: state.drafts,
-        activeDraftId: state.activeDraftId,
         nextDraftNumber: state.nextDraftNumber,
+        // activeDraftId 由 sessionStorage 管理（标签页隔离）
         // isDirty 不持久化
       }),
 
@@ -270,7 +270,7 @@ export const useDraftStore = create<DraftState>()(
         return {
           ...current,
           drafts: p?.drafts ?? current.drafts,
-          activeDraftId: p?.activeDraftId ?? current.activeDraftId,
+          // activeDraftId 不从 localStorage 恢复，由 sessionStorage 恢复
           nextDraftNumber: (p as Record<string, unknown>)?.nextDraftNumber as number ?? current.nextDraftNumber,
         };
       },
@@ -287,8 +287,13 @@ export const useDraftStore = create<DraftState>()(
         return state;
       },
 
-      onRehydrateStorage: () => (_state, error) => {
-        if (error) loggers.persist.error('useDraftStore rehydration 失败', error);
+      onRehydrateStorage: () => (state, error) => {
+        if (error) { loggers.persist.error('useDraftStore rehydration 失败', error); return; }
+        // 从 sessionStorage 恢复标签页级的 activeDraftId
+        const savedId = sessionStorage.getItem('nasge-tab-activeDraft');
+        if (savedId && state?.drafts.some(d => d.id === savedId)) {
+          useDraftStore.setState({ activeDraftId: savedId });
+        }
       },
     }
   )
@@ -301,3 +306,14 @@ setTimeout(() => {
     useDraftStore.setState({ activeDraftId: state.drafts[0].id });
   }
 }, 100);
+
+// 同步 activeDraftId 到 sessionStorage（标签页隔离）
+useDraftStore.subscribe((state, prev) => {
+  if (state.activeDraftId !== prev.activeDraftId) {
+    if (state.activeDraftId) {
+      sessionStorage.setItem('nasge-tab-activeDraft', state.activeDraftId);
+    } else {
+      sessionStorage.removeItem('nasge-tab-activeDraft');
+    }
+  }
+});

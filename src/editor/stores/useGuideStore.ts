@@ -227,7 +227,7 @@ export const useGuideStore = create<SessionState>()(
     {
       name: "nasge-session",
       version: 1,
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
         mode: state.mode,
         guideInfo: state.guideInfo,

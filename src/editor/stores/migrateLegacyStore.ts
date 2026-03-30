@@ -78,5 +78,8 @@ export function migrateLegacyStore(): void {
   }
 }
 
+// nasge-session 已迁移到 sessionStorage，清理旧 localStorage 数据
+localStorage.removeItem(SESSION_KEY);
+
 // 立即执行
 migrateLegacyStore();
