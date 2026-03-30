@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { useGuideStore, isReviewMode, isOnlineMode } from '../stores/useGuideStore';
+import { useGuideStore, isReviewMode } from '../stores/useGuideStore';
 import { useDraftStore } from '../stores/useDraftStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useReviewStore } from '../stores/useReviewStore';
@@ -23,6 +23,20 @@ const getDraftDisplayTitle = (draft: DraftItem | undefined) => {
   if (!draft) return '';
   const titleText = extractTitleText(draft.title);
   if (titleText) return titleText;
+  return draft.draftName;
+};
+
+/** 获取草稿副标题：归属信息（指南名 / 游戏名） */
+const getDraftSubtitle = (draft: DraftItem): string => {
+  // 指南草稿：显示所属指南名
+  if (draft.linkedGuideId) {
+    const archive = useArchiveStore.getState().archives[draft.linkedGuideId];
+    if (archive?.guideName) return archive.guideName;
+  }
+  // 评测草稿：显示游戏名
+  if (draft.draftType === 'review' && draft.linkedAppName) {
+    return draft.linkedAppName;
+  }
   return draft.draftName;
 };
 
@@ -174,11 +188,10 @@ const DraftPanel: React.FC = () => {
 
     if (inReview) {
       const reviewDrafts = drafts.filter((d) => d.draftType === 'review');
-      // online review + 有 appId → 只显示该游戏的草稿
-      if (isOnlineMode(mode) && reviewAppId) {
+      // 有 appId → 只显示该游戏的草稿（在线/离线均适用）
+      if (reviewAppId) {
         return reviewDrafts.filter((d) => d.linkedAppId === reviewAppId);
       }
-      // offline review → 显示所有 review 草稿
       return reviewDrafts;
     }
 
@@ -299,7 +312,7 @@ const DraftPanel: React.FC = () => {
               <span className="font-medium text-text-primary truncate">
                 {getDraftDisplayTitle(activeDraft)}
               </span>
-              <span className="text-xs text-text-secondary">· {activeDraft.draftName}</span>
+              <span className="text-xs text-text-secondary">· {getDraftSubtitle(activeDraft)}</span>
             </span>
           ) : (
             <span className="text-text-secondary">未选择草稿</span>
@@ -403,7 +416,7 @@ const DraftPanel: React.FC = () => {
                         {getDraftDisplayTitle(draft)}
                       </span>
                       <span className="text-[11px] text-text-muted">
-                        {draft.draftName}
+                        {getDraftSubtitle(draft)}
                         {' · '}{formatDate(draft.updatedAt)}
                       </span>
                     </div>

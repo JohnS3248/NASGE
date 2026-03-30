@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useGuideStore, type GuideArchive, isReviewMode } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
+import { useDraftStore } from '../stores/useDraftStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { SettingsModal } from './SettingsModal';
 import { ArchiveManageModal } from './ArchiveManageModal';
@@ -35,11 +36,14 @@ const EditorHeader: React.FC = () => {
   const switchArchive = useGuideStore((s) => s.switchArchive);
   const archives = useArchiveStore((s) => s.archives);
   const currentArchive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
+  const drafts = useDraftStore((s) => s.drafts);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
   const [manageModalVisible, setManageModalVisible] = useState(false);
   const archiveRef = useRef<HTMLDivElement>(null);
+  const gameRef = useRef<HTMLDivElement>(null);
 
   const reviewGameName = useReviewStore((s) => s.gameName);
   const reviewAppId = useReviewStore((s) => s.appId);
@@ -48,19 +52,31 @@ const EditorHeader: React.FC = () => {
   const archiveList = Object.values(archives);
   const modeConf = MODE_CONFIG[mode] ?? MODE_CONFIG['guide'];
 
-  // 存档下拉外部点击关闭
+  // 离线评测：从草稿提取不重复的游戏列表
+  const gameList = useMemo(() => {
+    const games = new Map<string, string>();
+    drafts
+      .filter(d => d.draftType === 'review' && d.linkedAppId)
+      .forEach(d => games.set(d.linkedAppId!, d.linkedAppName || `App ${d.linkedAppId}`));
+    return Array.from(games, ([appId, name]) => ({ appId, name }));
+  }, [drafts]);
+
+  // 下拉外部点击关闭
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (archiveRef.current && !archiveRef.current.contains(e.target as Node)) {
       setArchiveOpen(false);
     }
+    if (gameRef.current && !gameRef.current.contains(e.target as Node)) {
+      setGameOpen(false);
+    }
   }, []);
 
   useEffect(() => {
-    if (archiveOpen) {
+    if (archiveOpen || gameOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [archiveOpen, handleClickOutside]);
+  }, [archiveOpen, gameOpen, handleClickOutside]);
 
   // 模式描述
   const subtitle = mode === 'guide' && guideInfo
@@ -73,6 +89,8 @@ const EditorHeader: React.FC = () => {
 
   // 是否显示存档选择器（指南/评测在线模式绑定 Steam 页面，不允许切换）
   const showArchiveSelector = mode !== 'guide' && !inReviewMode && archiveList.length > 0;
+  // 离线评测：显示游戏选择器
+  const showGameSelector = mode === 'offline-review' && gameList.length > 0;
 
   return (
     <>
@@ -120,8 +138,47 @@ const EditorHeader: React.FC = () => {
           )}
         </div>
 
-        {/* 右侧：存档选择器 + 设置 */}
+        {/* 右侧：选择器 + 设置 */}
         <div className="flex items-center gap-2 shrink-0">
+          {/* 游戏选择器（离线评测） */}
+          {showGameSelector && (
+            <div ref={gameRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setGameOpen(!gameOpen)}
+                className="
+                  flex items-center gap-1.5 px-2.5 py-1.5
+                  rounded-md border border-border-default
+                  bg-transparent
+                  text-xs text-text-secondary
+                  hover:text-text-primary hover:border-border-accent hover:bg-accent-subtle
+                  nasge-transition-quick cursor-pointer
+                "
+              >
+                <span className="truncate max-w-32">
+                  {reviewAppId ? (reviewGameName || `App ${reviewAppId}`) : '全部游戏'}
+                </span>
+                <svg
+                  className={`w-3 h-3 opacity-50 nasge-transition-quick ${gameOpen ? 'rotate-180' : ''}`}
+                  viewBox="0 0 12 12" fill="none"
+                >
+                  <path d="M3 5l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {gameOpen && (
+                <GameDropdown
+                  games={gameList}
+                  activeAppId={reviewAppId}
+                  onSelect={(appId, name) => {
+                    useReviewStore.getState().selectGame(appId, name);
+                    setGameOpen(false);
+                  }}
+                />
+              )}
+            </div>
+          )}
+
           {/* 存档选择器 */}
           {showArchiveSelector && (
             <div ref={archiveRef} className="relative">
@@ -250,7 +307,8 @@ const ArchiveDropdown: React.FC<{
           className="
             w-full px-3 py-2 rounded-md text-center
             text-xs text-accent
-            hover:bg-accent-subtle
+            bg-bg-overlay border border-border-default
+            hover:bg-accent-subtle hover:border-border-accent
             nasge-transition-quick cursor-pointer
           "
         >
@@ -260,5 +318,73 @@ const ArchiveDropdown: React.FC<{
     </div>
   );
 };
+
+// ============================================================================
+// 游戏下拉菜单（离线评测）
+// ============================================================================
+
+const GameDropdown: React.FC<{
+  games: { appId: string; name: string }[];
+  activeAppId: string | null;
+  onSelect: (appId: string | null, name?: string) => void;
+}> = ({ games, activeAppId, onSelect }) => (
+  <div className="
+    absolute top-[calc(100%+6px)] right-0 z-[1000]
+    min-w-52 max-h-80 overflow-y-auto
+    rounded-lg border border-border-accent
+    bg-bg-surface shadow-xl
+  ">
+    <div className="p-1.5">
+      {/* 全部游戏 */}
+      <button
+        type="button"
+        onClick={() => onSelect(null)}
+        className={`
+          w-full text-left px-3 py-2 rounded-md
+          flex items-center gap-1.5
+          nasge-transition-quick cursor-pointer
+          ${!activeAppId
+            ? 'bg-accent-muted text-text-primary'
+            : 'bg-transparent text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+          }
+        `}
+      >
+        {!activeAppId && (
+          <svg className="w-3 h-3 text-accent shrink-0" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        <span className="text-sm">全部游戏</span>
+      </button>
+
+      {games.map((g) => {
+        const active = g.appId === activeAppId;
+        return (
+          <button
+            key={g.appId}
+            type="button"
+            onClick={() => onSelect(g.appId, g.name)}
+            className={`
+              w-full text-left px-3 py-2 rounded-md
+              flex items-center gap-1.5
+              nasge-transition-quick cursor-pointer
+              ${active
+                ? 'bg-accent-muted text-text-primary'
+                : 'bg-transparent text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+              }
+            `}
+          >
+            {active && (
+              <svg className="w-3 h-3 text-accent shrink-0" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+            <span className="text-sm truncate">{g.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
 
 export default EditorHeader;
