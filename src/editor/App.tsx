@@ -50,6 +50,18 @@ const App: React.FC = () => {
 
   const { drafts, activeDraftId, updateDraft } = useDraftStore();
 
+  // M6: 草稿切换 fade 过渡
+  const [editorFading, setEditorFading] = useState(false);
+  const prevDraftIdRef = useRef(activeDraftId);
+  useEffect(() => {
+    if (prevDraftIdRef.current !== activeDraftId && prevDraftIdRef.current !== undefined) {
+      setEditorFading(true);
+      const raf = requestAnimationFrame(() => setEditorFading(false));
+      return () => cancelAnimationFrame(raf);
+    }
+    prevDraftIdRef.current = activeDraftId;
+  }, [activeDraftId]);
+
   const activeDraft = useMemo(() => drafts.find((draft) => draft.id === activeDraftId), [drafts, activeDraftId]);
   const htmlExtensions = useMemo(() => createEditorExtensions({ reviewMode }), [reviewMode]);
 
@@ -273,6 +285,7 @@ const App: React.FC = () => {
         >
           {/* 编辑器区域 */}
           <main
+            className={`transition-opacity duration-fast ${editorFading ? "opacity-0" : "opacity-100"}`}
             style={{
               borderRadius: "var(--radius-lg, 1.05rem)",
               background: "var(--bg-surface, #0d1724)",

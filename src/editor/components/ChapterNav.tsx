@@ -40,6 +40,12 @@ const PlusIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
   </svg>
 );
 
+const Loader2Icon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+  </svg>
+);
+
 /* ── Tailwind class 常量 ─────────────────────────────────── */
 
 // 分隔线
@@ -154,7 +160,12 @@ const ChapterItem = React.memo<{
         disabled={isLoading}
         className={`border-0 bg-transparent text-left py-2 px-2.5 text-sm flex-1 font-normal leading-relaxed overflow-hidden ${isLinked ? 'text-white' : 'text-[#c5c5c5]'} ${isLoading ? 'cursor-wait opacity-60' : 'cursor-pointer'}`}
       >
-        {isLoading ? '拉取中...' : renderTitle(chapter)}
+        {isLoading ? (
+          <span className="inline-flex items-center gap-1.5">
+            <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
+            拉取中
+          </span>
+        ) : renderTitle(chapter)}
       </button>
 
       {/* 显示绑定的草稿名 */}
@@ -396,8 +407,9 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               </span>
             )}
             {(isSyncing || isRefreshing) && (
-              <span className="text-xs text-accent">
-                {isSyncing ? '同步中...' : '刷新中...'}
+              <span className="text-xs text-accent inline-flex items-center gap-1">
+                <Loader2Icon className="w-3 h-3 animate-spin" />
+                {isSyncing ? '同步中' : '刷新中'}
               </span>
             )}
           </h3>
@@ -480,7 +492,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           className={`border-0 bg-transparent text-accent/60 text-sm py-2 px-2.5 text-left nasge-transition-quick flex items-center gap-1.5 ${borderNone} ${isCreatingChapter ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-white/5 hover:text-accent'}`}
         >
           {isCreatingChapter ? (
-            <>创建中...</>
+            <span className="inline-flex items-center gap-1.5">
+              <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
+              创建中
+            </span>
           ) : (
             <>
               <PlusIcon className="w-3.5 h-3.5" />

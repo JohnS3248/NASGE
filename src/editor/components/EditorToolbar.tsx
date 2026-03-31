@@ -422,7 +422,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     <div
       ref={toolbarRef}
       onMouseDown={handleMouseDown}
-      className={`z-[500] flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-0.5 bg-bg-surface/95 backdrop-blur-md border border-border-default rounded-md shadow-panel p-1 select-none`}
+      className={`z-40 flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-0.5 bg-bg-surface/95 backdrop-blur-md border border-border-default rounded-md shadow-panel p-1 select-none`}
       style={positionStyle()}
     >
       {TOOLBAR_ITEMS.map((item, i) => {
