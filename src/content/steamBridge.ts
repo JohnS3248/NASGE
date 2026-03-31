@@ -445,7 +445,7 @@ function parseGuideImagePool(html: string): SteamGuideImage[] {
       previewId,
       fileName,
       thumbnailUrl,
-      originalUrl: thumbnailUrl  // AJAX: 使用 thumbnailUrl 作为 originalUrl
+      originalUrl: deriveOriginalUrl(thumbnailUrl)  // 从缩略图 URL 派生全尺寸 URL
     };
 
     if (!images.has(previewId)) {
@@ -462,6 +462,21 @@ function absoluteUrl(src: string): string | undefined {
     return new URL(src, window.location.href).toString();
   } catch {
     return src;
+  }
+}
+
+/**
+ * 从缩略图 URL 派生全尺寸原图 URL
+ * Steam CDN 规律：缩略图带 ?imw=256&... 参数，去掉即为原图
+ */
+function deriveOriginalUrl(thumbnailUrl: string | undefined): string | undefined {
+  if (!thumbnailUrl) return undefined;
+  try {
+    const url = new URL(thumbnailUrl);
+    url.search = '';
+    return url.toString();
+  } catch {
+    return thumbnailUrl;
   }
 }
 
@@ -583,7 +598,7 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
           previewId,
           fileName,
           thumbnailUrl,
-          originalUrl: thumbnailUrl  // DOM fallback: 使用 thumbnailUrl 作为 originalUrl
+          originalUrl: deriveOriginalUrl(thumbnailUrl)  // 从缩略图 URL 派生全尺寸 URL
         });
       }
     }
@@ -667,7 +682,7 @@ function parseGuideImagePoolFromEditSubsectionDOM(): SteamGuideImage[] {
         previewId,
         fileName,
         thumbnailUrl: absoluteThumbnailUrl,
-        originalUrl: absoluteThumbnailUrl  // editguidesubsection: 使用 thumbnailUrl 作为 originalUrl
+        originalUrl: deriveOriginalUrl(absoluteThumbnailUrl)  // 从缩略图 URL 派生全尺寸 URL
       });
     }
   }
