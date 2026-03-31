@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from "react";
 import { useImageStore } from "../stores/useImageStore";
 import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import type { ImageEntity, ImageLifecycleStatus } from "../types/image";
+import { SkeletonBlock, SkeletonLine } from "./Skeleton";
 
 type SteamImagePoolProps = {
   onDelete?: (recordId: string) => void;
@@ -92,7 +93,15 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
       <section className="flex flex-col gap-2.5">
         <SectionTitle>Steam 已有图片</SectionTitle>
         {remoteStatus === "loading" && !remoteItems.length ? (
-          <div className="text-[0.8rem] text-text-secondary/70">正在加载图片池…</div>
+          <div className="flex flex-col gap-2.5">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="flex flex-col gap-2 p-2.5 rounded-lg bg-bg-app/90 border border-accent/18">
+                <SkeletonLine width="40%" height={13} />
+                <SkeletonBlock height={120} />
+                <SkeletonLine width="60%" height={10} />
+              </div>
+            ))}
+          </div>
         ) : null}
         {!remoteItems.length && remoteStatus === "ready" ? (
           <div className="text-[0.8rem] text-text-secondary/65">

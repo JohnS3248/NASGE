@@ -1,6 +1,6 @@
 {
   "name": "nasge",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "description": "创建者友好的 Steam 指南编辑浏览器扩展",
   "type": "module",
   "scripts": {
@@ -12,7 +12,14 @@
     "test": "vitest run",
     "preview": "vite preview"
   },
-  "keywords": ["steam", "guide", "editor", "chrome-extension", "wysiwyg", "bbcode"],
+  "keywords": [
+    "steam",
+    "guide",
+    "editor",
+    "chrome-extension",
+    "wysiwyg",
+    "bbcode"
+  ],
   "author": "JohnS3248",
   "repository": {
     "type": "git",

@@ -43,12 +43,14 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
     >
       {/* 标题 */}
       <div className="flex items-center gap-2 text-[13px] font-semibold text-text-primary">
-        <ImageIcon size={16} />
+        <span className={isRefreshing ? "animate-spin" : ""}>
+          <ImageIcon size={16} />
+        </span>
         <span className={archiveName ? "max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap" : ""}>
           {archiveName || '图片池'}
         </span>
         <span className="text-xs text-text-muted font-normal">
-          ({imageCount})
+          ({isRefreshing ? "…" : imageCount})
         </span>
       </div>
 

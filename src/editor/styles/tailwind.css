@@ -83,6 +83,15 @@
   --spacing-18: 4.5rem;
   --spacing-88: 22rem;
 
+  /* === Duration: new tiers === */
+  --duration-micro: 80ms;    /* 按钮悬停 (GitHub btn) */
+  --duration-fast: 150ms;    /* 小 fade/scale (Vercel copy-btn) */
+  --duration-dialog: 400ms;  /* dialog 进出 (Vercel dialog) */
+
+  /* === Easing: new curves === */
+  --ease-swift: cubic-bezier(.175, .885, .32, 1.1);  /* 弹性 overlay (Vercel --ds-motion-timing-swift) */
+  --ease-dialog: cubic-bezier(0.32, 0.72, 0, 1);     /* dialog/drawer (Vercel) */
+
   /* === Toast animations === */
   --animate-toast-enter: nasge-toast-enter 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-toast-exit: nasge-toast-exit 150ms ease-in forwards;
@@ -90,6 +99,13 @@
   /* === Dialog animations === */
   --animate-dialog-enter: nasge-dialog-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-dialog-backdrop: nasge-dialog-backdrop 180ms ease-out forwards;
+
+  /* === Shimmer & transition animations === */
+  --animate-shimmer: nasge-shimmer 1.6s ease-in-out infinite;
+  --animate-dropdown-enter: nasge-dropdown-enter 100ms ease forwards;
+  --animate-dropdown-exit: nasge-dropdown-exit 100ms ease forwards;
+  --animate-modal-enter: nasge-modal-enter 250ms var(--ease-swift) forwards;
+  --animate-modal-backdrop: nasge-modal-backdrop 200ms ease-out forwards;
 }
 
 @keyframes nasge-toast-enter {
@@ -108,6 +124,35 @@
 }
 
 @keyframes nasge-dialog-backdrop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Shimmer 扫光 (GPU: transform only) */
+@keyframes nasge-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 下拉菜单进出 (Vercel dropdown 参数) */
+@keyframes nasge-dropdown-enter {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nasge-dropdown-exit {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+
+/* Modal 进场 (Vercel modal-appear 参数) */
+@keyframes nasge-modal-enter {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Modal backdrop 淡入 */
+@keyframes nasge-modal-backdrop {
   from { opacity: 0; }
   to   { opacity: 1; }
 }

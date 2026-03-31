@@ -17,19 +17,22 @@ import { ImageIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
 import { dialog } from "../../stores/useDialogStore";
+import { SkeletonBlock } from "../Skeleton";
 
 interface ImageGridProps {
   images: ImageWithState[];
   onImageDoubleClick: (image: ImageWithState) => void;
   editingImageId: string | null;
   onEditingChange: (imageId: string | null) => void;
+  isLoading?: boolean;
 }
 
 const ImageGrid: React.FC<ImageGridProps> = ({
   images,
   onImageDoubleClick,
   editingImageId,
-  onEditingChange
+  onEditingChange,
+  isLoading = false
 }) => {
   const {
     currentPage,
@@ -323,6 +326,25 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       ImageUploadService.queuePoolBatchUpload(addedImages);
     }
   }, [addLocalImage, autoUploadInPanel, promptRenameOnDrop, onEditingChange, currentArchiveId]);
+
+  // 加载骨架
+  if (isLoading && images.length === 0) {
+    const skeletonCount = 8;
+    return (
+      <div
+        className="flex-1 flex flex-wrap content-start p-1"
+        style={{ gap: SIZES.gap }}
+      >
+        {Array.from({ length: skeletonCount }, (_, i) => (
+          <SkeletonBlock
+            key={i}
+            width={thumbnailSize}
+            height={Math.round(thumbnailSize * 0.75)}
+          />
+        ))}
+      </div>
+    );
+  }
 
   // 空状态
   if (images.length === 0) {

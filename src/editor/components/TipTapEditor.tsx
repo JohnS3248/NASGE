@@ -25,6 +25,7 @@ import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
 import { dialog } from "../stores/useDialogStore";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
+import { SkeletonLine, SkeletonBlock } from "./Skeleton";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -71,6 +72,33 @@ const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> =
   { label: "右对齐", value: "floatRight" },
   { label: "内嵌", value: "inline" }
 ];
+
+/** 编辑器初始化骨架屏 — 匹配编辑器布局避免 CLS */
+function EditorSkeleton() {
+  return (
+    <div className="flex-1 min-h-[260px] p-6 space-y-5">
+      {/* 模拟工具栏区域 */}
+      <div className="flex gap-2">
+        <SkeletonBlock width={32} height={32} />
+        <SkeletonBlock width={32} height={32} />
+        <SkeletonBlock width={32} height={32} />
+        <SkeletonBlock width={48} height={32} />
+        <SkeletonBlock width={32} height={32} />
+      </div>
+      {/* 模拟文本内容 */}
+      <div className="space-y-3 pt-2">
+        <SkeletonLine width="45%" height={20} />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="92%" />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="78%" />
+        <SkeletonLine width="100%" />
+        <SkeletonLine width="85%" />
+        <SkeletonLine width="60%" />
+      </div>
+    </div>
+  );
+}
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
   initialContent = "<p>欢迎使用 NASGE 编辑器。</p>",
@@ -641,7 +669,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     setCharacterInfo(checkCharacterLimit(editor, CONTENT_CHARACTER_LIMIT));
   }, [editor, externalDoc]);
 
-  if (!editor) return null;
+  if (!editor) return <EditorSkeleton />;
 
   return (
     <>

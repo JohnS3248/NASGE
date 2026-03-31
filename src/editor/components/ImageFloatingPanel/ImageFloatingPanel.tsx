@@ -302,6 +302,7 @@ const ImageFloatingPanel: React.FC = () => {
             onImageDoubleClick={handleImageDoubleClick}
             editingImageId={editingImageId}
             onEditingChange={setEditingImageId}
+            isLoading={imagePoolStatus === "loading"}
           />
         </div>
 
