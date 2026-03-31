@@ -8,6 +8,7 @@ import { useImageStore } from "../stores/useImageStore";
 import { useImageFromStore } from "../hooks/useImageFromStore";
 import type { ImageEntity, ImageSizePreset, ImageAlignment, ImageSource } from "../types/image";
 import { DEFAULT_IMAGE_PRESET, DEFAULT_IMAGE_ALIGNMENT } from "../types/image";
+import { ImageIcon } from "../components/ImageFloatingPanel/icons";
 import { loggers } from "../../shared/logger";
 
 // Steam 尺寸常量 (来自 Steam 实际测量 2025-12-31)
@@ -459,7 +460,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
           }}>
             {statusLabel ? (
               <>
-                <span style={{ fontSize: "24px" }}>🖼️</span>
+                <ImageIcon size={24} />
                 <span style={{
                   color: imageEntity?.status === "orphaned" ? "#ff8080" : "#808080",
                   fontSize: "0.85rem",

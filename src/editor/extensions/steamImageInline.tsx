@@ -7,6 +7,7 @@ import { useImageStore } from "../stores/useImageStore";
 import { useImageFromStore } from "../hooks/useImageFromStore";
 import type { ImageSizePreset, ImageAlignment } from "../types/image";
 import { DEFAULT_IMAGE_PRESET } from "../types/image";
+import { ImageIcon } from "../components/ImageFloatingPanel/icons";
 import { loggers } from "../../shared/logger";
 
 // Steam 尺寸常量
@@ -363,7 +364,7 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
             textAlign: "center",
             color: "#66c0f4"
           }} title={statusLabel}>
-            🖼
+            <ImageIcon size={16} />
           </span>
         )}
       </span>

@@ -213,7 +213,7 @@ export const useDraftStore = create<DraftState>()(
         }
 
         if (matching.length > 0) {
-          const mostRecent = matching.sort((a, b) => b.updatedAt - a.updatedAt)[0];
+          const mostRecent = [...matching].sort((a, b) => b.updatedAt - a.updatedAt)[0];
           set({ activeDraftId: mostRecent.id });
         } else {
           set({ activeDraftId: null });

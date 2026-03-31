@@ -16,34 +16,6 @@ import type {
 } from "../shared/messages";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.channel === "nasge:steam" && message?.action === "upload-image") {
-    const payloadShape = message?.file?.data;
-    const size = Array.isArray(payloadShape)
-      ? payloadShape.length
-      : payloadShape instanceof ArrayBuffer
-        ? payloadShape.byteLength
-        : typeof (payloadShape as { byteLength?: number })?.byteLength === "number"
-          ? (payloadShape as { byteLength: number }).byteLength
-          : null;
-    loggers.background.info("收到上传消息", {
-      fromTab: sender.tab?.id,
-      hasFile: Boolean(message?.file),
-      byteLength: size,
-      dataType: typeof payloadShape,
-      constructor: payloadShape?.constructor?.name,
-      hasSlice: typeof (payloadShape as { slice?: unknown })?.slice === "function",
-      hasBuffer: payloadShape instanceof ArrayBuffer,
-      length: Array.isArray(payloadShape)
-        ? payloadShape.length
-        : (payloadShape as { length?: number })?.length ?? null,
-      byteLengthProp: (payloadShape as { byteLength?: unknown })?.byteLength ?? null,
-      keys:
-        payloadShape && typeof payloadShape === "object"
-          ? Object.keys(payloadShape as Record<string, unknown>).slice(0, 5)
-          : undefined
-    });
-  }
-
   if (message?.type === "PING_FROM_CONTENT") {
     loggers.background.info("Received ping from content script", sender.tab?.url);
     sendResponse({ ok: true, receivedAt: Date.now() });
@@ -109,23 +81,6 @@ async function dispatchToSteamTab(
   message: SteamBridgeRequest,
   attempt = 1
 ): Promise<SteamBridgeResponse> {
-  if (message?.channel === "nasge:steam" && (message as SteamUploadRequest)?.action === "upload-image") {
-    const payload = message as SteamUploadRequest;
-    const raw = payload.file?.data;
-    const byteLength = Array.isArray(raw)
-      ? raw.length
-      : raw instanceof ArrayBuffer
-        ? raw.byteLength
-        : typeof (raw as { byteLength?: number })?.byteLength === "number"
-          ? (raw as { byteLength: number }).byteLength
-          : null;
-    loggers.background.info("转发上传消息到 Steam Tab", {
-      tabId,
-      byteLength,
-      attempt
-    });
-  }
-
   try {
     return await new Promise<SteamBridgeResponse>((resolve, reject) => {
       chrome.tabs.sendMessage(tabId, message, (response) => {
@@ -218,18 +173,9 @@ function cloneSteamBridgeRequest(message: SteamBridgeRequest): SteamBridgeReques
   } else if (raw && typeof raw === "object" && "length" in (raw as { length: number })) {
     clonedData = Array.from(raw as ArrayLike<number>);
   } else {
-    loggers.background.warn("无法识别上传数据形态，使用空数组", {
-      type: describeRawType(raw),
-      keys: describeRawKeys(raw)
-    });
+    loggers.background.warn("无法识别上传数据形态，使用空数组");
     clonedData = [];
   }
-
-  loggers.background.info("克隆上传数据", {
-    originalType: describeRawType(raw),
-    originalLength: describeRawLength(raw),
-    clonedLength: clonedData.length
-  });
 
   return {
     ...upload,
@@ -238,53 +184,6 @@ function cloneSteamBridgeRequest(message: SteamBridgeRequest): SteamBridgeReques
       data: clonedData
     }
   };
-}
-
-function describeRawType(raw: ArrayBuffer | number[] | ArrayLike<number> | undefined): string {
-  if (raw instanceof ArrayBuffer) {
-    return "ArrayBuffer";
-  }
-  if (Array.isArray(raw)) {
-    return "Array";
-  }
-  if (ArrayBuffer.isView(raw)) {
-    return raw.constructor?.name ?? "TypedArray";
-  }
-  if (raw && typeof raw === "object" && "constructor" in raw) {
-    return ((raw as { constructor?: { name?: string } }).constructor?.name) ?? typeof raw;
-  }
-  return typeof raw;
-}
-
-function describeRawLength(raw: ArrayBuffer | number[] | ArrayLike<number> | undefined): number | null {
-  if (raw instanceof ArrayBuffer) {
-    return raw.byteLength;
-  }
-  if (Array.isArray(raw)) {
-    return raw.length;
-  }
-  if (ArrayBuffer.isView(raw)) {
-    return (raw as ArrayBufferView).byteLength;
-  }
-  if (raw && typeof raw === "object" && "length" in raw) {
-    const length = (raw as { length: number }).length;
-    return typeof length === "number" ? length : null;
-  }
-  return null;
-}
-
-function describeRawKeys(raw: ArrayBuffer | number[] | ArrayLike<number> | undefined): string[] | undefined {
-  if (Array.isArray(raw) || raw instanceof ArrayBuffer || ArrayBuffer.isView(raw)) {
-    return undefined;
-  }
-  if (raw && typeof raw === "object") {
-    try {
-      return Object.keys(raw as unknown as Record<string, unknown>).slice(0, 5);
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
 }
 
 const REVIEW_ACTIONS = new Set([

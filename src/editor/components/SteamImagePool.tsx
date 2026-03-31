@@ -17,9 +17,9 @@ const statusLabelMap: Record<ImageLifecycleStatus, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  error: "text-[#ff8f8f]",
-  uploaded: "text-[#85ffba]",
-  synced: "text-[#85ffba]",
+  error: "text-danger",
+  uploaded: "text-success",
+  synced: "text-success",
 };
 
 const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
@@ -64,14 +64,14 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
         <button
           type="button"
           onClick={() => refreshRemote()}
-          className={`border border-accent/30 bg-[rgba(11,20,33,0.82)] text-[#bcd9ff] rounded-lg px-2.5 py-1 text-xs ${remoteStatus === "loading" ? "cursor-progress" : "cursor-pointer"}`}
+          className={`border border-accent/30 bg-bg-app/80 text-accent rounded-lg px-2.5 py-1 text-xs ${remoteStatus === "loading" ? "cursor-progress" : "cursor-pointer"}`}
           disabled={remoteStatus === "loading"}
         >
           {remoteStatus === "loading" ? "刷新中…" : "刷新"}
         </button>
       </div>
       {remoteError ? (
-        <div className="px-2.5 py-2 rounded-md bg-danger/12 text-[#ffb3b3] text-[0.78rem]">
+        <div className="px-2.5 py-2 rounded-md bg-danger/12 text-danger text-[0.78rem]">
           {remoteError}
         </div>
       ) : null}
@@ -102,7 +102,7 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
         {remoteItems.map((asset) => (
           <div
             key={asset.previewId}
-            className="flex flex-col gap-2 p-2.5 rounded-lg bg-[rgba(12,20,32,0.9)] border border-accent/18"
+            className="flex flex-col gap-2 p-2.5 rounded-lg bg-bg-app/90 border border-accent/18"
           >
             <div className="text-[0.8rem] text-text-primary font-semibold">
               {asset.fileName}
@@ -111,7 +111,7 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
               <img
                 src={asset.thumbnailUrl}
                 alt={asset.fileName}
-                className="w-full rounded-md object-cover bg-[rgba(14,26,40,0.7)]"
+                className="w-full rounded-md object-cover bg-bg-app/70"
               />
             ) : null}
             <div className="flex justify-between items-center text-xs text-text-secondary/65">
@@ -119,7 +119,7 @@ const SteamImagePool: React.FC<SteamImagePoolProps> = ({ onDelete }) => {
               <button
                 type="button"
                 onClick={() => onDelete?.(asset.previewId)}
-                className="border-0 rounded-lg px-2.5 py-1 bg-[rgba(255,118,118,0.2)] text-[#ff9a9a] cursor-pointer font-semibold text-xs"
+                className="border-0 rounded-lg px-2.5 py-1 bg-danger/20 text-danger cursor-pointer font-semibold text-xs"
               >
                 删除
               </button>
@@ -149,12 +149,12 @@ const UploadQueueItem: React.FC<{
   }, [image.steamPreviewId, image.steamUrls, image.localPreviewUrl, remoteItems]);
 
   return (
-    <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-[rgba(12,20,32,0.9)] border border-accent/18">
+    <div className="flex flex-col gap-2 p-2.5 rounded-lg bg-bg-app/90 border border-accent/18">
       <div className="flex justify-between items-center gap-1.5">
         <span className="text-[0.8rem] font-semibold text-text-primary leading-snug">
           {image.fileName}
         </span>
-        <span className={`text-xs ${STATUS_COLOR[image.status] ?? "text-[#9ac7ff]"}`}>
+        <span className={`text-xs ${STATUS_COLOR[image.status] ?? "text-accent"}`}>
           {statusLabel}
         </span>
       </div>
@@ -162,15 +162,15 @@ const UploadQueueItem: React.FC<{
         <img
           src={src}
           alt={image.fileName}
-          className="w-full rounded-md object-cover bg-[rgba(14,26,40,0.7)]"
+          className="w-full rounded-md object-cover bg-bg-app/70"
         />
       ) : (
-        <div className="h-[120px] rounded-md bg-[rgba(14,26,40,0.7)] border border-dashed border-accent/25 flex items-center justify-center text-text-secondary/60 text-[0.8rem]">
+        <div className="h-[120px] rounded-md bg-bg-app/70 border border-dashed border-accent/25 flex items-center justify-center text-text-secondary/60 text-[0.8rem]">
           {image.status === "uploading" ? "正在上传…" : "等待上传"}
         </div>
       )}
       {image.status === "error" && image.error && (
-        <div className="text-xs text-[#ff8f8f] p-1.5 bg-[rgba(255,118,118,0.1)] rounded-lg">
+        <div className="text-xs text-danger p-1.5 bg-danger/10 rounded-lg">
           {image.error}
         </div>
       )}
@@ -179,7 +179,7 @@ const UploadQueueItem: React.FC<{
 };
 
 const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="text-[0.78rem] text-[rgba(173,202,236,0.78)] tracking-wider uppercase">
+  <div className="text-[0.78rem] text-text-secondary/78 tracking-wider uppercase">
     {children}
   </div>
 );

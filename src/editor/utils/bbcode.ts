@@ -20,34 +20,13 @@ const INLINE_MARKS: Record<string, { open: string; close: string }> = {
  */
 function getImageUrlFromPool(previewId: string): string | null {
   const imagePool = useSteamGuideImageStore.getState().items;
-
-  loggers.editor.verbose('bbcodeToHtml 查找图片:', {
-    previewId,
-    imagePoolSize: imagePool.length,
-    imagePoolPreviewIds: imagePool.map(img => img.previewId)
-  });
-
   const image = imagePool.find(img => img.previewId === previewId);
 
-  loggers.editor.verbose('bbcodeToHtml 查找结果:', {
-    previewId,
-    found: !!image,
-    imageData: image ? {
-      previewId: image.previewId,
-      fileName: image.fileName,
-      hasOriginalUrl: !!image.originalUrl,
-      hasThumbnailUrl: !!image.thumbnailUrl,
-      originalUrl: image.originalUrl,
-      thumbnailUrl: image.thumbnailUrl
-    } : null
-  });
-
   if (image?.originalUrl) {
-    loggers.editor.verbose('bbcodeToHtml 从图片池找到透明图片:', { previewId, url: image.originalUrl });
     return image.originalUrl;
   }
 
-  loggers.editor.warn('bbcodeToHtml 图片池中未找到 previewId:', previewId, '或 originalUrl 为空');
+  loggers.editor.verbose('bbcodeToHtml 图片池中未找到:', previewId);
   return null;
 }
 

@@ -12,8 +12,12 @@
     "test": "vitest run",
     "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["steam", "guide", "editor", "chrome-extension", "wysiwyg", "bbcode"],
+  "author": "JohnS3248",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JohnS3248/NASGE.git"
+  },
   "license": "MIT",
   "dependencies": {
     "@tiptap/extension-heading": "^3.9.0",
@@ -29,7 +33,6 @@
     "@tiptap/html": "^3.9.1",
     "@tiptap/react": "^3.9.0",
     "@tiptap/starter-kit": "^3.9.0",
-    "jsdom": "^27.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zustand": "^5.0.8"
@@ -47,6 +50,7 @@
     "type-fest": "^5.1.0",
     "typescript": "^5.9.3",
     "vite": "^7.1.12",
+    "jsdom": "^27.0.1",
     "vitest": "^2.1.4"
   }
 }

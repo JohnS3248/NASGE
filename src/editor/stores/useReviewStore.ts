@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ReviewFormData } from "../../shared/messages";
+import { loggers } from "../../shared/logger";
 
 type ReviewSettings = {
   ratedUp: boolean | null;
@@ -114,7 +115,7 @@ export const useReviewStore = create<ReviewState>()(
             const { appId, gameName } = JSON.parse(saved);
             if (appId) useReviewStore.setState({ appId, gameName: gameName || '' });
           }
-        } catch { /* ignore */ }
+        } catch (error) { loggers.persist.warn('useReviewStore session 恢复失败:', error); }
       },
     }
   )

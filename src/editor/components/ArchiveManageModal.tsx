@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { dialog } from '../stores/useDialogStore';
+import { TrashIcon } from './ImageFloatingPanel/icons';
 
 interface ArchiveManageModalProps {
   visible: boolean;
@@ -241,7 +242,7 @@ const ArchiveListItem: React.FC<{
         title="删除存档"
         className="w-8 h-8 rounded-md border-0 bg-transparent text-text-muted cursor-pointer flex items-center justify-center text-[0.9rem] hover:bg-danger/15 hover:text-danger nasge-transition-quick"
       >
-        🗑️
+        <TrashIcon size={16} />
       </button>
     </div>
   );
