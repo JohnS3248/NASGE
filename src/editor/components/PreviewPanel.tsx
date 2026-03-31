@@ -3,6 +3,7 @@ import { previewChapterFromSteam } from "../services/chapterSync";
 import { useGuideStore } from "../stores/useGuideStore";
 import { useDraftStore } from "../stores/useDraftStore";
 import { loggers } from "../../shared/logger";
+import { SkeletonLine } from "./Skeleton";
 
 /**
  * Steam 指南 BBCode 渲染样式
@@ -421,9 +422,23 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
               dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
           </>
+        ) : isLoading ? (
+          <div className="p-4 space-y-3" style={{ width: 638 }}>
+            <SkeletonLine width="45%" height={20} />
+            <div className="pt-2 space-y-2.5">
+              <SkeletonLine width="100%" />
+              <SkeletonLine width="93%" />
+              <SkeletonLine width="100%" />
+              <SkeletonLine width="80%" />
+              <SkeletonLine width="100%" />
+              <SkeletonLine width="88%" />
+              <SkeletonLine width="100%" />
+              <SkeletonLine width="65%" />
+            </div>
+          </div>
         ) : (
           <div className="text-text-muted text-[0.85rem] text-center p-8">
-            {isLoading ? "正在获取预览..." : "编辑内容后将显示预览"}
+            编辑内容后将显示预览
           </div>
         )}
       </div>
