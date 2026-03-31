@@ -28,7 +28,7 @@ const UploadStatusHUD: React.FC = () => {
       {activeItems.map((image) => (
         <div
           key={image.id}
-          className="bg-[rgba(10,18,30,0.92)] border border-border-accent rounded-lg px-3.5 py-2.5 shadow-xl text-[0.85rem] flex flex-col gap-1.5"
+          className="bg-[rgba(10,18,30,0.92)] border border-border-accent rounded-lg px-3.5 py-2.5 shadow-xl text-[0.85rem] flex flex-col gap-1.5 animate-toast-enter"
         >
           <div className="font-semibold text-text-primary">{image.originalName}</div>
           <div className={STATUS_COLOR[image.status] ?? "text-text-primary"}>

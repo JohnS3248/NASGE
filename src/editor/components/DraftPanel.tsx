@@ -5,6 +5,7 @@ import { useArchiveStore } from '../stores/useArchiveStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { extractTitleText } from '../utils/titleHelpers';
 import { dialog } from '../stores/useDialogStore';
+import { useMountTransition } from '../hooks/useMountTransition';
 
 // ============================================================================
 // Types & Helpers
@@ -177,6 +178,7 @@ const DraftPanel: React.FC = () => {
   const reviewAppId = useReviewStore((s) => s.appId);
 
   const [isExpanded, setIsExpanded] = useState(false);
+  const shouldRenderDropdown = useMountTransition(isExpanded, 100);
   const [batchMode, setBatchMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
@@ -326,8 +328,10 @@ const DraftPanel: React.FC = () => {
       </div>
 
       {/* 悬浮面板 */}
-      {isExpanded && (
-        <div ref={floatingRef} className="absolute top-[calc(100%+6px)] left-0 z-50 min-w-80 max-w-[450px] rounded-lg border border-border-accent bg-bg-surface shadow-xl">
+      {shouldRenderDropdown && (
+        <div ref={floatingRef} className={`absolute top-[calc(100%+6px)] left-0 z-50 min-w-80 max-w-[450px] rounded-lg border border-border-accent bg-bg-surface shadow-xl ${
+          isExpanded ? "animate-dropdown-enter" : "animate-dropdown-exit"
+        }`}>
           {/* 工具栏 */}
           <div className="flex items-center gap-2 px-3 py-2 border-b border-border-default">
             {batchMode ? (

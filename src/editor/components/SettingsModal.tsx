@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useMountTransition } from "../hooks/useMountTransition";
 import {
   useEditorConfigStore,
   ShortcutConfig,
@@ -119,6 +120,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   visible,
   onClose
 }) => {
+  const shouldRender = useMountTransition(visible, 150);
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -173,17 +175,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [visible, onClose]);
 
-  if (!visible) return null;
+  if (!shouldRender) return null;
 
   return (
     // Backdrop
     <div
-      className="fixed inset-0 bg-black/65 z-[10000] flex items-center justify-center"
+      className={`fixed inset-0 bg-black/65 z-[10000] flex items-center justify-center ${
+        visible ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-[150ms]"
+      }`}
       onClick={onClose}
     >
       {/* Modal container */}
       <div
-        className="bg-bg-surface border border-border-accent rounded-lg shadow-2xl w-[720px] max-w-[90vw] h-[540px] max-h-[85vh] flex flex-col"
+        className={`bg-bg-surface border border-border-accent rounded-lg shadow-2xl w-[720px] max-w-[90vw] h-[540px] max-h-[85vh] flex flex-col ${
+          visible ? "animate-modal-enter" : "opacity-0 scale-95 transition-all duration-[150ms]"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

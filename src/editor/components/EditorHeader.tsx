@@ -5,6 +5,7 @@ import { useDraftStore } from '../stores/useDraftStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { SettingsModal } from './SettingsModal';
 import { ArchiveManageModal } from './ArchiveManageModal';
+import { useMountTransition } from '../hooks/useMountTransition';
 
 // ============================================================================
 // 模式配置
@@ -41,6 +42,8 @@ const EditorHeader: React.FC = () => {
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [gameOpen, setGameOpen] = useState(false);
+  const shouldRenderArchive = useMountTransition(archiveOpen, 100);
+  const shouldRenderGame = useMountTransition(gameOpen, 100);
   const [manageModalVisible, setManageModalVisible] = useState(false);
   const archiveRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<HTMLDivElement>(null);
@@ -166,15 +169,17 @@ const EditorHeader: React.FC = () => {
                 </svg>
               </button>
 
-              {gameOpen && (
-                <GameDropdown
-                  games={gameList}
-                  activeAppId={reviewAppId}
-                  onSelect={(appId, name) => {
-                    useReviewStore.getState().selectGame(appId, name);
-                    setGameOpen(false);
-                  }}
-                />
+              {shouldRenderGame && (
+                <div className={gameOpen ? "animate-dropdown-enter" : "animate-dropdown-exit"}>
+                  <GameDropdown
+                    games={gameList}
+                    activeAppId={reviewAppId}
+                    onSelect={(appId, name) => {
+                      useReviewStore.getState().selectGame(appId, name);
+                      setGameOpen(false);
+                    }}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -206,13 +211,15 @@ const EditorHeader: React.FC = () => {
               </button>
 
               {/* 存档下拉 */}
-              {archiveOpen && (
-                <ArchiveDropdown
-                  archives={archiveList}
-                  activeId={currentArchiveId}
-                  onSelect={(id) => { switchArchive(id); setArchiveOpen(false); }}
-                  onManage={() => { setArchiveOpen(false); setManageModalVisible(true); }}
-                />
+              {shouldRenderArchive && (
+                <div className={archiveOpen ? "animate-dropdown-enter" : "animate-dropdown-exit"}>
+                  <ArchiveDropdown
+                    archives={archiveList}
+                    activeId={currentArchiveId}
+                    onSelect={(id) => { switchArchive(id); setArchiveOpen(false); }}
+                    onManage={() => { setArchiveOpen(false); setManageModalVisible(true); }}
+                  />
+                </div>
               )}
             </div>
           )}

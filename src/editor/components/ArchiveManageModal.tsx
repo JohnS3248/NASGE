@@ -3,6 +3,7 @@ import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { dialog } from '../stores/useDialogStore';
 import { TrashIcon } from './ImageFloatingPanel/icons';
+import { useMountTransition } from '../hooks/useMountTransition';
 
 interface ArchiveManageModalProps {
   visible: boolean;
@@ -13,6 +14,7 @@ interface ArchiveManageModalProps {
  * 存档管理弹窗 - 管理所有存档
  */
 export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible, onClose }) => {
+  const shouldRender = useMountTransition(visible, 150);
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const switchArchive = useGuideStore((s) => s.switchArchive);
   const { archives, createArchive, deleteArchive } = useArchiveStore();
@@ -64,15 +66,19 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
     }
   };
 
-  if (!visible) return null;
+  if (!shouldRender) return null;
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[10000]"
+      className={`fixed inset-0 bg-black/60 flex items-center justify-center z-[10000] ${
+        visible ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-[150ms]"
+      }`}
       onClick={onClose}
     >
       <div
-        className="bg-[rgba(13,23,36,0.98)] border border-accent/30 rounded-xl p-6 w-[480px] max-h-[80vh] flex flex-col shadow-2xl"
+        className={`bg-[rgba(13,23,36,0.98)] border border-accent/30 rounded-xl p-6 w-[480px] max-h-[80vh] flex flex-col shadow-2xl ${
+          visible ? "animate-modal-enter" : "opacity-0 scale-95 transition-all duration-[150ms]"
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 */}
