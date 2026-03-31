@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
@@ -60,50 +60,6 @@ const INITIAL_CONTEXT_MENU: ContextMenuState = {
   mode: "empty"
 };
 
-/**
- * 计算右键菜单位置，确保菜单不会超出视口边界
- * @param clientX 鼠标点击的 X 坐标
- * @param clientY 鼠标点击的 Y 坐标
- * @param menuWidth 菜单预估宽度
- * @param menuHeight 菜单预估高度
- */
-function calcMenuPosition(
-  clientX: number,
-  clientY: number,
-  menuWidth = 180,
-  menuHeight = 280
-): { x: number; y: number } {
-  let x = clientX;
-  let y = clientY;
-
-  // 右侧边界检测
-  if (x + menuWidth > window.innerWidth) {
-    x = clientX - menuWidth;
-  }
-
-  // 底部边界检测：优先在点击位置下方显示
-  // 如果下方空间不足，尝试在上方显示
-  // 如果上方空间也不足，确保菜单底部不超出视口
-  const spaceBelow = window.innerHeight - clientY;
-  const spaceAbove = clientY;
-
-  if (spaceBelow < menuHeight) {
-    // 下方空间不足
-    if (spaceAbove >= menuHeight) {
-      // 上方空间足够，向上翻转
-      y = clientY - menuHeight;
-    } else {
-      // 上下空间都不足，确保菜单底部不超出视口底部
-      y = Math.max(0, window.innerHeight - menuHeight);
-    }
-  }
-
-  // 确保不会超出左边界
-  if (x < 0) x = 0;
-
-  return { x, y };
-}
-
 const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
   { label: "原尺寸", value: "original" },
   { label: "半宽", value: "half" },
@@ -126,6 +82,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const ignoreNextUpdateRef = useRef(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
   // 字符数限制信息
   const [characterInfo, setCharacterInfo] = useState(() => ({
     length: 0,
@@ -284,6 +241,31 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   const closeContextMenu = useCallback(() => {
     setContextMenu(INITIAL_CONTEXT_MENU);
   }, []);
+
+  // 渲染后根据实际菜单尺寸调整位置，防止溢出视口
+  useLayoutEffect(() => {
+    const el = contextMenuRef.current;
+    if (!contextMenu.visible || !el) return;
+
+    const rect = el.getBoundingClientRect();
+    let x = contextMenu.x;
+    let y = contextMenu.y;
+    let adjusted = false;
+
+    if (x + rect.width > window.innerWidth) {
+      x = Math.max(0, window.innerWidth - rect.width);
+      adjusted = true;
+    }
+    if (y + rect.height > window.innerHeight) {
+      y = Math.max(0, window.innerHeight - rect.height);
+      adjusted = true;
+    }
+
+    if (adjusted) {
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+    }
+  }, [contextMenu]);
 
   // 查找图片节点的辅助函数
   // data-image-node-id 可能是 imageNodeId 或 previewId，需要都检查
@@ -743,12 +725,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
               loggers.editor.verbose('右键菜单 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
 
-              // 计算菜单位置（图片菜单较高，预估 320px）
-              const imageMenuPos = calcMenuPosition(event.clientX, event.clientY, 180, 320);
               setContextMenu({
                 visible: true,
-                x: imageMenuPos.x,
-                y: imageMenuPos.y,
+                x: event.clientX,
+                y: event.clientY,
                 mode: "image",
                 payload: {
                   imageNodeId,
@@ -770,11 +750,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             if (coords) {
               editor.chain().focus().setTextSelection(coords.pos).run();
             }
-            const menuPos = calcMenuPosition(event.clientX, event.clientY, 180, 380);
             setContextMenu({
               visible: true,
-              x: menuPos.x,
-              y: menuPos.y,
+              x: event.clientX,
+              y: event.clientY,
               mode: "table"
             });
             return;
@@ -789,12 +768,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           }
 
           event.preventDefault();
-          // 计算菜单位置（选中菜单有更多选项，预估 350px 高）
-          const menuPos = calcMenuPosition(event.clientX, event.clientY, 180, 350);
           setContextMenu({
             visible: true,
-            x: menuPos.x,
-            y: menuPos.y,
+            x: event.clientX,
+            y: event.clientY,
             mode
           });
         }}
@@ -812,6 +789,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
       {contextMenu.visible ? (
         <div
+          ref={contextMenuRef}
           className="fixed bg-bg-overlay border border-border-accent rounded-lg p-1 flex flex-col gap-1 min-w-[160px] z-[9999] shadow-xl"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >

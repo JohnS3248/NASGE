@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
@@ -72,6 +72,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   const [hasImage, setHasImage] = useState(false);
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
   // 字符数限制信息
   const [characterInfo, setCharacterInfo] = useState(() => ({
     length: 0,
@@ -155,6 +156,31 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   const closeContextMenu = useCallback(() => {
     setContextMenu(INITIAL_CONTEXT_MENU);
   }, []);
+
+  // 渲染后根据实际菜单尺寸调整位置，防止溢出视口
+  useLayoutEffect(() => {
+    const el = contextMenuRef.current;
+    if (!contextMenu.visible || !el) return;
+
+    const rect = el.getBoundingClientRect();
+    let x = contextMenu.x;
+    let y = contextMenu.y;
+    let adjusted = false;
+
+    if (x + rect.width > window.innerWidth) {
+      x = Math.max(0, window.innerWidth - rect.width);
+      adjusted = true;
+    }
+    if (y + rect.height > window.innerHeight) {
+      y = Math.max(0, window.innerHeight - rect.height);
+      adjusted = true;
+    }
+
+    if (adjusted) {
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+    }
+  }, [contextMenu]);
 
   // 获取当前右键菜单对应的图片节点
   const contextMenuImageEntity = contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
@@ -390,6 +416,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       {/* 右键菜单 */}
       {contextMenu.visible && contextMenu.mode === "image" && contextMenuImageNode && (
         <div
+          ref={contextMenuRef}
           className="fixed bg-bg-overlay border border-border-accent rounded-lg p-1 flex flex-col gap-1 min-w-[160px] z-[9999] shadow-xl"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >

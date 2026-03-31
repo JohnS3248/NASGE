@@ -3,7 +3,7 @@
  * 显示单个图片的缩略图、文件名和状态
  * 支持拖拽到编辑器插入
  */
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, type ImageTag } from "../../stores/useGuideStore";
@@ -242,22 +242,41 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
   const imagePoolMenuConfig = useEditorConfigStore((state) => state.imagePoolMenuConfig);
 
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
     if (!imagePoolMenuConfig.enabled) return;
     e.preventDefault();
     e.stopPropagation();
-    const menuWidth = 180;
-    const menuHeight = 280;
-    let x = e.clientX;
-    let y = e.clientY;
-    if (x + menuWidth > window.innerWidth) x = e.clientX - menuWidth;
-    if (y + menuHeight > window.innerHeight) y = e.clientY - menuHeight;
-    if (x < 0) x = 0;
-    if (y < 0) y = 0;
-    setContextMenu({ x, y });
+    setContextMenu({ x: e.clientX, y: e.clientY });
   }, [imagePoolMenuConfig.enabled]);
 
   const closeContextMenu = useCallback(() => { setContextMenu(null); }, []);
+
+  // 渲染后根据实际菜单尺寸调整位置，防止溢出视口
+  useLayoutEffect(() => {
+    const el = contextMenuRef.current;
+    if (!contextMenu || !el) return;
+
+    const rect = el.getBoundingClientRect();
+    let adjusted = false;
+    let x = contextMenu.x;
+    let y = contextMenu.y;
+
+    if (x + rect.width > window.innerWidth) {
+      x = Math.max(0, window.innerWidth - rect.width);
+      adjusted = true;
+    }
+    if (y + rect.height > window.innerHeight) {
+      y = Math.max(0, window.innerHeight - rect.height);
+      adjusted = true;
+    }
+
+    if (adjusted) {
+      el.style.left = `${x}px`;
+      el.style.top = `${y}px`;
+    }
+  }, [contextMenu]);
 
   useEffect(() => {
     if (contextMenu) {
@@ -418,6 +437,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       {/* 右键菜单 */}
       {contextMenu && (
         <div
+          ref={contextMenuRef}
           className="fixed bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-md shadow-lg py-1 min-w-[160px] z-[3000]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
