@@ -343,6 +343,17 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
     return drafts.find((d) => d.id === activeId) ?? drafts[0];
   });
 
+  // 章节切换时清空旧预览，触发骨架屏
+  const currentChapterId = activeDraft?.linkedChapterId;
+  const prevChapterRef = useRef(currentChapterId);
+  useEffect(() => {
+    if (prevChapterRef.current !== currentChapterId) {
+      prevChapterRef.current = currentChapterId;
+      setPreviewHtml("");
+      lastRequestRef.current = "";
+    }
+  }, [currentChapterId]);
+
   const fetchPreview = useCallback(async (content: string, contentTitle: string) => {
     // 生成请求唯一标识，避免重复请求
     const requestKey = `${content}|${contentTitle}`;
@@ -352,7 +363,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
     lastRequestRef.current = requestKey;
 
     if (!guideInfo?.id) {
-      setError("未获取到指南信息");
+      // guideInfo 尚未就绪，静默等待（guideInfo 到达后会触发重新渲染）
       return;
     }
 
@@ -381,7 +392,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
     }
   }, [guideInfo?.id, activeDraft?.linkedChapterId]);
 
-  // 防抖请求预览
+  // 防抖请求预览（guideInfo 变化也触发重试）
   useEffect(() => {
     if (debounceTimerRef.current) {
       window.clearTimeout(debounceTimerRef.current);
@@ -399,7 +410,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
         window.clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [bbcode, title, fetchPreview]);
+  }, [bbcode, title, fetchPreview, guideInfo?.id]);
 
   return (
     <div className="rounded-lg bg-bg-surface border border-border-accent p-[1.1rem] shadow-panel flex flex-col overflow-hidden min-w-[638px]">
