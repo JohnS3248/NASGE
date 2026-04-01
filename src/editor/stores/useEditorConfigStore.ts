@@ -331,6 +331,9 @@ export type EditorConfig = {
   toolbarPos: { x: number; y: number }; // 悬浮工具栏位置
   toolbarDockMode: ToolbarDockMode;   // 工具栏停靠模式
   showPreview: boolean;               // 实时预览开关
+  // 章节导航配置
+  chapterNavMode: 'fixed' | 'movable';  // 固定/活动模式
+  chapterNavPos: { x: number; y: number }; // 活动模式下的位置
   // 右键菜单配置
   imageMenuConfig: ImageMenuConfig;         // 编辑器图片菜单
   selectionMenuConfig: ContextMenuConfig;   // 文字选择菜单
@@ -359,6 +362,9 @@ type EditorConfigState = EditorConfig & {
   setToolbarPos: (pos: { x: number; y: number }) => void;
   setToolbarDockMode: (mode: ToolbarDockMode) => void;
   setShowPreview: (enabled: boolean) => void;
+  // 章节导航配置相关
+  setChapterNavMode: (mode: 'fixed' | 'movable') => void;
+  setChapterNavPos: (pos: { x: number; y: number }) => void;
   // 右键菜单配置相关
   setContextMenuEnabled: (menuType: ContextMenuType, enabled: boolean) => void;
   setMenuItemEnabled: (menuType: ContextMenuType, itemId: string, enabled: boolean, groupId?: 'preset' | 'align' | 'action') => void;
@@ -386,6 +392,9 @@ const DEFAULT_CONFIG: EditorConfig = {
   toolbarPos: { x: -1, y: -1 },    // -1 表示使用默认位置
   toolbarDockMode: 'side',          // 默认侧边停靠
   showPreview: false,               // 默认关闭实时预览
+  // 章节导航默认值
+  chapterNavMode: 'fixed' as const,
+  chapterNavPos: { x: -1, y: -1 },  // -1 表示使用默认位置
   // 右键菜单配置默认值
   imageMenuConfig: DEFAULT_IMAGE_MENU_CONFIG,
   selectionMenuConfig: DEFAULT_SELECTION_MENU_CONFIG,
@@ -468,6 +477,14 @@ export const useEditorConfigStore = create<EditorConfigState>()(
       setShowPreview: (enabled) => {
         loggers.config.info("设置实时预览:", enabled ? "开启" : "关闭");
         set({ showPreview: enabled });
+      },
+      // 章节导航配置方法
+      setChapterNavMode: (mode) => {
+        loggers.config.info("设置章节导航模式:", mode);
+        set({ chapterNavMode: mode });
+      },
+      setChapterNavPos: (pos) => {
+        set({ chapterNavPos: pos });
       },
       // 右键菜单配置方法
       setContextMenuEnabled: (menuType, enabled) => {
@@ -600,6 +617,9 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           toolbarPos: persisted?.toolbarPos ?? DEFAULT_CONFIG.toolbarPos,
           toolbarDockMode: persisted?.toolbarDockMode ?? DEFAULT_CONFIG.toolbarDockMode,
           showPreview: persisted?.showPreview ?? DEFAULT_CONFIG.showPreview,
+          // 章节导航
+          chapterNavMode: persisted?.chapterNavMode ?? DEFAULT_CONFIG.chapterNavMode,
+          chapterNavPos: persisted?.chapterNavPos ?? DEFAULT_CONFIG.chapterNavPos,
           // 深度合并右键菜单配置
           imageMenuConfig: mergeImageMenuConfig(persisted?.imageMenuConfig),
           selectionMenuConfig: mergeContextMenuConfig(persisted?.selectionMenuConfig, DEFAULT_SELECTION_MENU_CONFIG),

@@ -1,12 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useGuideStore, type ChapterInfo } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useDraftStore } from '../stores/useDraftStore';
+import { useEditorConfigStore } from '../stores/useEditorConfigStore';
 import { useChapterSync } from '../hooks/useChapterSync';
 import { createChapterOnSteam } from '../services/chapterSync';
 import { loggers } from '../../shared/logger';
 import { toast } from '../stores/useToastStore';
 import { dialog } from '../stores/useDialogStore';
+import { SkeletonLine } from './Skeleton';
 
 /* ── Lucide SVG 图标 ─────────────────────────────────────── */
 
@@ -46,10 +48,21 @@ const Loader2Icon: React.FC<{ className?: string }> = ({ className = "" }) => (
   </svg>
 );
 
-/* ── Tailwind class 常量 ─────────────────────────────────── */
+// Lucide Lock icon
+const LockIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
 
-// 分隔线
-const navHr = "h-px bg-border-subtle my-1";
+// Lucide Unlock icon
+const UnlockIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />
+  </svg>
+);
+
+/* ── Tailwind class 常量 ─────────────────────────────────── */
 
 // 状态 border
 const borderLinked = "border-l-[3px] border-l-accent";
@@ -73,6 +86,17 @@ const formatSyncTime = (timestamp: number): string => {
   if (diffDays < 7) return `${diffDays} 天前`;
 
   return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+};
+
+/* ── 固定模式默认位置 ────────────────────────────────────── */
+
+const FIXED_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  right: '1rem',
+  top: '14rem',
+  maxHeight: 'calc(100vh - 15rem)',
+  zIndex: 100,
+  pointerEvents: 'auto',
 };
 
 interface ChapterNavProps {
@@ -107,6 +131,32 @@ const ChapterTitleImage: React.FC<{
     </div>
   );
 };
+
+/* ── 骨架屏组件 ─────────────────────────────────────────── */
+
+const ChapterNavSkeleton: React.FC<{ style?: React.CSSProperties }> = ({ style }) => (
+  <aside
+    className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col overflow-hidden animate-dropdown-enter"
+    style={style}
+  >
+    {/* 头部骨架 */}
+    <div className="px-2.5 py-2.5 border-b border-border-subtle bg-bg-app/60 flex justify-between items-center">
+      <SkeletonLine width="55%" height={16} />
+      <div className="flex items-center gap-1.5">
+        <SkeletonLine width={20} height={20} className="rounded" />
+        <SkeletonLine width={20} height={20} className="rounded" />
+      </div>
+    </div>
+    {/* 章节项骨架 */}
+    <div className="flex flex-col gap-0.5 p-1">
+      {[85, 70, 92, 60, 78, 45].map((w, i) => (
+        <div key={i} className={`py-2 px-2.5 ${borderNone}`}>
+          <SkeletonLine width={`${w}%`} height={14} />
+        </div>
+      ))}
+    </div>
+  </aside>
+);
 
 /**
  * 单个章节项组件（使用 React.memo 避免不必要的重渲染）
@@ -201,12 +251,98 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const currentArchive = useArchiveStore((state) => currentArchiveId ? state.archives[currentArchiveId] : undefined);
   const getDraftByChapterId = useDraftStore((state) => state.getDraftByChapterId);
 
+  // 章节导航模式/位置（持久化）
+  const navMode = useEditorConfigStore((s) => s.chapterNavMode);
+  const navPos = useEditorConfigStore((s) => s.chapterNavPos);
+  const setNavMode = useEditorConfigStore((s) => s.setChapterNavMode);
+  const setNavPos = useEditorConfigStore((s) => s.setChapterNavPos);
+
   const { pullChapter, switchToChapter, getChapterDraft, syncStatus, syncChapterOrder } = useChapterSync();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCreatingChapter, setIsCreatingChapter] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  // 活动模式拖拽 state
+  const [isDraggingNav, setIsDraggingNav] = useState(false);
+  const [floatingPos, setFloatingPos] = useState({ x: navPos.x, y: navPos.y });
+  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+
+  // 同步 store → local state（仅初始化/store 外部修改时）
+  useEffect(() => {
+    if (!isDraggingNav) {
+      setFloatingPos({ x: navPos.x, y: navPos.y });
+    }
+  }, [navPos.x, navPos.y, isDraggingNav]);
+
+  /* ── 活动模式拖拽处理 ────────────────────────────────────── */
+
+  const handleNavMouseDown = useCallback((e: React.MouseEvent) => {
+    if (navMode !== 'movable') return;
+    // 忽略按钮点击
+    if ((e.target as HTMLElement).closest('button')) return;
+    e.preventDefault();
+    // -1 表示使用默认位置，需要解析为实际像素值
+    const posX = floatingPos.x < 0 ? window.innerWidth - 316 : floatingPos.x;
+    const posY = floatingPos.y < 0 ? 224 : floatingPos.y;
+    dragStartRef.current = { x: e.clientX, y: e.clientY, posX, posY };
+    setIsDraggingNav(true);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+  }, [navMode, floatingPos]);
+
+  useEffect(() => {
+    if (!isDraggingNav) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = e.clientX - dragStartRef.current.x;
+      const dy = e.clientY - dragStartRef.current.y;
+      const newX = Math.max(0, Math.min(window.innerWidth - 60, dragStartRef.current.posX + dx));
+      const newY = Math.max(0, Math.min(window.innerHeight - 60, dragStartRef.current.posY + dy));
+      setFloatingPos({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingNav(false);
+      dragStartRef.current = null;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      // 持久化位置
+      setFloatingPos((pos) => {
+        setNavPos(pos);
+        return pos;
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingNav, setNavPos]);
+
+  /* ── 位置样式计算 ────────────────────────────────────────── */
+
+  const positionStyle = useCallback((): React.CSSProperties => {
+    if (navMode === 'movable') {
+      // 活动模式：使用 left/top 绝对定位
+      const x = floatingPos.x < 0 ? window.innerWidth - 316 : floatingPos.x;
+      const y = floatingPos.y < 0 ? 224 : floatingPos.y;
+      return {
+        position: 'fixed',
+        left: x,
+        top: y,
+        zIndex: 100,
+        pointerEvents: 'auto',
+        cursor: isDraggingNav ? 'grabbing' : 'grab',
+      };
+    }
+    // 固定模式
+    return FIXED_STYLE;
+  }, [navMode, floatingPos, isDraggingNav]);
 
   const { chapters, isOfflineData, syncTime } = useMemo(() => {
     const isOfflineMode = mode === 'offline-guide' || mode === 'offline-review';
@@ -235,7 +371,14 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   }, [mode, guideInfo?.chapters, currentArchive?.chapters, currentArchive?.chaptersUpdatedAt]);
 
   if (mode === 'review') return null;
-  if (chapters.length === 0) return null;
+
+  // 骨架屏：指南模式下数据尚未加载
+  if (chapters.length === 0) {
+    if (mode !== 'offline-guide' && guideInfo === null) {
+      return <ChapterNavSkeleton style={positionStyle()} />;
+    }
+    return null;
+  }
 
   const handleChapterClick = async (sectionId: string) => {
     const switched = switchToChapter(sectionId);
@@ -375,11 +518,20 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     return titleText || chapter.title;
   };
 
+  const toggleNavMode = () => {
+    const next = navMode === 'fixed' ? 'movable' : 'fixed';
+    setNavMode(next);
+    if (next === 'fixed') {
+      // 回到固定模式时重置位置
+      setNavPos({ x: -1, y: -1 });
+    }
+  };
+
   /* ── 折叠态 ────────────────────────────────────────────── */
 
   if (isCollapsed) {
     return (
-      <aside className="sticky top-4 self-end">
+      <aside style={positionStyle()}>
         <button
           type="button"
           onClick={() => setIsCollapsed(false)}
@@ -395,7 +547,11 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   /* ── 展开态 ────────────────────────────────────────────── */
 
   return (
-    <aside className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col max-h-full overflow-hidden animate-dropdown-enter">
+    <aside
+      className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col max-h-full overflow-hidden animate-dropdown-enter"
+      style={positionStyle()}
+      onMouseDown={handleNavMouseDown}
+    >
       {/* 头部 */}
       <div className="px-2.5 py-2.5 border-b border-border-subtle bg-bg-app/60 flex justify-between items-center">
         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -421,6 +577,15 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* 模式切换按钮 */}
+          <button
+            type="button"
+            onClick={toggleNavMode}
+            className={`border-0 bg-transparent p-1 nasge-transition-quick cursor-pointer ${navMode === 'movable' ? 'text-accent hover:text-accent-hover' : 'text-text-muted hover:text-text-primary'}`}
+            title={navMode === 'fixed' ? '切换为可拖拽模式' : '切换为固定模式'}
+          >
+            {navMode === 'fixed' ? <LockIcon className="w-3.5 h-3.5" /> : <UnlockIcon className="w-3.5 h-3.5" />}
+          </button>
           {/* 刷新按钮 */}
           {onRefresh && (
             <button

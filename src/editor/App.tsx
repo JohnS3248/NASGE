@@ -409,23 +409,12 @@ const App: React.FC = () => {
       <ToastContainer />
       <DialogContainer />
 
-      {/* 章节导航 - 仅指南模式，固定在右侧边缘 */}
+      {/* 章节导航 - 仅指南模式 */}
       {!reviewMode && (
-        <div
-          style={{
-            position: "fixed",
-            right: "1rem",
-            top: "14rem",
-            bottom: "1rem",
-            zIndex: 100,
-            pointerEvents: "auto"
-          }}
-        >
-          <ChapterNav
-            onRefresh={refreshGuideInfo}
-            isRefreshing={isRefreshingGuide}
-          />
-        </div>
+        <ChapterNav
+          onRefresh={refreshGuideInfo}
+          isRefreshing={isRefreshingGuide}
+        />
       )}
 
       {/* 评测设置面板 - 仅评测模式，固定在右侧 */}
