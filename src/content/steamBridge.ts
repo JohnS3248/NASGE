@@ -617,7 +617,6 @@ async function parseGuideImagePoolFromDOM(): Promise<SteamGuideImage[]> {
         (function() {
           if (typeof window.gPreviewImages !== 'undefined' && window.gPreviewImages) {
             document.documentElement.setAttribute('data-nasge-gpreview-bridge', JSON.stringify(window.gPreviewImages));
-            console.log('[NASGE 最终检查] ✅ gPreviewImages 已写入 DOM，共', window.gPreviewImages.length, '张图片');
           }
         })();
       `;

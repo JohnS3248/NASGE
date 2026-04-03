@@ -208,10 +208,14 @@ const ArchiveListItem: React.FC<{
             alt=""
             className="w-full h-full object-cover"
           />
+        ) : isOffline ? (
+          <svg className="w-6 h-6 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
+          </svg>
         ) : (
-          <span className="text-2xl">
-            {isOffline ? '📝' : '📦'}
-          </span>
+          <svg className="w-6 h-6 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" />
+          </svg>
         )}
       </div>
 
@@ -221,7 +225,11 @@ const ArchiveListItem: React.FC<{
         onClick={onSelect}
       >
         <div className="flex items-center gap-2 mb-1">
-          {isActive && <span className="text-accent text-[0.8rem]">✓</span>}
+          {isActive && (
+            <svg className="w-3.5 h-3.5 text-accent shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          )}
           <span className={`text-[0.95rem] text-text-primary truncate ${isActive ? 'font-semibold' : 'font-normal'}`}>
             {archive.guideName}
           </span>

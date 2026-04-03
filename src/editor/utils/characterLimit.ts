@@ -80,9 +80,9 @@ export function getCharacterCountColor(info: CharacterLimitInfo): string {
 /**
  * 获取字符数显示文本
  * @param info 字符限制信息
- * @returns 显示文本，例如 "45 / 96" 或 "98 / 96 ⚠️"
+ * @returns 显示文本，例如 "45 / 96" 或 "98 / 96 !"
  */
 export function getCharacterCountText(info: CharacterLimitInfo): string {
   const baseText = `${info.length} / ${info.limit}`;
-  return info.exceeded ? `${baseText} ⚠️` : baseText;
+  return info.exceeded ? `${baseText} !` : baseText;
 }
