@@ -1,7 +1,9 @@
 import React, { useEffect, useCallback, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { useDialogStore } from "../stores/useDialogStore";
 
 const ConfirmDialog: React.FC = () => {
+  const { t } = useTranslation();
   const state = useDialogStore((s) => s.state);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -9,10 +11,10 @@ const ConfirmDialog: React.FC = () => {
 
   const { options, resolve } = state;
   const {
-    title = "确认",
+    title = t("confirm"),
     message,
-    confirmText = "确认",
-    cancelText = "取消",
+    confirmText = t("confirm"),
+    cancelText = t("cancel"),
     danger = false,
   } = options;
 
@@ -49,6 +51,7 @@ const ConfirmDialog: React.FC = () => {
 };
 
 const PromptDialog: React.FC = () => {
+  const { t } = useTranslation();
   const state = useDialogStore((s) => s.state);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +59,7 @@ const PromptDialog: React.FC = () => {
 
   const { options, resolve } = state;
   const {
-    title = "输入",
+    title = t("input"),
     message,
     defaultValue = "",
     placeholder = "",
@@ -89,14 +92,14 @@ const PromptDialog: React.FC = () => {
           onClick={handleCancel}
           className="px-4 py-2 rounded-md text-sm font-medium cursor-pointer nasge-transition-quick bg-bg-overlay text-text-secondary border border-border-default hover:bg-bg-hover hover:text-text-primary"
         >
-          取消
+          {t("cancel")}
         </button>
         <button
           type="button"
           onClick={handleSubmit}
           className="px-4 py-2 rounded-md text-sm font-semibold cursor-pointer nasge-transition-quick bg-accent text-bg-app hover:bg-accent-hover border-0"
         >
-          确定
+          {t("ok")}
         </button>
       </div>
     </DialogShell>

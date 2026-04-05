@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import type { Editor } from "@tiptap/core";
+import { useTranslation } from "react-i18next";
 import TipTapEditor from "./components/TipTapEditor";
 import EditorToolbar from "./components/EditorToolbar";
 import { bbcodeToHtml, htmlToBBCode } from "./utils/bbcode";
@@ -26,14 +27,15 @@ import { toast } from "./stores/useToastStore";
 import { dialog } from "./stores/useDialogStore";
 import ReviewSettingsPanel from "./components/ReviewSettingsPanel";
 
-const MODE_LABELS: Record<string, string> = {
-  'guide': '指南模式',
-  'review': '评测模式',
-  'offline-guide': '离线指南',
-  'offline-review': '离线评测',
+const MODE_LABEL_KEYS: Record<string, string> = {
+  'guide': 'editor:mode.guide',
+  'review': 'editor:mode.review',
+  'offline-guide': 'editor:mode.offlineGuide',
+  'offline-review': 'editor:mode.offlineReview',
 };
 
 const App: React.FC = () => {
+  const { t } = useTranslation('editor');
   // 初始化编辑器模式和指南信息
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
   const mode = useGuideStore((s) => s.mode);
@@ -67,7 +69,7 @@ const App: React.FC = () => {
 
   // 动态更新标签页标题
   useEffect(() => {
-    const modeLabel = MODE_LABELS[mode] || mode;
+    const modeLabel = t(MODE_LABEL_KEYS[mode] || mode);
     // review 模式从 useReviewStore 取游戏名
     if (reviewMode) {
       import('./stores/useReviewStore').then(({ useReviewStore }) => {
@@ -77,7 +79,7 @@ const App: React.FC = () => {
     } else {
       document.title = guideTitle ? `NASGE · ${modeLabel} · ${guideTitle}` : `NASGE · ${modeLabel}`;
     }
-  }, [mode, guideTitle, reviewMode]);
+  }, [mode, guideTitle, reviewMode, t]);
 
   // 草稿是否为空
   const isDraftEmpty = useMemo(() => {
@@ -117,20 +119,20 @@ const App: React.FC = () => {
 
   const handleExportBBCode = useCallback(async () => {
     if (!currentHtml) {
-      toast.error("当前章节为空，没有可导出的 BBCode。");
+      toast.error(t('editor:bbcode.emptyContent'));
       return;
     }
     const bbcode = htmlToBBCode(currentHtml);
     try {
       void navigator.clipboard?.writeText(bbcode);
-      toast.success("BBCode 已复制到剪贴板。");
+      toast.success(t('editor:bbcode.copied'));
     } catch {
-      await dialog.prompt({ message: "复制以下 BBCode", defaultValue: bbcode });
+      await dialog.prompt({ message: t('editor:bbcode.copyPrompt'), defaultValue: bbcode });
     }
-  }, [currentHtml]);
+  }, [currentHtml, t]);
 
   const handleImportBBCode = useCallback(async () => {
-    const input = await dialog.prompt({ message: "粘贴要导入的 BBCode", defaultValue: "" });
+    const input = await dialog.prompt({ message: t('editor:bbcode.pastePrompt'), defaultValue: "" });
     if (input === null) return;
     const html = bbcodeToHtml(input);
     let doc: JSONContent;
@@ -138,7 +140,7 @@ const App: React.FC = () => {
       doc = generateJSON(html, htmlExtensions);
     } catch (error) {
       loggers.editor.error("导入 BBCode 失败", error);
-      toast.error("BBCode 内容无法识别，请检查格式后再试。");
+      toast.error(t('editor:bbcode.invalidFormat'));
       return;
     }
     setExternalDoc(doc);
@@ -147,7 +149,7 @@ const App: React.FC = () => {
     if (activeDraft) {
       updateDraft(activeDraft.id, { content: doc });
     }
-  }, [activeDraft, updateDraft, htmlExtensions, docToHtml]);
+  }, [activeDraft, updateDraft, htmlExtensions, docToHtml, t]);
 
   // 上传按钮点击：两阶段流程
   const handleUploadClick = useCallback(() => {
@@ -169,16 +171,16 @@ const App: React.FC = () => {
     setIsUploading(true);
     try {
       await pushDraft(activeDraft.id);
-      toast.success("上传成功！");
+      toast.success(t('editor:upload.success'));
       setIsUploadPreviewing(false);
     } catch (error) {
       loggers.sync.error("上传失败", error);
-      const message = error instanceof Error ? error.message : "上传失败，未知错误";
-      toast.error(`上传失败：${message}`);
+      const message = error instanceof Error ? error.message : t('common:unknown');
+      toast.error(t('editor:upload.fail', { message }));
     } finally {
       setIsUploading(false);
     }
-  }, [activeDraft, pushDraft]);
+  }, [activeDraft, pushDraft, t]);
 
   // 切换草稿时重置上传确认状态
   useEffect(() => {
@@ -222,14 +224,14 @@ const App: React.FC = () => {
               onClick={handleImportBBCode}
               className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer bg-bg-overlay text-text-secondary border border-border-default hover:bg-bg-hover hover:text-text-primary"
             >
-              导入 BBCode
+              {t('editor:bbcode.import')}
             </button>
             <button
               type="button"
               onClick={handleExportBBCode}
               className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer bg-bg-overlay text-text-secondary border border-border-default hover:bg-bg-hover hover:text-text-primary"
             >
-              导出 BBCode
+              {t('editor:bbcode.export')}
             </button>
             {!reviewMode && activeDraft?.linkedChapterId && (
               <>
@@ -239,14 +241,14 @@ const App: React.FC = () => {
                     onClick={() => setIsUploadPreviewing(false)}
                     className="px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick cursor-pointer text-danger border border-danger/40 bg-transparent hover:bg-danger/10"
                   >
-                    取消上传
+                    {t('editor:upload.cancel')}
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={handleUploadClick}
                   disabled={isUploading || isDraftEmpty}
-                  title={isDraftEmpty ? "草稿内容为空，无法上传" : undefined}
+                  title={isDraftEmpty ? t('editor:draft.emptyContent') : undefined}
                   className={`px-3 py-1.5 rounded-sm text-sm font-semibold nasge-transition-quick
                     ${(isUploading || isDraftEmpty)
                       ? "opacity-50 cursor-not-allowed"
@@ -255,7 +257,7 @@ const App: React.FC = () => {
                       ? "bg-warning text-bg-app border-2 border-warning/70"
                       : "bg-accent text-bg-app hover:bg-accent-hover border-0"}`}
                 >
-                  {isUploading ? "上传中..." : isUploadPreviewing ? "确认上传" : "上传到 Steam"}
+                  {isUploading ? t('editor:upload.uploading') : isUploadPreviewing ? t('editor:upload.confirm') : t('editor:upload.toSteam')}
                 </button>
               </>
             )}
@@ -324,12 +326,12 @@ const App: React.FC = () => {
                     }}
                   >
                     <div style={{ fontSize: "1.2rem", fontWeight: 600, marginBottom: "0.5rem", color: "var(--text-primary, #d7e8ff)" }}>
-                      {reviewMode ? '还没有评测草稿' : '暂无草稿'}
+                      {reviewMode ? t('editor:review.noReviewDrafts') : t('editor:draft.emptyTitle')}
                     </div>
                     <div style={{ fontSize: "0.95rem" }}>
                       {reviewMode
-                        ? '在 Steam 游戏页面点击「编辑此评测」开始，或创建一个新草稿'
-                        : '请先创建一个新草稿，或从章节导航中拉取现有章节'}
+                        ? t('editor:review.startInstruction')
+                        : t('editor:review.guideInstruction')}
                     </div>
                   </div>
                   <button
@@ -337,8 +339,8 @@ const App: React.FC = () => {
                     onClick={async () => {
                       const guideState = useGuideStore.getState();
                       const draftStore = useDraftStore.getState();
-                      const defaultName = `未命名草稿 ${draftStore.nextDraftNumber}`;
-                      const name = await dialog.prompt({ message: '新建草稿', defaultValue: defaultName });
+                      const defaultName = t('editor:draft.newName', { number: draftStore.nextDraftNumber });
+                      const name = await dialog.prompt({ message: t('editor:draft.newDialog'), defaultValue: defaultName });
                       if (name === null) return;
                       const finalName = name.trim() || defaultName;
 
@@ -373,7 +375,7 @@ const App: React.FC = () => {
                       boxShadow: "0 4px 12px rgba(102, 192, 244, 0.3)"
                     }}
                   >
-                    + 创建新草稿
+                    {t('editor:draft.createNew')}
                   </button>
                 </div>
               ) : (

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGuideStore, type GuideArchive, isReviewMode } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useDraftStore } from '../stores/useDraftStore';
@@ -11,11 +12,18 @@ import { useMountTransition } from '../hooks/useMountTransition';
 // 模式配置
 // ============================================================================
 
-const MODE_CONFIG = {
-  'guide':          { label: '指南模式',     dot: 'bg-accent' },
-  'review':         { label: '评测模式',     dot: 'bg-warning' },
-  'offline-guide':  { label: '离线指南',     dot: 'bg-text-muted' },
-  'offline-review': { label: '离线评测',     dot: 'bg-text-muted' },
+const MODE_DOT = {
+  'guide':          'bg-accent',
+  'review':         'bg-warning',
+  'offline-guide':  'bg-text-muted',
+  'offline-review': 'bg-text-muted',
+} as const;
+
+const MODE_I18N_KEY = {
+  'guide':          'editor:mode.guide',
+  'review':         'editor:mode.review',
+  'offline-guide':  'editor:mode.offlineGuide',
+  'offline-review': 'editor:mode.offlineReview',
 } as const;
 
 // ============================================================================
@@ -31,6 +39,7 @@ const BreadcrumbSep: React.FC = () => (
 // ============================================================================
 
 const EditorHeader: React.FC = () => {
+  const { t } = useTranslation('editor');
   const mode = useGuideStore((s) => s.mode);
   const guideInfo = useGuideStore((s) => s.guideInfo);
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
@@ -53,7 +62,8 @@ const EditorHeader: React.FC = () => {
   const inReviewMode = isReviewMode(mode);
 
   const archiveList = Object.values(archives);
-  const modeConf = MODE_CONFIG[mode] ?? MODE_CONFIG['guide'];
+  const modeDot = MODE_DOT[mode] ?? MODE_DOT['guide'];
+  const modeLabel = t(MODE_I18N_KEY[mode] ?? MODE_I18N_KEY['guide']);
 
   // 离线评测：从草稿提取不重复的游戏列表
   const gameList = useMemo(() => {
@@ -83,12 +93,12 @@ const EditorHeader: React.FC = () => {
 
   // 模式描述
   const subtitle = mode === 'guide' && guideInfo
-    ? `ID ${guideInfo.id} · ${guideInfo.chapters.length} 个章节`
+    ? t('header.guideInfo', { id: guideInfo.id, count: guideInfo.chapters.length })
     : inReviewMode && reviewGameName
     ? `${reviewGameName}${reviewAppId ? ` · ID ${reviewAppId}` : ''}`
     : inReviewMode
-    ? '编辑 Steam 评测内容'
-    : '离线编辑模式 - 不关联任何 Steam 内容';
+    ? t('header.editReview')
+    : t('header.offlineSubtitle');
 
   // 是否显示存档选择器（指南/评测在线模式绑定 Steam 页面，不允许切换）
   const showArchiveSelector = mode !== 'guide' && !inReviewMode && archiveList.length > 0;
@@ -120,8 +130,8 @@ const EditorHeader: React.FC = () => {
             inline-flex items-center gap-1.5 shrink-0
             text-xs font-medium text-text-secondary
           ">
-            <span className={`w-1.5 h-1.5 rounded-full ${modeConf.dot}`} />
-            {modeConf.label}
+            <span className={`w-1.5 h-1.5 rounded-full ${modeDot}`} />
+            {modeLabel}
           </span>
 
           <BreadcrumbSep />
@@ -136,7 +146,7 @@ const EditorHeader: React.FC = () => {
           {/* 章节数（指南模式下显示） */}
           {mode === 'guide' && guideInfo && (
             <span className="text-xs text-text-muted ml-1.5 shrink-0">
-              · {guideInfo.chapters.length} 章
+              · {guideInfo.chapters.length} {t('header.chaptersUnit')}
             </span>
           )}
         </div>
@@ -159,7 +169,7 @@ const EditorHeader: React.FC = () => {
                 "
               >
                 <span className="truncate max-w-32">
-                  {reviewAppId ? (reviewGameName || `App ${reviewAppId}`) : '全部游戏'}
+                  {reviewAppId ? (reviewGameName || `App ${reviewAppId}`) : t('header.allGames')}
                 </span>
                 <svg
                   className={`w-3 h-3 opacity-50 nasge-transition-quick ${gameOpen ? 'rotate-180' : ''}`}
@@ -200,7 +210,7 @@ const EditorHeader: React.FC = () => {
                 "
               >
                 <span className="truncate max-w-32">
-                  {currentArchive?.guideName || '选择存档'}
+                  {currentArchive?.guideName || t('header.selectArchive')}
                 </span>
                 <svg
                   className={`w-3 h-3 opacity-50 nasge-transition-quick ${archiveOpen ? 'rotate-180' : ''}`}
@@ -235,7 +245,7 @@ const EditorHeader: React.FC = () => {
               hover:text-text-primary hover:border-border-accent hover:bg-accent-subtle
               nasge-transition-quick cursor-pointer
             "
-            title="设置"
+            title={t('common:settings')}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
@@ -261,8 +271,9 @@ const ArchiveDropdown: React.FC<{
   onSelect: (id: string | null) => void;
   onManage: () => void;
 }> = ({ archives, activeId, onSelect, onManage }) => {
+  const { t } = useTranslation('editor');
   const formatDate = (ts: number) =>
-    new Date(ts).toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+    new Date(ts).toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
 
   return (
     <div className="
@@ -298,7 +309,7 @@ const ArchiveDropdown: React.FC<{
                 {a.guideName}
               </span>
               <span className="text-[11px] text-text-muted">
-                {a.chapters.length} 章节 · {formatDate(a.lastAccessedAt)}
+                {a.chapters.length} {t('header.chapters')} · {formatDate(a.lastAccessedAt)}
               </span>
             </button>
           );
@@ -319,7 +330,7 @@ const ArchiveDropdown: React.FC<{
             nasge-transition-quick cursor-pointer
           "
         >
-          存档管理
+          {t('header.archiveManage')}
         </button>
       </div>
     </div>
@@ -334,7 +345,9 @@ const GameDropdown: React.FC<{
   games: { appId: string; name: string }[];
   activeAppId: string | null;
   onSelect: (appId: string | null, name?: string) => void;
-}> = ({ games, activeAppId, onSelect }) => (
+}> = ({ games, activeAppId, onSelect }) => {
+  const { t } = useTranslation('editor');
+  return (
   <div className="
     absolute top-[calc(100%+6px)] right-0 z-[1000]
     min-w-52 max-h-80 overflow-y-auto
@@ -361,7 +374,7 @@ const GameDropdown: React.FC<{
             <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
-        <span className="text-sm">全部游戏</span>
+        <span className="text-sm">{t('header.allGames')}</span>
       </button>
 
       {games.map((g) => {
@@ -392,6 +405,7 @@ const GameDropdown: React.FC<{
       })}
     </div>
   </div>
-);
+  );
+};
 
 export default EditorHeader;

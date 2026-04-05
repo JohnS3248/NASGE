@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
@@ -43,18 +44,6 @@ const INITIAL_CONTEXT_MENU: ContextMenuState = {
   mode: "empty"
 };
 
-const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
-  { label: "原尺寸", value: "original" },
-  { label: "半宽", value: "half" },
-  { label: "全宽", value: "full" }
-];
-
-const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> = [
-  { label: "左对齐", value: "floatLeft" },
-  { label: "右对齐", value: "floatRight" },
-  { label: "内嵌", value: "inline" }
-];
-
 /**
  * 标题编辑器组件 - 使用完整的 TipTap 编辑器
  *
@@ -68,6 +57,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   value,
   onChange
 }) => {
+  const { t } = useTranslation('editor');
   // 检测标题中是否包含图片
   const [hasImage, setHasImage] = useState(false);
   // 右键菜单状态
@@ -234,7 +224,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       loggers.image.info('TitleEditor 图片上传成功');
     } catch (error) {
       loggers.image.error('TitleEditor 图片上传失败:', error);
-      toast.error(`图片上传失败: ${error instanceof Error ? error.message : '未知错误'}`);
+      toast.error(t('image.uploadFail', { error: error instanceof Error ? error.message : '未知错误' }));
     }
   }, [contextMenu.payload]);
 
@@ -420,8 +410,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           className="fixed bg-bg-overlay border border-border-accent rounded-lg p-1 flex flex-col gap-1 min-w-[160px] z-[9999] shadow-xl"
           style={{ top: contextMenu.y, left: contextMenu.x }}
         >
-          <MenuSectionLabel label="尺寸" />
-          {IMAGE_SIZE_OPTIONS.map((option) => (
+          <MenuSectionLabel label={t('image.size')} />
+          {([
+            { label: t('image.original'), value: 'original' as ImageSizePreset },
+            { label: t('image.half'), value: 'half' as ImageSizePreset },
+            { label: t('image.full'), value: 'full' as ImageSizePreset }
+          ]).map((option) => (
             <MenuItem
               key={option.value}
               label={option.label}
@@ -431,8 +425,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
             />
           ))}
           <MenuDivider />
-          <MenuSectionLabel label="对齐" />
-          {IMAGE_ALIGNMENT_OPTIONS.map((option) => (
+          <MenuSectionLabel label={t('image.align')} />
+          {([
+            { label: t('image.alignLeft'), value: 'floatLeft' as ImageAlignment },
+            { label: t('image.alignRight'), value: 'floatRight' as ImageAlignment },
+            { label: t('image.inline'), value: 'inline' as ImageAlignment }
+          ]).map((option) => (
             <MenuItem
               key={option.value}
               label={option.label}
@@ -443,12 +441,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           ))}
           <MenuDivider />
           <MenuItem
-            label="上传图片"
+            label={t('image.upload')}
             onClick={handleUploadImage}
             onComplete={closeContextMenu}
           />
           <MenuItem
-            label="删除图片"
+            label={t('image.delete')}
             danger
             onClick={handleDeleteImage}
             onComplete={closeContextMenu}

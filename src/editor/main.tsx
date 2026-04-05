@@ -23,66 +23,65 @@ declare global {
   }
 }
 
-// 初始化主题（始终执行）
-import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
-  const theme = useEditorConfigStore.getState().theme;
-  document.documentElement.dataset.theme = theme;
-});
+// 初始化主题 + i18n，等待完成后再 render（避免 key 闪现）
+async function bootstrap() {
+  const { useEditorConfigStore } = await import("./stores/useEditorConfigStore");
+  const state = useEditorConfigStore.getState();
+  document.documentElement.dataset.theme = state.theme;
 
-// === DEBUG: 导出 Store 和 Service 用于控制台测试 ===
-// 等待 EditorConfigStore rehydrate 后再判断 debugMode，避免同步求值时 _debugMode 尚未初始化
-import("./stores/useEditorConfigStore").then(({ useEditorConfigStore }) => {
-  const { debugMode } = useEditorConfigStore.getState();
-  if (!debugMode) return;
+  const { initI18n } = await import("../i18n");
+  await initI18n(state.locale);
 
-  import("./stores/useImageStore").then(({ useImageStore }) => {
-    window.__imageStore = useImageStore;
-  });
-  import("./stores/useImagePanelStore").then(({ useImagePanelStore }) => {
-    window.__imagePanelStore = useImagePanelStore;
-  });
-  import("./stores/useSteamGuideImageStore").then(
-    ({ useSteamGuideImageStore }) => {
-      window.__steamImageStore = useSteamGuideImageStore;
-    }
+  // === DEBUG: 导出 Store 和 Service 用于控制台测试 ===
+  if (state.debugMode) {
+    import("./stores/useImageStore").then(({ useImageStore }) => {
+      window.__imageStore = useImageStore;
+    });
+    import("./stores/useImagePanelStore").then(({ useImagePanelStore }) => {
+      window.__imagePanelStore = useImagePanelStore;
+    });
+    import("./stores/useSteamGuideImageStore").then(
+      ({ useSteamGuideImageStore }) => {
+        window.__steamImageStore = useSteamGuideImageStore;
+      }
+    );
+    import("./services/ImageUploadService").then(({ ImageUploadService }) => {
+      window.__uploadService = ImageUploadService;
+    });
+    window.__editorConfigStore = useEditorConfigStore;
+    import("./stores/useToastStore").then(({ useToastStore }) => {
+      window.__toastStore = useToastStore;
+    });
+    import("./stores/useDialogStore").then(({ useDialogStore }) => {
+      window.__dialogStore = useDialogStore;
+    });
+    import("./stores/useGuideStore").then(({ useGuideStore }) => {
+      window.__guideStore = useGuideStore;
+    });
+    import("./stores/useDraftStore").then(({ useDraftStore }) => {
+      window.__draftStore = useDraftStore;
+    });
+    import("./stores/useArchiveStore").then(({ useArchiveStore }) => {
+      window.__archiveStore = useArchiveStore;
+    });
+    import("./stores/useReviewStore").then(({ useReviewStore }) => {
+      window.__reviewStore = useReviewStore;
+    });
+    import("./utils/bbcode").then(({ bbcodeToHtml, htmlToBBCode }) => {
+      window.__bbcodeToHtml = bbcodeToHtml;
+      window.__htmlToBBCode = htmlToBBCode;
+    });
+  }
+  // === END DEBUG ===
+
+  const container = document.getElementById("root");
+  if (!container) throw new Error("Editor root element not found");
+
+  createRoot(container).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
   );
-  import("./services/ImageUploadService").then(({ ImageUploadService }) => {
-    window.__uploadService = ImageUploadService;
-  });
-  window.__editorConfigStore = useEditorConfigStore;
-  import("./stores/useToastStore").then(({ useToastStore }) => {
-    window.__toastStore = useToastStore;
-  });
-  import("./stores/useDialogStore").then(({ useDialogStore }) => {
-    window.__dialogStore = useDialogStore;
-  });
-  import("./stores/useGuideStore").then(({ useGuideStore }) => {
-    window.__guideStore = useGuideStore;
-  });
-  import("./stores/useDraftStore").then(({ useDraftStore }) => {
-    window.__draftStore = useDraftStore;
-  });
-  import("./stores/useArchiveStore").then(({ useArchiveStore }) => {
-    window.__archiveStore = useArchiveStore;
-  });
-  import("./stores/useReviewStore").then(({ useReviewStore }) => {
-    window.__reviewStore = useReviewStore;
-  });
-  import("./utils/bbcode").then(({ bbcodeToHtml, htmlToBBCode }) => {
-    window.__bbcodeToHtml = bbcodeToHtml;
-    window.__htmlToBBCode = htmlToBBCode;
-  });
-});
-// === END DEBUG ===
-
-const container = document.getElementById("root");
-
-if (!container) {
-  throw new Error("Editor root element not found");
 }
 
-createRoot(container).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+bootstrap();

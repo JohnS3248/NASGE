@@ -3,6 +3,7 @@
  * 支持创建、重命名、删除、调色
  */
 import React, { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useGuideStore, TAG_COLORS, type ImageTag } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
 import { PencilIcon, TrashIcon, XIcon, PlusIcon } from "./icons";
@@ -13,6 +14,7 @@ interface TagManagerProps {
 }
 
 const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
+  const { t } = useTranslation('editor');
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const { createTag, updateTag, deleteTag } = useArchiveStore();
   const archive = useArchiveStore((s) => currentArchiveId ? s.archives[currentArchiveId] : undefined);
@@ -87,7 +89,7 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border-accent">
           <span className="text-sm font-semibold text-text-primary">
-            管理标签
+            {t('tag.manage')}
           </span>
           <button
             type="button"
@@ -102,7 +104,7 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
         <div className="flex-1 overflow-y-auto py-2">
           {tags.length === 0 && !isCreating ? (
             <div className="px-4 py-6 text-center text-text-muted text-[13px]">
-              暂无标签，点击下方按钮创建
+              {t('tag.noTags')}
             </div>
           ) : (
             tags.map((tag) => (
@@ -140,7 +142,7 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
                     if (e.key === "Enter") handleCreate();
                     if (e.key === "Escape") { setIsCreating(false); setNewTagName(""); }
                   }}
-                  placeholder="输入标签名称"
+                  placeholder={t('tag.namePlaceholder')}
                   className="flex-1 border-none bg-transparent text-text-primary text-[13px] outline-none"
                 />
                 <button
@@ -151,14 +153,14 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
                     newTagName.trim() ? "bg-accent" : "bg-text-muted cursor-not-allowed"
                   }`}
                 >
-                  创建
+                  {t('common:create')}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setIsCreating(false); setNewTagName(""); }}
                   className="px-2 py-1 border-none rounded-sm bg-transparent text-text-muted text-xs cursor-pointer"
                 >
-                  取消
+                  {t('common:cancel')}
                 </button>
               </div>
             </div>
@@ -178,7 +180,7 @@ const TagManager: React.FC<TagManagerProps> = ({ visible, onClose }) => {
             }`}
           >
             <span className="inline-flex items-center gap-1">
-              <PlusIcon size={14} /> 新建标签
+              <PlusIcon size={14} /> {t('tag.createNew')}
             </span>
           </button>
         </div>
@@ -224,13 +226,15 @@ const TagItem: React.FC<TagItemProps> = ({
   onCancelDelete,
   editInputRef
 }) => {
+  const { t } = useTranslation('editor');
+
   // 删除确认状态
   if (isDeleting) {
     return (
       <div className="px-4 py-2">
         <div className="flex items-center justify-between px-3 py-2 bg-danger/15 rounded-md border border-danger">
           <span className="text-xs text-text-primary">
-            确定删除标签 &ldquo;{tag.name}&rdquo;?
+            {t('tag.deleteConfirm', { name: tag.name })}
           </span>
           <div className="flex gap-2">
             <button
@@ -238,14 +242,14 @@ const TagItem: React.FC<TagItemProps> = ({
               onClick={onConfirmDelete}
               className="px-3 py-1 border-none rounded-sm bg-danger text-white text-xs cursor-pointer"
             >
-              删除
+              {t('common:delete')}
             </button>
             <button
               type="button"
               onClick={onCancelDelete}
               className="px-2 py-1 border-none rounded-sm bg-transparent text-text-muted text-xs cursor-pointer"
             >
-              取消
+              {t('common:cancel')}
             </button>
           </div>
         </div>
@@ -265,7 +269,7 @@ const TagItem: React.FC<TagItemProps> = ({
             onClick={onToggleColorPicker}
             className="w-5 h-5 rounded-sm border-2 cursor-pointer p-0"
             style={{ borderColor: tag.color, background: tag.color }}
-            title="更改颜色"
+            title={t('tag.changeColor')}
           />
 
           {/* 颜色选择器弹出 */}
@@ -305,7 +309,7 @@ const TagItem: React.FC<TagItemProps> = ({
           <span
             className="flex-1 text-[13px] text-text-primary cursor-pointer"
             onClick={onStartEdit}
-            title="点击编辑"
+            title={t('tag.clickEdit')}
           >
             {tag.name}
           </span>
@@ -318,7 +322,7 @@ const TagItem: React.FC<TagItemProps> = ({
               type="button"
               onClick={onStartEdit}
               className="w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-muted cursor-pointer rounded-sm hover:bg-accent-subtle hover:text-accent"
-              title="重命名"
+              title={t('common:rename')}
             >
               <PencilIcon size={12} />
             </button>
@@ -326,7 +330,7 @@ const TagItem: React.FC<TagItemProps> = ({
               type="button"
               onClick={onStartDelete}
               className="w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-muted cursor-pointer rounded-sm hover:bg-danger/20 hover:text-danger"
-              title="删除"
+              title={t('common:delete')}
             >
               <TrashIcon size={12} />
             </button>

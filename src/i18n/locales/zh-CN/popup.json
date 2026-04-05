@@ -1,0 +1,12 @@
+{
+  "detecting": "正在检测页面...",
+  "guideDetected": "已检测到指南管理页",
+  "storeDetected": "已检测到游戏商店页（appId: {{appId}}）",
+  "reviewDetected": "已检测到评测页",
+  "nonSteamPage": "当前页面不是 Steam 指南或评测页",
+  "unknownPage": "未知页面类型",
+  "editGuide": "编辑此指南",
+  "editReview": "编辑此评测",
+  "offlineGuide": "离线指南",
+  "offlineReview": "离线评测"
+}

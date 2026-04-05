@@ -1,0 +1,107 @@
+{
+  "tabs": {
+    "general": "General",
+    "image": "Image",
+    "menu": "Menu",
+    "shortcuts": "Shortcuts"
+  },
+  "title": "Editor Settings",
+  "theme": {
+    "title": "Theme",
+    "label": "Theme",
+    "description": "Switch the editor's visual style"
+  },
+  "preview": {
+    "title": "Preview",
+    "label": "Live Preview",
+    "description": "Show Steam's official live preview alongside the editor"
+  },
+  "developer": {
+    "title": "Developer",
+    "debugLabel": "Debug Mode",
+    "debugDescription": "Show detailed logs in the console for troubleshooting"
+  },
+  "language": {
+    "title": "Language",
+    "label": "Interface Language",
+    "description": "Set the display language of the editor interface"
+  },
+  "imageUpload": {
+    "title": "Image Upload",
+    "autoLabel": "Auto-upload to Image Pool",
+    "autoDescription": "Automatically upload images to Steam after adding to the image pool (when rename option is on, rename first then upload)",
+    "pasteRenameLabel": "Rename on Paste",
+    "pasteRenameDescription": "Automatically select the filename for renaming after pasting an image to the image pool",
+    "dropRenameLabel": "Rename on Drop",
+    "dropRenameDescription": "Automatically select the filename for renaming after dropping an image to the image pool",
+    "tip": "When auto-upload is off, images are still inserted into the editor with local preview. Manual upload selection will be available in a future version."
+  },
+  "imagePool": {
+    "title": "Image Pool Display",
+    "pageSize": "Items Per Page",
+    "pageSizeDescription": "Number of images displayed per page in the image pool. 0 shows all",
+    "thumbSize": "Thumbnail Size",
+    "thumbSizeDescription": "Display size of thumbnails in the image pool",
+    "thumbSmall": "Small",
+    "thumbMedium": "Medium",
+    "thumbLarge": "Large",
+    "thumbCustom": "Custom",
+    "customSize": "Custom Size",
+    "customSizeCurrent": "Current: {{size}}px"
+  },
+  "contextMenu": {
+    "title": "Context Menu",
+    "selection": "Text Selection Menu",
+    "selectionDesc": "Menu shown when right-clicking selected text",
+    "empty": "Empty Area Menu",
+    "emptyDesc": "Menu shown when right-clicking empty space in the editor",
+    "image": "Editor Image Menu",
+    "imageDesc": "Menu shown when right-clicking an image in the editor",
+    "imagePool": "Image Pool Menu",
+    "imagePoolDesc": "Menu shown when right-clicking an image in the image pool",
+    "groupSize": "Size",
+    "groupAlign": "Alignment",
+    "groupAction": "Actions"
+  },
+  "shortcuts": {
+    "title": "Shortcuts",
+    "resetAll": "Reset All",
+    "recording": "Press a shortcut...",
+    "resetMenu": "Reset"
+  },
+  "menu": {
+    "renameImage": "Rename Image",
+    "deleteImage": "Delete Image",
+    "toggleBold": "Bold",
+    "toggleItalic": "Italic",
+    "toggleUnderline": "Underline",
+    "toggleStrike": "Strikethrough",
+    "setParagraph": "Paragraph",
+    "setHeading1": "Heading 1",
+    "setHeading2": "Heading 2",
+    "setHeading3": "Heading 3",
+    "toggleCodeBlock": "Code Block",
+    "toggleSpoiler": "Spoiler",
+    "preset-original": "Original",
+    "preset-half": "Half Width",
+    "preset-full": "Full Width",
+    "align-floatLeft": "Align Left",
+    "align-floatRight": "Align Right",
+    "align-inline": "Inline",
+    "upload": "Upload Image",
+    "delete": "Delete Image",
+    "heading1": "Heading 1",
+    "heading2": "Heading 2",
+    "heading3": "Heading 3",
+    "spoiler": "Spoiler",
+    "bold": "Bold",
+    "italic": "Italic",
+    "strike": "Strikethrough",
+    "underline": "Underline",
+    "link": "Insert Link",
+    "codeBlock": "Insert Code Block",
+    "quote": "Insert Quote",
+    "table": "Insert Table",
+    "tags": "Tag Selection"
+  }
+}

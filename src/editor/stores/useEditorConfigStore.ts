@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { setDebugMode, loggers } from "../../shared/logger";
+import { i18n, resolveLocale } from "../../i18n";
 
 /**
  * 快捷键配置
@@ -44,25 +45,6 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig = {
   toggleSpoiler: "Mod+H"
 };
 
-/**
- * 快捷键显示名称映射
- */
-export const SHORTCUT_LABELS: Record<keyof ShortcutConfig, string> = {
-  // 图片池操作
-  renameImage: "重命名图片",
-  deleteImage: "删除图片",
-  // 编辑器格式快捷键
-  toggleBold: "加粗",
-  toggleItalic: "斜体",
-  toggleUnderline: "下划线",
-  toggleStrike: "删除线",
-  setParagraph: "正文段落",
-  setHeading1: "一级标题",
-  setHeading2: "二级标题",
-  setHeading3: "三级标题",
-  toggleCodeBlock: "代码块",
-  toggleSpoiler: "折叠/剧透"
-};
 
 /**
  * 检查键盘事件是否匹配快捷键配置
@@ -320,6 +302,8 @@ export type EditorConfig = {
   promptRenameOnDrop: boolean;  // 悬浮窗：拖拽时启用内联重命名
   debugMode: boolean;           // 调试模式开关
   shortcuts: ShortcutConfig;    // 快捷键配置
+  // 语言
+  locale: string;                     // 'auto' | 'zh-CN' | 'en-US'
   // 主题
   theme: string;                      // 主题名称
   // 智能布局配置（全屏模式）
@@ -351,6 +335,8 @@ type EditorConfigState = EditorConfig & {
   // 快捷键相关
   setShortcut: (key: keyof ShortcutConfig, value: string) => void;
   resetShortcuts: () => void;
+  // 语言
+  setLocale: (locale: string) => void;
   // 主题
   setTheme: (theme: string) => void;
   // 智能布局相关
@@ -381,6 +367,8 @@ const DEFAULT_CONFIG: EditorConfig = {
   promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
   debugMode: false,
   shortcuts: DEFAULT_SHORTCUTS,
+  // 语言默认值
+  locale: 'auto',
   // 主题默认值
   theme: 'steam-dark',
   // 智能布局默认值
@@ -432,6 +420,11 @@ export const useEditorConfigStore = create<EditorConfigState>()(
         // 这条日志在关闭调试模式时也会输出（因为还没生效）
         loggers.config.info("调试模式:", enabled ? "开启" : "关闭");
         set({ debugMode: enabled });
+      },
+      setLocale: (locale) => {
+        loggers.config.info("设置语言:", locale);
+        i18n.changeLanguage(resolveLocale(locale));
+        set({ locale });
       },
       setShortcut: (key, value) => {
         loggers.config.info("设置快捷键:", key, "=>", value);
@@ -610,6 +603,8 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           smartLayoutEnabled: persisted?.smartLayoutEnabled ?? DEFAULT_CONFIG.smartLayoutEnabled,
           smartLayoutWidthThreshold: persisted?.smartLayoutWidthThreshold ?? DEFAULT_CONFIG.smartLayoutWidthThreshold,
           smartLayoutHeightThreshold: persisted?.smartLayoutHeightThreshold ?? DEFAULT_CONFIG.smartLayoutHeightThreshold,
+          // 语言
+          locale: persisted?.locale ?? DEFAULT_CONFIG.locale,
           // 主题
           theme: persisted?.theme ?? DEFAULT_CONFIG.theme,
           // 确保编辑器布局字段有默认值

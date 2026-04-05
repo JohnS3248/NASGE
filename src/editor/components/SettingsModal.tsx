@@ -1,19 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useMountTransition } from "../hooks/useMountTransition";
 import {
   useEditorConfigStore,
   ShortcutConfig,
-  SHORTCUT_LABELS,
   DEFAULT_SHORTCUTS,
   MenuItemConfig,
-  MenuItemDefinition,
   MenuGroupConfig,
-  IMAGE_MENU_PRESET_ITEMS,
-  IMAGE_MENU_ALIGN_ITEMS,
-  IMAGE_MENU_ACTION_ITEMS,
-  SELECTION_MENU_ITEMS,
-  EMPTY_MENU_ITEMS,
-  IMAGE_POOL_MENU_ITEMS
 } from "../stores/useEditorConfigStore";
 import {
   useImagePanelStore,
@@ -100,12 +93,21 @@ function formatShortcut(value: string): string {
 
 type TabId = "general" | "images" | "menus" | "shortcuts";
 
-const TABS: { id: TabId; label: string; Icon: React.FC<{ className?: string }> }[] = [
-  { id: "general", label: "通用", Icon: SlidersHorizontalIcon },
-  { id: "images", label: "图片", Icon: ImageIcon },
-  { id: "menus", label: "菜单", Icon: ListIcon },
-  { id: "shortcuts", label: "快捷键", Icon: KeyboardIcon },
-];
+const TAB_ICONS: Record<TabId, React.FC<{ className?: string }>> = {
+  general: SlidersHorizontalIcon,
+  images: ImageIcon,
+  menus: ListIcon,
+  shortcuts: KeyboardIcon,
+};
+
+const TAB_KEYS: Record<TabId, string> = {
+  general: "settings:tabs.general",
+  images: "settings:tabs.image",
+  menus: "settings:tabs.menu",
+  shortcuts: "settings:tabs.shortcuts",
+};
+
+const TAB_IDS: TabId[] = ["general", "images", "menus", "shortcuts"];
 
 // ============================================================================
 // SettingsModal
@@ -120,6 +122,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   visible,
   onClose
 }) => {
+  const { t } = useTranslation("settings");
   const shouldRender = useMountTransition(visible, 150);
   const [activeTab, setActiveTab] = useState<TabId>("general");
   const contentRef = useRef<HTMLDivElement>(null);
@@ -139,6 +142,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const theme = useEditorConfigStore((s) => s.theme);
   const setTheme = useEditorConfigStore((s) => s.setTheme);
+  const locale = useEditorConfigStore((s) => s.locale);
+  const setLocale = useEditorConfigStore((s) => s.setLocale);
   const showPreview = useEditorConfigStore((s) => s.showPreview);
   const setShowPreview = useEditorConfigStore((s) => s.setShowPreview);
 
@@ -194,7 +199,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border-subtle shrink-0">
-          <span className="text-[15px] font-semibold text-text-primary">编辑器设置</span>
+          <span className="text-[15px] font-semibold text-text-primary">{t("title")}</span>
           <button
             type="button"
             onClick={onClose}
@@ -208,16 +213,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         <div className="flex flex-1 min-h-0">
           {/* Tab Nav */}
           <nav className="w-40 shrink-0 border-r border-border-subtle p-3 flex flex-col gap-1">
-            {TABS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                className={`${tabBase} ${activeTab === id ? tabActive : tabInactive}`}
-                onClick={() => handleTabChange(id)}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </button>
-            ))}
+            {TAB_IDS.map((id) => {
+              const Icon = TAB_ICONS[id];
+              return (
+                <button
+                  key={id}
+                  className={`${tabBase} ${activeTab === id ? tabActive : tabInactive}`}
+                  onClick={() => handleTabChange(id)}
+                >
+                  <Icon className="w-4 h-4" />
+                  {t(TAB_KEYS[id])}
+                </button>
+              );
+            })}
           </nav>
 
           {/* Content */}
@@ -225,10 +233,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ===== 通用 Tab ===== */}
             {activeTab === "general" && (
               <div>
-                <div className={sectionTitle}>主题</div>
+                <div className={sectionTitle}>{t("language.title")}</div>
                 <SelectOption
-                  label="主题"
-                  description="切换编辑器的视觉风格"
+                  label={t("language.label")}
+                  description={t("language.description")}
+                  value={locale}
+                  options={[
+                    { value: "auto", label: "Auto" },
+                    { value: "zh-CN", label: "简体中文" },
+                    { value: "en-US", label: "English" },
+                  ]}
+                  onChange={setLocale}
+                />
+
+                <div className={divider} />
+
+                <div className={sectionTitle}>{t("theme.title")}</div>
+                <SelectOption
+                  label={t("theme.label")}
+                  description={t("theme.description")}
                   value={theme}
                   options={[
                     { value: "steam-dark", label: "Steam Dark" },
@@ -240,20 +263,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                 <div className={divider} />
 
-                <div className={sectionTitle}>预览</div>
+                <div className={sectionTitle}>{t("preview.title")}</div>
                 <ToggleOption
-                  label="实时预览"
-                  description="开启后在编辑器旁边显示 Steam 官方渲染的实时预览"
+                  label={t("preview.label")}
+                  description={t("preview.description")}
                   checked={showPreview}
                   onChange={setShowPreview}
                 />
 
                 <div className={divider} />
 
-                <div className={sectionTitle}>开发者</div>
+                <div className={sectionTitle}>{t("developer.title")}</div>
                 <ToggleOption
-                  label="调试模式"
-                  description="开启后在控制台显示详细日志，便于排查问题"
+                  label={t("developer.debugLabel")}
+                  description={t("developer.debugDescription")}
                   checked={debugMode}
                   onChange={setDebugMode}
                 />
@@ -263,11 +286,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ===== 图片 Tab ===== */}
             {activeTab === "images" && (
               <div>
-                <div className={sectionTitle}>图片上传</div>
+                <div className={sectionTitle}>{t("imageUpload.title")}</div>
 
                 <ToggleOption
-                  label="图片池自动上传"
-                  description="图片添加到图片池后自动上传到 Steam（配合重命名选项时先改名后上传）"
+                  label={t("imageUpload.autoLabel")}
+                  description={t("imageUpload.autoDescription")}
                   checked={autoUploadInPanel}
                   onChange={setAutoUploadInPanel}
                 />
@@ -275,8 +298,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <ToggleOption
-                  label="粘贴时重命名"
-                  description="粘贴图片到图片池后自动选中文件名便于重命名"
+                  label={t("imageUpload.pasteRenameLabel")}
+                  description={t("imageUpload.pasteRenameDescription")}
                   checked={promptRenameOnPaste}
                   onChange={setPromptRenameOnPaste}
                 />
@@ -284,25 +307,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <ToggleOption
-                  label="拖拽时重命名"
-                  description="拖拽图片到图片池后自动选中文件名便于重命名"
+                  label={t("imageUpload.dropRenameLabel")}
+                  description={t("imageUpload.dropRenameDescription")}
                   checked={promptRenameOnDrop}
                   onChange={setPromptRenameOnDrop}
                 />
 
-                {/* 提示 */}
                 <div className="bg-accent-subtle border border-accent/20 rounded-md p-3 text-xs text-text-secondary leading-relaxed mt-4">
-                  <strong>提示：</strong>关闭自动上传后，图片仍会插入编辑器并显示本地预览。
-                  未来版本将支持手动选择上传图片。
+                  <strong>{t("common:tip")}</strong>{t("imageUpload.tip")}
                 </div>
 
                 <div className={divider} />
 
-                <div className={sectionTitle}>图片池显示</div>
+                <div className={sectionTitle}>{t("imagePool.title")}</div>
 
                 <NumberInputOption
-                  label="每页显示数量"
-                  description="图片池中每页显示的图片数量，0 表示显示全部"
+                  label={t("imagePool.pageSize")}
+                  description={t("imagePool.pageSizeDescription")}
                   value={itemsPerPage}
                   min={0}
                   max={100}
@@ -312,14 +333,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <SelectOption
-                  label="缩略图尺寸"
-                  description="图片池中缩略图的显示大小"
+                  label={t("imagePool.thumbSize")}
+                  description={t("imagePool.thumbSizeDescription")}
                   value={thumbnailSizePreset}
                   options={[
-                    { value: "small", label: `小 (${THUMBNAIL_SIZE_MAP.small}px)` },
-                    { value: "medium", label: `中 (${THUMBNAIL_SIZE_MAP.medium}px)` },
-                    { value: "large", label: `大 (${THUMBNAIL_SIZE_MAP.large}px)` },
-                    { value: "custom", label: "自定义" }
+                    { value: "small", label: `${t("imagePool.thumbSmall")} (${THUMBNAIL_SIZE_MAP.small}px)` },
+                    { value: "medium", label: `${t("imagePool.thumbMedium")} (${THUMBNAIL_SIZE_MAP.medium}px)` },
+                    { value: "large", label: `${t("imagePool.thumbLarge")} (${THUMBNAIL_SIZE_MAP.large}px)` },
+                    { value: "custom", label: t("imagePool.thumbCustom") }
                   ]}
                   onChange={(v) => setThumbnailSize(v as ThumbnailSizePreset)}
                 />
@@ -328,8 +349,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <>
                     <div className="h-3" />
                     <SliderOption
-                      label="自定义尺寸"
-                      description={`当前: ${customThumbnailSize}px`}
+                      label={t("imagePool.customSize")}
+                      description={t("imagePool.customSizeCurrent", { size: customThumbnailSize })}
                       value={customThumbnailSize}
                       min={32}
                       max={256}
@@ -344,15 +365,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* ===== 菜单 Tab ===== */}
             {activeTab === "menus" && (
               <div>
-                <div className={sectionTitle}>右键菜单</div>
+                <div className={sectionTitle}>{t("contextMenu.title")}</div>
 
                 <MenuConfigSection
-                  title="文字选择菜单"
-                  description="选中文字后右键显示的菜单"
+                  title={t("contextMenu.selection")}
+                  description={t("contextMenu.selectionDesc")}
                   enabled={selectionMenuConfig.enabled}
                   onEnabledChange={(enabled) => setContextMenuEnabled('selection', enabled)}
                   items={selectionMenuConfig.items}
-                  definitions={SELECTION_MENU_ITEMS}
                   onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('selection', itemId, enabled)}
                   onReorder={(itemIds) => reorderMenuItems('selection', itemIds)}
                   onReset={() => resetContextMenuConfig('selection')}
@@ -361,12 +381,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <MenuConfigSection
-                  title="空白处菜单"
-                  description="在编辑器空白处右键显示的菜单"
+                  title={t("contextMenu.empty")}
+                  description={t("contextMenu.emptyDesc")}
                   enabled={emptyMenuConfig.enabled}
                   onEnabledChange={(enabled) => setContextMenuEnabled('empty', enabled)}
                   items={emptyMenuConfig.items}
-                  definitions={EMPTY_MENU_ITEMS}
                   onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('empty', itemId, enabled)}
                   onReorder={(itemIds) => reorderMenuItems('empty', itemIds)}
                   onReset={() => resetContextMenuConfig('empty')}
@@ -375,8 +394,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <ImageMenuConfigSection
-                  title="编辑器图片菜单"
-                  description="右键编辑器内图片显示的菜单"
+                  title={t("contextMenu.image")}
+                  description={t("contextMenu.imageDesc")}
                   config={imageMenuConfig}
                   onEnabledChange={(enabled) => setContextMenuEnabled('image', enabled)}
                   onItemEnabledChange={(itemId, enabled, groupId) => setMenuItemEnabled('image', itemId, enabled, groupId)}
@@ -387,12 +406,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <div className="h-3" />
 
                 <MenuConfigSection
-                  title="图片池菜单"
-                  description="在图片池中右键图片显示的菜单"
+                  title={t("contextMenu.imagePool")}
+                  description={t("contextMenu.imagePoolDesc")}
                   enabled={imagePoolMenuConfig.enabled}
                   onEnabledChange={(enabled) => setContextMenuEnabled('imagePool', enabled)}
                   items={imagePoolMenuConfig.items}
-                  definitions={IMAGE_POOL_MENU_ITEMS}
                   onItemEnabledChange={(itemId, enabled) => setMenuItemEnabled('imagePool', itemId, enabled)}
                   onReorder={(itemIds) => reorderMenuItems('imagePool', itemIds)}
                   onReset={() => resetContextMenuConfig('imagePool')}
@@ -405,17 +423,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {activeTab === "shortcuts" && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <div className={sectionTitle + " !mb-0"}>快捷键</div>
+                  <div className={sectionTitle + " !mb-0"}>{t("shortcuts.title")}</div>
                   <button type="button" onClick={resetShortcuts} className={btnText}>
-                    重置默认
+                    {t("shortcuts.resetAll")}
                   </button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  {(Object.keys(SHORTCUT_LABELS) as (keyof ShortcutConfig)[]).map((key) => (
+                  {(Object.keys(DEFAULT_SHORTCUTS) as (keyof ShortcutConfig)[]).map((key) => (
                     <ShortcutInput
                       key={key}
-                      label={SHORTCUT_LABELS[key]}
+                      label={t(`menu.${key}`)}
                       value={shortcuts?.[key] ?? DEFAULT_SHORTCUTS[key]}
                       onChange={(value) => setShortcut(key, value)}
                     />
@@ -670,10 +688,16 @@ const ShortcutInput: React.FC<ShortcutInputProps> = ({
             : "bg-bg-input border border-border-default text-text-primary"
         }`}
       >
-        {isRecording ? "按下快捷键..." : formatShortcut(value)}
+        {isRecording ? <RecordingText /> : formatShortcut(value)}
       </div>
     </div>
   );
+};
+
+// Small helper to use useTranslation inside ShortcutInput (which doesn't have hook access itself)
+const RecordingText: React.FC = () => {
+  const { t } = useTranslation("settings");
+  return <>{t("shortcuts.recording")}</>;
 };
 
 // ============================================================================
@@ -686,7 +710,6 @@ type MenuConfigSectionProps = {
   enabled: boolean;
   onEnabledChange: (enabled: boolean) => void;
   items: MenuItemConfig[];
-  definitions: MenuItemDefinition[];
   onItemEnabledChange: (itemId: string, enabled: boolean) => void;
   onReorder: (itemIds: string[]) => void;
   onReset: () => void;
@@ -699,19 +722,16 @@ const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
   enabled,
   onEnabledChange,
   items,
-  definitions,
   onItemEnabledChange,
   onReorder,
   onReset,
   hideIfSingleItem = false
 }) => {
+  const { t } = useTranslation("settings");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const getLabel = (id: string) => {
-    const def = definitions.find(d => d.id === id);
-    return def?.label || id;
-  };
+  const getLabel = (id: string) => t(`menu.${id}`);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedId(id);
@@ -757,7 +777,7 @@ const MenuConfigSection: React.FC<MenuConfigSectionProps> = ({
           <div className="text-xs text-text-muted">{description}</div>
         </div>
         {showItemsList && (
-          <button type="button" onClick={onReset} className={btnText}>重置</button>
+          <button type="button" onClick={onReset} className={btnText}>{t("shortcuts.resetMenu")}</button>
         )}
       </div>
 
@@ -800,16 +820,10 @@ type ImageMenuConfigSectionProps = {
   onReset: () => void;
 };
 
-const GROUP_LABELS: Record<string, string> = {
-  preset: '尺寸',
-  align: '对齐',
-  action: '操作'
-};
-
-const GROUP_DEFINITIONS: Record<string, MenuItemDefinition[]> = {
-  preset: IMAGE_MENU_PRESET_ITEMS,
-  align: IMAGE_MENU_ALIGN_ITEMS,
-  action: IMAGE_MENU_ACTION_ITEMS
+const GROUP_LABEL_KEYS: Record<string, string> = {
+  preset: "contextMenu.groupSize",
+  align: "contextMenu.groupAlign",
+  action: "contextMenu.groupAction",
 };
 
 const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
@@ -821,15 +835,12 @@ const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
   onReorder,
   onReset
 }) => {
+  const { t } = useTranslation("settings");
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [dragGroupId, setDragGroupId] = useState<string | null>(null);
 
-  const getLabel = (groupId: string, id: string) => {
-    const defs = GROUP_DEFINITIONS[groupId] || [];
-    const def = defs.find(d => d.id === id);
-    return def?.label || id;
-  };
+  const getLabel = (_groupId: string, id: string) => t(`menu.${id}`);
 
   const handleDragStart = (e: React.DragEvent, id: string, groupId: string) => {
     setDraggedId(id);
@@ -877,14 +888,14 @@ const ImageMenuConfigSection: React.FC<ImageMenuConfigSectionProps> = ({
           <div className="text-[13px] font-medium text-text-primary">{title}</div>
           <div className="text-xs text-text-muted">{description}</div>
         </div>
-        <button type="button" onClick={onReset} className={btnText}>重置</button>
+        <button type="button" onClick={onReset} className={btnText}>{t("shortcuts.resetMenu")}</button>
       </div>
 
       {/* Group lists */}
       {config.enabled && config.groups.map((group, index) => (
         <div key={group.groupId}>
           <div className={`text-[11px] text-text-muted pl-1 mb-1 ${index > 0 ? "mt-2" : "mt-1"}`}>
-            {GROUP_LABELS[group.groupId]}
+            {t(GROUP_LABEL_KEYS[group.groupId])}
           </div>
           <div className="flex flex-col gap-0.5">
             {group.items.map(item => (

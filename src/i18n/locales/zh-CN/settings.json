@@ -1,0 +1,107 @@
+{
+  "tabs": {
+    "general": "通用",
+    "image": "图片",
+    "menu": "菜单",
+    "shortcuts": "快捷键"
+  },
+  "title": "编辑器设置",
+  "theme": {
+    "title": "主题",
+    "label": "主题",
+    "description": "切换编辑器的视觉风格"
+  },
+  "preview": {
+    "title": "预览",
+    "label": "实时预览",
+    "description": "开启后在编辑器旁边显示 Steam 官方渲染的实时预览"
+  },
+  "developer": {
+    "title": "开发者",
+    "debugLabel": "调试模式",
+    "debugDescription": "开启后在控制台显示详细日志，便于排查问题"
+  },
+  "language": {
+    "title": "语言",
+    "label": "界面语言",
+    "description": "设置编辑器界面的显示语言"
+  },
+  "imageUpload": {
+    "title": "图片上传",
+    "autoLabel": "图片池自动上传",
+    "autoDescription": "图片添加到图片池后自动上传到 Steam（配合重命名选项时先改名后上传）",
+    "pasteRenameLabel": "粘贴时重命名",
+    "pasteRenameDescription": "粘贴图片到图片池后自动选中文件名便于重命名",
+    "dropRenameLabel": "拖拽时重命名",
+    "dropRenameDescription": "拖拽图片到图片池后自动选中文件名便于重命名",
+    "tip": "关闭自动上传后，图片仍会插入编辑器并显示本地预览。未来版本将支持手动选择上传图片。"
+  },
+  "imagePool": {
+    "title": "图片池显示",
+    "pageSize": "每页显示数量",
+    "pageSizeDescription": "图片池中每页显示的图片数量，0 表示显示全部",
+    "thumbSize": "缩略图尺寸",
+    "thumbSizeDescription": "图片池中缩略图的显示大小",
+    "thumbSmall": "小",
+    "thumbMedium": "中",
+    "thumbLarge": "大",
+    "thumbCustom": "自定义",
+    "customSize": "自定义尺寸",
+    "customSizeCurrent": "当前: {{size}}px"
+  },
+  "contextMenu": {
+    "title": "右键菜单",
+    "selection": "文字选择菜单",
+    "selectionDesc": "选中文字后右键显示的菜单",
+    "empty": "空白处菜单",
+    "emptyDesc": "在编辑器空白处右键显示的菜单",
+    "image": "编辑器图片菜单",
+    "imageDesc": "右键编辑器内图片显示的菜单",
+    "imagePool": "图片池菜单",
+    "imagePoolDesc": "在图片池中右键图片显示的菜单",
+    "groupSize": "尺寸",
+    "groupAlign": "对齐",
+    "groupAction": "操作"
+  },
+  "shortcuts": {
+    "title": "快捷键",
+    "resetAll": "重置默认",
+    "recording": "按下快捷键...",
+    "resetMenu": "重置"
+  },
+  "menu": {
+    "renameImage": "重命名图片",
+    "deleteImage": "删除图片",
+    "toggleBold": "加粗",
+    "toggleItalic": "斜体",
+    "toggleUnderline": "下划线",
+    "toggleStrike": "删除线",
+    "setParagraph": "正文段落",
+    "setHeading1": "一级标题",
+    "setHeading2": "二级标题",
+    "setHeading3": "三级标题",
+    "toggleCodeBlock": "代码块",
+    "toggleSpoiler": "折叠/剧透",
+    "preset-original": "原尺寸",
+    "preset-half": "半宽",
+    "preset-full": "全宽",
+    "align-floatLeft": "左对齐",
+    "align-floatRight": "右对齐",
+    "align-inline": "内嵌",
+    "upload": "上传图片",
+    "delete": "删除图片",
+    "heading1": "一级标题",
+    "heading2": "二级标题",
+    "heading3": "三级标题",
+    "spoiler": "隐藏文本",
+    "bold": "加粗",
+    "italic": "斜体",
+    "strike": "删除线",
+    "underline": "下划线",
+    "link": "插入链接",
+    "codeBlock": "插入代码块",
+    "quote": "插入引用",
+    "table": "插入表格",
+    "tags": "标签选择"
+  }
+}

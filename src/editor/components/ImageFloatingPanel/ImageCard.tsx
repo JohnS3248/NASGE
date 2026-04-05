@@ -4,6 +4,7 @@
  * 支持拖拽到编辑器插入
  */
 import React, { useState, useCallback, useRef, useEffect, useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ImageWithState, useSteamGuideImageStore } from "../../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, type ImageTag } from "../../stores/useGuideStore";
@@ -56,6 +57,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
   isEditing = false,
   onEditingChange
 }) => {
+  const { t } = useTranslation('editor');
   const {
     showFileName,
     showStatusIndicator,
@@ -183,14 +185,14 @@ const ImageCard: React.FC<ImageCardProps> = ({
 
   const getDisplayStatus = (): { text: string; color: string } => {
     if (image.state === "pending") {
-      if (isCurrentlyUploading) return { text: "上传中", color: statusColorMap.uploading };
-      if (isInQueue) return { text: `队列中 (${queuePosition}/${queueLength})`, color: statusColorMap.queued };
-      return { text: "待上传", color: statusColorMap.pending };
+      if (isCurrentlyUploading) return { text: t('image.uploading'), color: statusColorMap.uploading };
+      if (isInQueue) return { text: t('image.queued', { position: queuePosition, length: queueLength }), color: statusColorMap.queued };
+      return { text: t('image.pending'), color: statusColorMap.pending };
     }
-    if (image.state === "uploading") return { text: "上传中", color: statusColorMap.uploading };
-    if (image.state === "success") return { text: "已上传", color: statusColorMap.success };
-    if (image.state === "error") return { text: "失败", color: statusColorMap.error };
-    return { text: "未知", color: "var(--color-text-muted)" };
+    if (image.state === "uploading") return { text: t('image.uploading'), color: statusColorMap.uploading };
+    if (image.state === "success") return { text: t('image.success'), color: statusColorMap.success };
+    if (image.state === "error") return { text: t('image.error'), color: statusColorMap.error };
+    return { text: t('common:unknown'), color: "var(--color-text-muted)" };
   };
 
   const displayStatus = getDisplayStatus();
@@ -322,7 +324,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       }}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      title={`${image.fileName}\n状态: ${displayStatus.text}\n拖拽到编辑器插入`}
+      title={t('image.cardTitle', { fileName: image.fileName, status: displayStatus.text })}
     >
       {/* 缩略图区域 */}
       <div
@@ -338,7 +340,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(image); }}
             className="absolute top-0.5 right-0.5 w-[18px] h-[18px] flex items-center justify-center bg-black/70 border-none rounded-full text-text-secondary cursor-pointer z-10 p-0 leading-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:!bg-danger hover:!text-white"
-            title="删除图片"
+            title={t('image.delete')}
           >
             <XIcon size={10} />
           </button>
@@ -347,7 +349,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
         {imageError || !displayUrl ? (
           <div className="flex flex-col items-center justify-center text-text-muted text-[10px]">
             <span className="text-xl mb-1 opacity-50"><XIcon size={20} /></span>
-            <span>加载失败</span>
+            <span>{t('image.loadFailed')}</span>
           </div>
         ) : (
           <img
@@ -445,7 +447,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
           {allTags.length > 0 ? (
             <>
               <div className="px-3 py-1 text-[11px] text-text-muted border-b border-border-accent">
-                选择标签
+                {t('image.selectTag')}
               </div>
               {allTags.map((tag) => {
                 const hasTag = imageTags.some(t => t.id === tag.id);
@@ -476,10 +478,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
               })}
             </>
           ) : (
-            <div className="p-3 text-xs text-text-muted text-center">
-              暂无标签
-              <br />
-              <span className="text-[11px]">在标题栏点击标签图标创建</span>
+            <div className="p-3 text-xs text-text-muted text-center whitespace-pre-line">
+              {t('image.noTags')}
             </div>
           )}
         </div>

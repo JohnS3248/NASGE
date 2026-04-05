@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useReviewStore } from "../stores/useReviewStore";
 import { useDraftStore } from "../stores/useDraftStore";
 import { useGuideStore, isOnlineMode } from "../stores/useGuideStore";
@@ -25,6 +26,7 @@ type ReviewSettingsPanelProps = {
 };
 
 const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }) => {
+  const { t } = useTranslation('editor');
   const mode = useGuideStore((s) => s.mode);
   const settings = useReviewStore((s) => s.settings);
   const gameName = useReviewStore((s) => s.gameName);
@@ -41,16 +43,16 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
     );
     const currentAppId = useReviewStore.getState().appId;
     if (activeDraft?.linkedAppId && currentAppId && activeDraft.linkedAppId !== currentAppId) {
-      toast.error(`此草稿绑定的游戏 (${activeDraft.linkedAppName || activeDraft.linkedAppId}) 与当前评测页面不一致，请切换到正确的草稿`);
+      toast.error(t('review.gameMismatch', { game: activeDraft.linkedAppName || activeDraft.linkedAppId }));
       return;
     }
 
     if (settings.ratedUp === null) {
-      toast.warning("请先选择推荐或不推荐");
+      toast.warning(t('review.selectRating'));
       return;
     }
     if (!currentHtml) {
-      toast.error("评测内容为空");
+      toast.error(t('review.emptyContent'));
       return;
     }
 
@@ -65,10 +67,10 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
         received_compensation: settings.receivedCompensation ? 1 : 0,
         disable_comments: settings.enableComments ? 0 : 1,
       });
-      toast.success(result.created ? "评测发布成功！" : "评测更新成功！");
+      toast.success(result.created ? t('review.publishSuccess') : t('review.updateSuccess'));
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      toast.error(`提交失败：${msg}`);
+      toast.error(t('review.submitFail', { message: msg }));
     } finally {
       setIsSubmitting(false);
     }
@@ -78,7 +80,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
     <div className="flex flex-col gap-3 p-4 rounded-lg bg-bg-surface border border-border-default shadow-panel min-w-56">
       {/* 标题 */}
       <div className="text-sm font-semibold text-text-primary">
-        评测设置
+        {t('review.settings')}
       </div>
       {gameName && (
         <div className="text-xs text-text-muted truncate" title={gameName}>
@@ -98,7 +100,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
             }`}
         >
           <ThumbUpIcon className="w-4 h-4" />
-          推荐
+          {t('review.recommend')}
         </button>
         <button
           type="button"
@@ -110,7 +112,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
             }`}
         >
           <ThumbDownIcon className="w-4 h-4" />
-          不推荐
+          {t('review.notRecommend')}
         </button>
       </div>
 
@@ -119,20 +121,20 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
 
       {/* 可见性 */}
       <label className="flex items-center justify-between text-xs text-text-secondary">
-        <span>可见性</span>
+        <span>{t('review.visibility')}</span>
         <select
           value={settings.visibility}
           onChange={(e) => updateSettings({ visibility: e.target.value as "public" | "friends" })}
           className="bg-bg-overlay border border-border-default rounded px-2 py-1 text-xs text-text-primary cursor-pointer"
         >
-          <option value="public">公开</option>
-          <option value="friends">仅限好友</option>
+          <option value="public">{t('review.public')}</option>
+          <option value="friends">{t('review.friendsOnly')}</option>
         </select>
       </label>
 
       {/* 语言 */}
       <label className="flex items-center justify-between text-xs text-text-secondary">
-        <span>语言</span>
+        <span>{t('review.language')}</span>
         <select
           value={settings.language}
           onChange={(e) => updateSettings({ language: e.target.value })}
@@ -151,17 +153,17 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
 
       {/* 复选框 */}
       <Checkbox
-        label="允许留言"
+        label={t('review.allowComments')}
         checked={settings.enableComments}
         onChange={(v) => updateSettings({ enableComments: v })}
       />
       <Checkbox
-        label="展示 PC 配置"
+        label={t('review.showSpecs')}
         checked={settings.attachHardware}
         onChange={(v) => updateSettings({ attachHardware: v })}
       />
       <Checkbox
-        label="免费获取的产品"
+        label={t('review.freeProduct')}
         checked={settings.receivedCompensation}
         onChange={(v) => updateSettings({ receivedCompensation: v })}
       />
@@ -180,7 +182,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
                 : "cursor-pointer bg-accent text-bg-app hover:bg-accent-hover"
               }`}
           >
-            {isSubmitting ? "提交中..." : hasExistingReview ? "更新评测" : "提交评测"}
+            {isSubmitting ? t('review.submitting') : hasExistingReview ? t('review.update') : t('review.submit')}
           </button>
         </>
       )}

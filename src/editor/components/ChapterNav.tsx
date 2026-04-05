@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { useGuideStore, type ChapterInfo } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { useDraftStore } from '../stores/useDraftStore';
@@ -72,7 +74,7 @@ const borderNone = "border-l-[3px] border-l-transparent";
 /**
  * 格式化同步时间
  */
-const formatSyncTime = (timestamp: number): string => {
+const formatSyncTime = (timestamp: number, t: TFunction): string => {
   const date = new Date(timestamp);
   const now = new Date();
   const diffMs = now.getTime() - timestamp;
@@ -80,12 +82,12 @@ const formatSyncTime = (timestamp: number): string => {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return '刚刚';
-  if (diffMins < 60) return `${diffMins} 分钟前`;
-  if (diffHours < 24) return `${diffHours} 小时前`;
-  if (diffDays < 7) return `${diffDays} 天前`;
+  if (diffMins < 1) return t('time.justNow');
+  if (diffMins < 60) return t('time.minutesAgo', { count: diffMins });
+  if (diffHours < 24) return t('time.hoursAgo', { count: diffHours });
+  if (diffDays < 7) return t('time.daysAgo', { count: diffDays });
 
-  return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 };
 
 /* ── 固定模式默认位置 ────────────────────────────────────── */
@@ -184,6 +186,8 @@ const ChapterItem = React.memo<{
   boundDraftName, onChapterClick, onPullChapter, onDragStart, onDragOver,
   onDragLeave, onDrop, onDragEnd, renderTitle
 }) => {
+  const { t } = useTranslation('editor');
+
   // 状态 border class
   const borderClass = isDragOver
     ? "border-l-[3px] border-l-accent/80"
@@ -215,7 +219,7 @@ const ChapterItem = React.memo<{
         {isLoading ? (
           <span className="inline-flex items-center gap-1.5">
             <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
-            拉取中
+            {t('chapter.pulling')}
           </span>
         ) : renderTitle(chapter)}
       </button>
@@ -234,7 +238,7 @@ const ChapterItem = React.memo<{
           onPullChapter(chapter.sectionId);
         }}
         disabled={isLoading}
-        title="从 Steam 拉取章节内容"
+        title={t('chapter.pullTooltip')}
         className={`border-0 bg-transparent text-accent px-2.5 py-1.5 cursor-pointer nasge-transition-quick ${isLoading ? 'opacity-50 cursor-wait' : 'opacity-70 hover:opacity-100'}`}
       >
         <ArrowDownIcon className="w-3.5 h-3.5" />
@@ -246,6 +250,7 @@ const ChapterItem = React.memo<{
 ChapterItem.displayName = 'ChapterItem';
 
 const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false }) => {
+  const { t } = useTranslation('editor');
   const mode = useGuideStore((state) => state.mode);
   const guideInfo = useGuideStore((state) => state.guideInfo);
   const reorderChapters = useGuideStore((state) => state.reorderChapters);
@@ -385,7 +390,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
   const handleChapterClick = async (sectionId: string) => {
     const switched = switchToChapter(sectionId);
     if (!switched) {
-      if (await dialog.confirm({ message: '该章节尚未拉取，是否立即从 Steam 拉取内容？' })) {
+      if (await dialog.confirm({ message: t('chapter.pullConfirm') })) {
         pullChapter(sectionId);
       }
     }
@@ -414,7 +419,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     if (!draggedId || draggedId === targetId || chapters.length === 0) return;
 
     if (isOfflineData) {
-      toast.warning('离线模式下无法重新排序章节，请先刷新连接 Steam');
+      toast.warning(t('chapter.offlineReorder'));
       return;
     }
 
@@ -439,7 +444,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       loggers.sync.info('章节排序已同步到 Steam');
     } catch (error) {
       loggers.sync.error('章节排序同步失败', error);
-      toast.error('章节排序同步到 Steam 失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error(t('chapter.syncFail', { error: error instanceof Error ? error.message : 'Unknown error' }));
     } finally {
       setIsSyncing(false);
     }
@@ -454,10 +459,10 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     if (!onRefresh || isRefreshing) return;
     try {
       await onRefresh();
-      toast.success('章节列表已刷新');
+      toast.success(t('chapter.refreshed'));
     } catch (error) {
       loggers.editor.error('章节列表刷新失败', error);
-      toast.error('章节列表刷新失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error(t('chapter.refreshFail', { error: error instanceof Error ? error.message : 'Unknown error' }));
     }
   };
 
@@ -465,7 +470,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
     if (isCreatingChapter || !guideInfo?.id) return;
 
     if (isOfflineData) {
-      toast.warning('离线模式下无法创建新章节，请先刷新连接 Steam');
+      toast.warning(t('chapter.offlineCreate'));
       return;
     }
 
@@ -476,7 +481,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       if (onRefresh) await onRefresh();
     } catch (error) {
       loggers.editor.error('创建章节失败', error);
-      toast.error('创建章节失败：' + (error instanceof Error ? error.message : '未知错误'));
+      toast.error(t('chapter.createFail', { error: error instanceof Error ? error.message : 'Unknown error' }));
     } finally {
       setIsCreatingChapter(false);
     }
@@ -538,7 +543,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           type="button"
           onClick={() => setIsCollapsed(false)}
           className="w-9 h-9 rounded-md bg-bg-app/95 border border-border-subtle text-text-muted hover:text-text-primary hover:bg-bg-hover nasge-transition-quick cursor-pointer flex items-center justify-center shadow-md"
-          title="展开目录"
+          title={t('chapter.expandToc')}
         >
           <MenuIcon className="w-4 h-4" />
         </button>
@@ -558,22 +563,22 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       <div className="px-2.5 py-2.5 border-b border-border-subtle bg-bg-app/60 flex justify-between items-center">
         <div className="flex flex-col gap-0.5 min-w-0 flex-1">
           <h3 className="m-0 text-sm text-text-secondary font-normal flex items-center gap-2">
-            {currentArchive ? currentArchive.guideName : '目录'}
+            {currentArchive ? currentArchive.guideName : t('chapter.toc')}
             {isOfflineData && (
               <span className="text-[10px] text-warning bg-warning/15 rounded px-1.5 py-0.5 font-medium">
-                离线
+                {t('common:offline')}
               </span>
             )}
             {(isSyncing || isRefreshing) && (
               <span className="text-xs text-accent inline-flex items-center gap-1">
                 <Loader2Icon className="w-3 h-3 animate-spin" />
-                {isSyncing ? '同步中' : '刷新中'}
+                {isSyncing ? t('chapter.syncing') : t('chapter.refreshing')}
               </span>
             )}
           </h3>
           {syncTime > 0 && (
             <span className={`text-[11px] ${isOfflineData ? 'text-warning' : 'text-text-muted'}`}>
-              {isOfflineData ? '离线数据 · ' : ''}同步于 {formatSyncTime(syncTime)}
+              {isOfflineData ? t('chapter.offlineData') : ''}{t('chapter.syncedAt')}{formatSyncTime(syncTime, t)}
             </span>
           )}
         </div>
@@ -584,7 +589,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             type="button"
             onClick={toggleNavMode}
             className={`border-0 bg-transparent p-1 nasge-transition-quick cursor-pointer ${navMode === 'movable' ? 'text-accent hover:text-accent-hover' : 'text-text-muted hover:text-text-primary'}`}
-            title={navMode === 'fixed' ? '切换为可拖拽模式' : '切换为固定模式'}
+            title={navMode === 'fixed' ? t('chapter.switchMovable') : t('chapter.switchFixed')}
           >
             {navMode === 'fixed' ? <LockIcon className="w-3.5 h-3.5" /> : <UnlockIcon className="w-3.5 h-3.5" />}
           </button>
@@ -595,7 +600,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
               onClick={handleRefresh}
               disabled={isRefreshing || isSyncing}
               className={`border-0 bg-transparent text-accent p-1 nasge-transition-quick ${isRefreshing || isSyncing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:text-accent-hover'}`}
-              title="刷新章节列表"
+              title={t('chapter.refreshTooltip')}
             >
               <RotateCwIcon className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </button>
@@ -605,7 +610,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
             type="button"
             onClick={() => setIsCollapsed(true)}
             className="border-0 bg-transparent text-text-muted hover:text-text-primary p-1 nasge-transition-quick cursor-pointer"
-            title="收起目录"
+            title={t('chapter.collapseToc')}
           >
             <XIcon className="w-4 h-4" />
           </button>
@@ -616,7 +621,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
       <div className="flex flex-col overflow-y-auto flex-1">
         {chapters.length === 0 ? (
           <div className="py-8 px-3 text-center text-text-muted text-sm leading-relaxed">
-            该指南暂无章节
+            {t('chapter.noChapters')}
           </div>
         ) : (
           chapters.map((chapter) => {
@@ -661,12 +666,12 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
           {isCreatingChapter ? (
             <span className="inline-flex items-center gap-1.5">
               <Loader2Icon className="w-3.5 h-3.5 animate-spin" />
-              创建中
+              {t('chapter.creating')}
             </span>
           ) : (
             <>
               <PlusIcon className="w-3.5 h-3.5" />
-              新建章节
+              {t('chapter.createNew')}
             </>
           )}
         </button>

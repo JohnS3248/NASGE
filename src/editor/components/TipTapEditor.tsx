@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
@@ -61,18 +62,6 @@ const INITIAL_CONTEXT_MENU: ContextMenuState = {
   mode: "empty"
 };
 
-const IMAGE_SIZE_OPTIONS: Array<{ label: string; value: ImageDisplayPreset }> = [
-  { label: "原尺寸", value: "original" },
-  { label: "半宽", value: "half" },
-  { label: "全宽", value: "full" }
-];
-
-const IMAGE_ALIGNMENT_OPTIONS: Array<{ label: string; value: ImageAlignment }> = [
-  { label: "左对齐", value: "floatLeft" },
-  { label: "右对齐", value: "floatRight" },
-  { label: "内嵌", value: "inline" }
-];
-
 /** 编辑器初始化骨架屏 — 匹配编辑器布局避免 CLS */
 function EditorSkeleton() {
   return (
@@ -101,11 +90,13 @@ function EditorSkeleton() {
 }
 
 const TipTapEditor: React.FC<TipTapEditorProps> = ({
-  initialContent = "<p>欢迎使用 NASGE 编辑器。</p>",
+  initialContent,
   externalDoc,
   onUpdate,
   onEditorReady
 }) => {
+  const { t } = useTranslation('editor');
+  const resolvedInitialContent = initialContent ?? `<p>${t('welcomeContent')}</p>`;
   const extensions = useMemo(() => createEditorExtensions(), []);
   const ignoreNextUpdateRef = useRef(false);
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -224,7 +215,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       editor.state.selection.to
     );
 
-    const url = await dialog.prompt({ message: "请输入链接地址", defaultValue: previousUrl ?? "https://" });
+    const url = await dialog.prompt({ message: t('link.inputUrl'), defaultValue: previousUrl ?? "https://" });
     if (url === null || url.trim() === "") {
       editor.chain().focus().unsetLink().run();
       return;
@@ -232,7 +223,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
     let label = selectionText;
     if (!label) {
-      label = (await dialog.prompt({ message: "显示文本（留空则使用链接本身）", defaultValue: url })) ?? url;
+      label = (await dialog.prompt({ message: t('link.displayText'), defaultValue: url })) ?? url;
       editor
         .chain()
         .focus()
@@ -391,21 +382,21 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       loggers.image.error('TipTapEditor 图片上传失败:', errorMessage);
-      toast.error(`图片上传失败：${errorMessage}`);
+      toast.error(t('image.uploadFail', { error: errorMessage }));
     }
   }, [contextMenu, editor]);
 
   const insertImage = useCallback(async () => {
     if (!editor) return;
-    const src = (await dialog.prompt({ message: "输入图片链接", defaultValue: "https://" }))?.trim();
+    const src = (await dialog.prompt({ message: t('imageLink.inputUrl'), defaultValue: "https://" }))?.trim();
     if (!src) return;
-    const alt = (await dialog.prompt({ message: "图片描述（可选）", defaultValue: "" })) ?? "";
+    const alt = (await dialog.prompt({ message: t('imageLink.altText'), defaultValue: "" })) ?? "";
     editor.chain().focus().setImage({ src, alt }).run();
   }, [editor]);
 
   const insertQuote = useCallback(async () => {
     if (!editor) return;
-    const author = (await dialog.prompt({ message: "引用来源（可选）", defaultValue: "" })) ?? "";
+    const author = (await dialog.prompt({ message: t('quote.source'), defaultValue: "" })) ?? "";
     editor
       .chain()
       .focus()
@@ -416,7 +407,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           ...(author
             ? [{
                 type: "paragraph",
-                content: [{ type: "text", text: `引用自 ${author}：` }]
+                content: [{ type: "text", text: t('quote.prefix', { author }) }]
               }]
             : []),
           { type: "paragraph", content: [] }
@@ -833,9 +824,21 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                   const groupDefs = group.groupId === 'preset' ? IMAGE_MENU_PRESET_ITEMS
                     : group.groupId === 'align' ? IMAGE_MENU_ALIGN_ITEMS
                     : IMAGE_MENU_ACTION_ITEMS;
-                  const groupLabel = group.groupId === 'preset' ? '尺寸'
-                    : group.groupId === 'align' ? '对齐'
+                  const groupLabel = group.groupId === 'preset' ? t('image.size')
+                    : group.groupId === 'align' ? t('image.align')
                     : null; // action 组无标签
+
+                  // i18n label mapping for image menu items
+                  const imageMenuI18nKeys: Record<string, string> = {
+                    'preset-original': t('image.original'),
+                    'preset-half': t('image.half'),
+                    'preset-full': t('image.full'),
+                    'align-floatLeft': t('image.alignLeft'),
+                    'align-floatRight': t('image.alignRight'),
+                    'align-inline': t('image.inline'),
+                    'upload': t('image.upload'),
+                    'delete': t('image.delete')
+                  };
 
                   return (
                     <React.Fragment key={group.groupId}>
@@ -844,6 +847,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                       {enabledItems.map(item => {
                         const def = groupDefs.find(d => d.id === item.id);
                         if (!def) return null;
+                        const label = imageMenuI18nKeys[item.id] ?? def.label;
 
                         // 根据 id 确定 onClick 和 active 状态
                         // 使用 payload 中的值（从被点击的 TipTap 节点读取），而非 Store 数据
@@ -852,7 +856,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                           return (
                             <MenuItem
                               key={item.id}
-                              label={def.label}
+                              label={label}
                               active={contextMenu.payload?.sizePreset === preset}
                               onClick={() => applyImagePreset(preset)}
                               onComplete={closeContextMenu}
@@ -863,7 +867,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                           return (
                             <MenuItem
                               key={item.id}
-                              label={def.label}
+                              label={label}
                               active={contextMenu.payload?.alignment === alignment}
                               onClick={() => applyImageAlignment(alignment)}
                               onComplete={closeContextMenu}
@@ -880,7 +884,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                           return (
                             <MenuItem
                               key={item.id}
-                              label={def.label}
+                              label={label}
                               onClick={action.onClick}
                               onComplete={closeContextMenu}
                               danger={action.danger}
@@ -894,82 +898,103 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
               </>
             ) : (
               <div className="px-3 py-2.5 text-text-secondary text-[0.8rem]">
-                图片数据暂不可用。
+                {t('image.dataUnavailable')}
               </div>
             )
           ) : contextMenu.mode === "table" ? (
             <>
-              <MenuSectionLabel label="行操作" />
-              <MenuItem label="上方插入行" onClick={() => editor.chain().focus().addRowBefore().run()} onComplete={closeContextMenu} />
-              <MenuItem label="下方插入行" onClick={() => editor.chain().focus().addRowAfter().run()} onComplete={closeContextMenu} />
-              <MenuItem label="删除当前行" onClick={() => editor.chain().focus().deleteRow().run()} onComplete={closeContextMenu} danger />
+              <MenuSectionLabel label={t('table.rowOps')} />
+              <MenuItem label={t('table.insertAbove')} onClick={() => editor.chain().focus().addRowBefore().run()} onComplete={closeContextMenu} />
+              <MenuItem label={t('table.insertBelow')} onClick={() => editor.chain().focus().addRowAfter().run()} onComplete={closeContextMenu} />
+              <MenuItem label={t('table.deleteRow')} onClick={() => editor.chain().focus().deleteRow().run()} onComplete={closeContextMenu} danger />
               <MenuDivider />
-              <MenuSectionLabel label="列操作" />
-              <MenuItem label="左侧插入列" onClick={() => editor.chain().focus().addColumnBefore().run()} onComplete={closeContextMenu} />
-              <MenuItem label="右侧插入列" onClick={() => editor.chain().focus().addColumnAfter().run()} onComplete={closeContextMenu} />
-              <MenuItem label="删除当前列" onClick={() => editor.chain().focus().deleteColumn().run()} onComplete={closeContextMenu} danger />
+              <MenuSectionLabel label={t('table.colOps')} />
+              <MenuItem label={t('table.insertLeft')} onClick={() => editor.chain().focus().addColumnBefore().run()} onComplete={closeContextMenu} />
+              <MenuItem label={t('table.insertRight')} onClick={() => editor.chain().focus().addColumnAfter().run()} onComplete={closeContextMenu} />
+              <MenuItem label={t('table.deleteCol')} onClick={() => editor.chain().focus().deleteColumn().run()} onComplete={closeContextMenu} danger />
               <MenuDivider />
-              <MenuSectionLabel label="嵌套" />
-              <MenuItem label="在单元格内插入表格" onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: false }).run()} onComplete={closeContextMenu} />
+              <MenuSectionLabel label={t('table.nesting')} />
+              <MenuItem label={t('table.insertNested')} onClick={() => editor.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: false }).run()} onComplete={closeContextMenu} />
               <MenuDivider />
-              <MenuItem label="删除整个表格" onClick={() => editor.chain().focus().deleteTable().run()} onComplete={closeContextMenu} danger />
+              <MenuItem label={t('table.deleteTable')} onClick={() => editor.chain().focus().deleteTable().run()} onComplete={closeContextMenu} danger />
             </>
           ) : contextMenu.mode === "selection" ? (
             <>
               {/* 动态渲染文字选择菜单 */}
-              {selectionMenuConfig.items
-                .filter(item => item.enabled)
-                .map(item => {
-                  const def = SELECTION_MENU_ITEMS.find(d => d.id === item.id);
-                  if (!def) return null;
-                  const actionMap: Record<string, () => void> = {
-                    heading1: () => editor.chain().focus().setHeading({ level: 1 }).run(),
-                    heading2: () => editor.chain().focus().setHeading({ level: 2 }).run(),
-                    heading3: () => editor.chain().focus().setHeading({ level: 3 }).run(),
-                    spoiler: toggleSpoiler,
-                    bold: () => editor.chain().focus().toggleBold().run(),
-                    italic: () => editor.chain().focus().toggleItalic().run(),
-                    strike: () => editor.chain().focus().toggleStrike().run(),
-                    underline: () => editor.chain().focus().toggleUnderline().run(),
-                    link: toggleLink
-                  };
-                  const onClick = actionMap[item.id];
-                  if (!onClick) return null;
-                  return (
-                    <MenuItem
-                      key={item.id}
-                      label={def.label}
-                      onClick={onClick}
-                      onComplete={closeContextMenu}
-                    />
-                  );
-                })}
+              {(() => {
+                const selectionMenuI18nKeys: Record<string, string> = {
+                  heading1: t('contextMenu.heading1'),
+                  heading2: t('contextMenu.heading2'),
+                  heading3: t('contextMenu.heading3'),
+                  spoiler: t('contextMenu.spoiler'),
+                  bold: t('contextMenu.bold'),
+                  italic: t('contextMenu.italic'),
+                  strike: t('contextMenu.strike'),
+                  underline: t('contextMenu.underline'),
+                  link: t('contextMenu.link')
+                };
+                return selectionMenuConfig.items
+                  .filter(item => item.enabled)
+                  .map(item => {
+                    const def = SELECTION_MENU_ITEMS.find(d => d.id === item.id);
+                    if (!def) return null;
+                    const actionMap: Record<string, () => void> = {
+                      heading1: () => editor.chain().focus().setHeading({ level: 1 }).run(),
+                      heading2: () => editor.chain().focus().setHeading({ level: 2 }).run(),
+                      heading3: () => editor.chain().focus().setHeading({ level: 3 }).run(),
+                      spoiler: toggleSpoiler,
+                      bold: () => editor.chain().focus().toggleBold().run(),
+                      italic: () => editor.chain().focus().toggleItalic().run(),
+                      strike: () => editor.chain().focus().toggleStrike().run(),
+                      underline: () => editor.chain().focus().toggleUnderline().run(),
+                      link: toggleLink
+                    };
+                    const onClick = actionMap[item.id];
+                    if (!onClick) return null;
+                    return (
+                      <MenuItem
+                        key={item.id}
+                        label={selectionMenuI18nKeys[item.id] ?? def.label}
+                        onClick={onClick}
+                        onComplete={closeContextMenu}
+                      />
+                    );
+                  });
+              })()}
             </>
           ) : (
             <>
               {/* 动态渲染空白处菜单 */}
-              {emptyMenuConfig.items
-                .filter(item => item.enabled)
-                .map(item => {
-                  const def = EMPTY_MENU_ITEMS.find(d => d.id === item.id);
-                  if (!def) return null;
-                  const actionMap: Record<string, () => void> = {
-                    insertImage: insertImage,
-                    codeBlock: insertCodeBlock,
-                    quote: insertQuote,
-                    table: insertTable
-                  };
-                  const onClick = actionMap[item.id];
-                  if (!onClick) return null;
-                  return (
-                    <MenuItem
-                      key={item.id}
-                      label={def.label}
-                      onClick={onClick}
-                      onComplete={closeContextMenu}
-                    />
-                  );
-                })}
+              {(() => {
+                const emptyMenuI18nKeys: Record<string, string> = {
+                  insertImage: t('imageLink.inputUrl'),
+                  codeBlock: t('contextMenu.insertCodeBlock'),
+                  quote: t('contextMenu.insertQuote'),
+                  table: t('contextMenu.insertTable')
+                };
+                return emptyMenuConfig.items
+                  .filter(item => item.enabled)
+                  .map(item => {
+                    const def = EMPTY_MENU_ITEMS.find(d => d.id === item.id);
+                    if (!def) return null;
+                    const actionMap: Record<string, () => void> = {
+                      insertImage: insertImage,
+                      codeBlock: insertCodeBlock,
+                      quote: insertQuote,
+                      table: insertTable
+                    };
+                    const onClick = actionMap[item.id];
+                    if (!onClick) return null;
+                    return (
+                      <MenuItem
+                        key={item.id}
+                        label={emptyMenuI18nKeys[item.id] ?? def.label}
+                        onClick={onClick}
+                        onComplete={closeContextMenu}
+                      />
+                    );
+                  });
+              })()}
             </>
           )}
         </div>

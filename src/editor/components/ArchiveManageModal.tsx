@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGuideStore, type GuideArchive } from '../stores/useGuideStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
 import { dialog } from '../stores/useDialogStore';
@@ -14,6 +15,7 @@ interface ArchiveManageModalProps {
  * 存档管理弹窗 - 管理所有存档
  */
 export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible, onClose }) => {
+  const { t } = useTranslation('editor');
   const shouldRender = useMountTransition(visible, 150);
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const switchArchive = useGuideStore((s) => s.switchArchive);
@@ -27,7 +29,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
   // 格式化完整日期
   const formatFullDate = (timestamp: number): string => {
     const date = new Date(timestamp);
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'numeric',
       day: 'numeric',
@@ -58,8 +60,8 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
   const handleDeleteArchive = async (archive: GuideArchive) => {
     const isOffline = archive.guideId.startsWith('offline-');
     const warningMsg = isOffline
-      ? `确定要删除离线存档"${archive.guideName}"吗？\n\n该存档下的所有草稿将变为未关联状态。`
-      : `确定要删除存档"${archive.guideName}"吗？\n\n注意：这只会删除本地缓存，不会影响 Steam 上的原始指南。该存档下的所有草稿将变为未关联状态。`;
+      ? t('archive.deleteOfflineConfirm', { name: archive.guideName })
+      : t('archive.deleteConfirm', { name: archive.guideName });
 
     if (await dialog.confirm({ message: warningMsg, danger: true })) {
       deleteArchive(archive.guideId);
@@ -84,7 +86,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
         {/* 标题栏 */}
         <div className="flex justify-between items-center mb-5 pb-3 border-b border-border-default">
           <h2 className="m-0 text-xl font-semibold text-text-primary">
-            存档管理
+            {t('archive.manage')}
           </h2>
           <button
             type="button"
@@ -97,14 +99,14 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
 
         {/* 存档统计 */}
         <div className="text-[0.85rem] text-text-secondary mb-4">
-          共 {archiveList.length} 个存档
+          {t('archive.count', { count: archiveList.length })}
         </div>
 
         {/* 存档列表 */}
         <div className="flex-1 overflow-y-auto mb-4 flex flex-col gap-2">
           {archiveList.length === 0 ? (
             <div className="py-8 text-center text-text-muted text-[0.9rem]">
-              暂无存档，访问 Steam 指南或创建离线存档
+              {t('archive.noArchives')}
             </div>
           ) : (
             archiveList.map((archive) => (
@@ -131,7 +133,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
                 type="text"
                 value={newArchiveName}
                 onChange={(e) => setNewArchiveName(e.target.value)}
-                placeholder="输入存档名称..."
+                placeholder={t('archive.namePlaceholder')}
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateOfflineArchive();
@@ -152,7 +154,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
                     : 'bg-accent/30 text-text-muted cursor-not-allowed'
                 } nasge-transition-quick`}
               >
-                创建
+                {t('common:create')}
               </button>
               <button
                 type="button"
@@ -162,7 +164,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
                 }}
                 className="px-3 py-2.5 rounded-md border border-danger/40 bg-transparent text-danger cursor-pointer text-[0.85rem] hover:bg-danger/10 nasge-transition-quick"
               >
-                取消
+                {t('common:cancel')}
               </button>
             </div>
           ) : (
@@ -171,7 +173,7 @@ export const ArchiveManageModal: React.FC<ArchiveManageModalProps> = ({ visible,
               onClick={() => setIsCreating(true)}
               className="w-full py-3 px-4 rounded-lg border border-dashed border-accent/40 bg-transparent text-accent text-[0.9rem] cursor-pointer hover:bg-accent/10 hover:border-solid nasge-transition-quick"
             >
-              + 新建离线存档
+              {t('archive.createOffline')}
             </button>
           )}
         </div>
@@ -190,6 +192,7 @@ const ArchiveListItem: React.FC<{
   onDelete: () => void;
   formatDate: (timestamp: number) => string;
 }> = ({ archive, isActive, onSelect, onDelete, formatDate }) => {
+  const { t } = useTranslation('editor');
   const isOffline = archive.guideId.startsWith('offline-');
 
   return (
@@ -235,14 +238,14 @@ const ArchiveListItem: React.FC<{
           </span>
           {isOffline && (
             <span className="px-1.5 py-0.5 rounded text-[0.65rem] font-medium bg-warning/20 text-warning">
-              离线
+              {t('common:offline')}
             </span>
           )}
         </div>
         <div className="text-xs text-text-muted flex gap-2.5">
-          <span>{archive.chapters.length} 章节</span>
+          <span>{archive.chapters.length} {t('header.chapters')}</span>
           <span>•</span>
-          <span>创建于 {formatDate(archive.createdAt)}</span>
+          <span>{t('archive.createdAt', { date: formatDate(archive.createdAt) })}</span>
         </div>
       </div>
 
@@ -253,7 +256,7 @@ const ArchiveListItem: React.FC<{
           e.stopPropagation();
           onDelete();
         }}
-        title="删除存档"
+        title={t('common:delete')}
         className="w-8 h-8 rounded-md border-0 bg-transparent text-text-muted cursor-pointer flex items-center justify-center text-[0.9rem] hover:bg-danger/15 hover:text-danger nasge-transition-quick"
       >
         <TrashIcon size={16} />

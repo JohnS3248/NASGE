@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { Editor } from "@tiptap/core";
 import { useEditorConfigStore, type ToolbarDockMode } from "../stores/useEditorConfigStore";
 
@@ -83,25 +84,26 @@ const Separator: React.FC<{ isVertical: boolean }> = ({ isVertical }) =>
 
 const DOCK_CYCLE: ToolbarDockMode[] = ['side', 'top', 'floating'];
 
+const DOCK_TITLE_KEYS: Record<ToolbarDockMode, string> = {
+  side: 'toolbar.dockSide',
+  top: 'toolbar.dockTop',
+  floating: 'toolbar.dockFloat',
+};
+
 const DockModeToggle: React.FC<{ mode: ToolbarDockMode; isVertical: boolean; onToggle: () => void }> = ({ mode, isVertical, onToggle }) => {
+  const { t } = useTranslation('editor');
   const icon = mode === 'side'
     ? <PanelLeftIcon className="w-3.5 h-3.5" />
     : mode === 'top'
       ? <PanelTopIcon className="w-3.5 h-3.5" />
       : <MoveIcon className="w-3.5 h-3.5" />;
 
-  const titles: Record<ToolbarDockMode, string> = {
-    side: '侧边停靠（点击切换到顶部）',
-    top: '顶部停靠（点击切换到浮动）',
-    floating: '浮动模式（点击切换到侧边）',
-  };
-
   return (
     <>
       <Separator isVertical={isVertical} />
       <button
         type="button"
-        title={titles[mode]}
+        title={t(DOCK_TITLE_KEYS[mode])}
         className={`${btnBase} ${btnInactive}`}
         onClick={onToggle}
       >
@@ -116,7 +118,7 @@ const DockModeToggle: React.FC<{ mode: ToolbarDockMode; isVertical: boolean; onT
 type ButtonDef = {
   key: string;
   label: React.ReactNode;
-  title: string;
+  titleKey: string; // i18n key in editor namespace (e.g. 'toolbar.bold')
   isActive: (editor: Editor) => boolean;
   action: (editor: Editor) => void;
 };
@@ -128,28 +130,28 @@ const TOOLBAR_ITEMS: ToolbarItem[] = [
   {
     key: 'bold',
     label: 'B',
-    title: '粗体',
+    titleKey: 'toolbar.bold',
     isActive: (e) => e.isActive('bold'),
     action: (e) => e.chain().focus().toggleBold().run(),
   },
   {
     key: 'italic',
     label: <em style={{ fontStyle: "italic", fontFamily: "Georgia, serif" }}>I</em>,
-    title: '斜体',
+    titleKey: 'toolbar.italic',
     isActive: (e) => e.isActive('italic'),
     action: (e) => e.chain().focus().toggleItalic().run(),
   },
   {
     key: 'underline',
     label: 'U',
-    title: '下划线',
+    titleKey: 'toolbar.underline',
     isActive: (e) => e.isActive('underline'),
     action: (e) => e.chain().focus().toggleUnderline().run(),
   },
   {
     key: 'strike',
     label: <StrikethroughIcon className="w-3.5 h-3.5" />,
-    title: '删除线',
+    titleKey: 'toolbar.strike',
     isActive: (e) => e.isActive('strike'),
     action: (e) => e.chain().focus().toggleStrike().run(),
   },
@@ -158,21 +160,21 @@ const TOOLBAR_ITEMS: ToolbarItem[] = [
   {
     key: 'spoiler',
     label: <EyeOffIcon className="w-3.5 h-3.5" />,
-    title: '隐藏文本',
+    titleKey: 'toolbar.spoiler',
     isActive: (e) => e.isActive('spoiler'),
     action: (e) => e.chain().focus().toggleSpoiler().run(),
   },
   {
     key: 'codeBlock',
     label: '<>',
-    title: '代码块',
+    titleKey: 'toolbar.codeBlock',
     isActive: (e) => e.isActive('codeBlock'),
     action: (e) => e.chain().focus().toggleCodeBlock().run(),
   },
   {
     key: 'hr',
     label: '—',
-    title: '分隔线',
+    titleKey: 'toolbar.hr',
     isActive: () => false,
     action: (e) => e.chain().focus().setHorizontalRule().run(),
   },
@@ -181,21 +183,21 @@ const TOOLBAR_ITEMS: ToolbarItem[] = [
   {
     key: 'h1',
     label: 'H1',
-    title: '标题 1',
+    titleKey: 'toolbar.h1',
     isActive: (e) => e.isActive('heading', { level: 1 }),
     action: (e) => e.chain().focus().toggleHeading({ level: 1 }).run(),
   },
   {
     key: 'h2',
     label: 'H2',
-    title: '标题 2',
+    titleKey: 'toolbar.h2',
     isActive: (e) => e.isActive('heading', { level: 2 }),
     action: (e) => e.chain().focus().toggleHeading({ level: 2 }).run(),
   },
   {
     key: 'h3',
     label: 'H3',
-    title: '标题 3',
+    titleKey: 'toolbar.h3',
     isActive: (e) => e.isActive('heading', { level: 3 }),
     action: (e) => e.chain().focus().toggleHeading({ level: 3 }).run(),
   },
@@ -204,21 +206,21 @@ const TOOLBAR_ITEMS: ToolbarItem[] = [
   {
     key: 'bulletList',
     label: '•',
-    title: '项目符号列表',
+    titleKey: 'toolbar.bulletList',
     isActive: (e) => e.isActive('bulletList'),
     action: (e) => e.chain().focus().toggleBulletList().run(),
   },
   {
     key: 'orderedList',
     label: '1.',
-    title: '有序列表',
+    titleKey: 'toolbar.orderedList',
     isActive: (e) => e.isActive('orderedList'),
     action: (e) => e.chain().focus().toggleOrderedList().run(),
   },
   {
     key: 'clearFormatting',
     label: 'Tx',
-    title: '清除格式',
+    titleKey: 'toolbar.clearFormat',
     isActive: () => false,
     action: (e) => e.chain().focus().unsetAllMarks().clearNodes().setParagraph().run(),
   },
@@ -266,6 +268,7 @@ type EditorToolbarProps = {
 };
 
 const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
+  const { t } = useTranslation('editor');
   const toolbarPos = useEditorConfigStore((s) => s.toolbarPos);
   const setToolbarPos = useEditorConfigStore((s) => s.setToolbarPos);
   const dockMode = useEditorConfigStore((s) => s.toolbarDockMode);
@@ -431,7 +434,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
           <ToolbarButton
             key={item.key}
             label={item.label}
-            title={item.title}
+            title={t(item.titleKey)}
             active={item.isActive(editor)}
             onClick={() => item.action(editor)}
             isVertical={isVertical}

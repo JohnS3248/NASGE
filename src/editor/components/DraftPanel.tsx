@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGuideStore, isReviewMode } from '../stores/useGuideStore';
 import { useDraftStore } from '../stores/useDraftStore';
 import { useArchiveStore } from '../stores/useArchiveStore';
@@ -14,7 +15,7 @@ import { useMountTransition } from '../hooks/useMountTransition';
 type DraftItem = ReturnType<typeof useDraftStore.getState>['drafts'][number];
 
 const formatDate = (ts: number) =>
-  new Date(ts).toLocaleString('zh-CN', {
+  new Date(ts).toLocaleString(undefined, {
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -105,6 +106,7 @@ const DraftContextMenu: React.FC<{
   onDuplicate: () => void;
   onDelete: () => void;
 }> = ({ anchorRef, floatingRef, onClose, onRename, onDuplicate, onDelete }) => {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
@@ -142,16 +144,16 @@ const DraftContextMenu: React.FC<{
     >
       <button type="button" onClick={() => { onRename(); onClose(); }}
         className={menuItemClass}>
-        重命名
+        {t("rename")}
       </button>
       <button type="button" onClick={() => { onDuplicate(); onClose(); }}
         className={menuItemClass}>
-        复制
+        {t("copy")}
       </button>
       <div className="mx-1 border-t border-border-default" />
       <button type="button" onClick={() => { onDelete(); onClose(); }}
         className={`w-full text-left ${btnDanger}`}>
-        删除
+        {t("delete")}
       </button>
     </div>
   );
@@ -162,6 +164,7 @@ const DraftContextMenu: React.FC<{
 // ============================================================================
 
 const DraftPanel: React.FC = () => {
+  const { t } = useTranslation('editor');
   const {
     drafts,
     activeDraftId,
@@ -217,8 +220,8 @@ const DraftPanel: React.FC = () => {
 
   const handleAddDraft = useCallback(async () => {
     const { nextDraftNumber } = useDraftStore.getState();
-    const defaultName = `未命名草稿 ${nextDraftNumber}`;
-    const name = await dialog.prompt({ message: '新建草稿', defaultValue: defaultName });
+    const defaultName = t('draft.newName', { number: nextDraftNumber });
+    const name = await dialog.prompt({ message: t('draft.newDialog'), defaultValue: defaultName });
     if (name === null) return;
 
     const finalName = name.trim() || defaultName;
@@ -236,7 +239,7 @@ const DraftPanel: React.FC = () => {
   }, [addDraft, selectDraft, mode, currentArchiveId]);
 
   const handleRename = useCallback(async (id: string, currentName: string) => {
-    const newName = await dialog.prompt({ message: '重命名草稿', defaultValue: currentName });
+    const newName = await dialog.prompt({ message: t('draft.renameDialog'), defaultValue: currentName });
     if (newName && newName.trim()) {
       updateDraft(id, { draftName: newName.trim() });
     }
@@ -248,14 +251,14 @@ const DraftPanel: React.FC = () => {
   }, [duplicateDraft, selectDraft]);
 
   const handleDelete = useCallback(async (id: string, name: string) => {
-    if (await dialog.confirm({ message: `确定要删除草稿"${name}"吗？`, danger: true })) {
+    if (await dialog.confirm({ message: t('draft.deleteConfirm', { name }), danger: true })) {
       deleteDraft(id);
     }
   }, [deleteDraft]);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
-    if (await dialog.confirm({ message: `确定要删除选中的 ${selectedIds.size} 个草稿吗？`, danger: true })) {
+    if (await dialog.confirm({ message: t('draft.batchDeleteConfirm', { count: selectedIds.size }), danger: true })) {
       selectedIds.forEach((id) => deleteDraft(id));
       setSelectedIds(new Set());
       setBatchMode(false);
@@ -318,12 +321,12 @@ const DraftPanel: React.FC = () => {
               <span className="text-xs text-text-secondary">· {getDraftSubtitle(activeDraft)}</span>
             </span>
           ) : (
-            <span className="text-text-secondary">未选择草稿</span>
+            <span className="text-text-secondary">{t('draft.noSelected')}</span>
           )}
         </button>
 
         <span className="text-xs text-text-muted">
-          {displayedDrafts.length} 个草稿
+          {displayedDrafts.length} {t('draft.count')}
         </span>
       </div>
 
@@ -337,25 +340,25 @@ const DraftPanel: React.FC = () => {
             {batchMode ? (
               <>
                 <button type="button" onClick={exitBatchMode} className={btnAccent}>
-                  取消
+                  {t('common:cancel')}
                 </button>
                 <div className="flex-1" />
                 <button type="button" onClick={handleBatchDelete}
                   disabled={selectedIds.size === 0} className={btnDanger}>
-                  删除选中{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                  {t('draft.deleteSelected')}{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
                 </button>
               </>
             ) : (
               <>
                 <button type="button" onClick={() => { setBatchMode(true); setMenuOpenId(null); }}
                   className={btnAccent}>
-                  批量管理
+                  {t('draft.batchManage')}
                 </button>
                 <div className="flex-1" />
                 <button type="button" onClick={handleAddDraft}
                   className={`${btnAccent} flex items-center gap-1`}>
                   <PlusIcon className="w-3 h-3" />
-                  新建
+                  {t('draft.new')}
                 </button>
               </>
             )}
@@ -366,10 +369,10 @@ const DraftPanel: React.FC = () => {
             {displayedDrafts.length === 0 ? (
               <div className="py-6 text-center text-text-muted text-xs">
                 {isReviewMode(mode)
-                  ? '还没有评测草稿。在 Steam 游戏页面点击「编辑此评测」开始'
+                  ? t('draft.noReviewDrafts')
                   : currentArchive?.guideName
-                    ? `"${currentArchive.guideName}" 下没有草稿`
-                    : '点击「新建」开始编辑'}
+                    ? t('draft.noDrafts', { name: currentArchive.guideName })
+                    : t('draft.startEditing')}
               </div>
             ) : (
               displayedDrafts.map((draft) => {

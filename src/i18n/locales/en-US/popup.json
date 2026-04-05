@@ -1,0 +1,12 @@
+{
+  "detecting": "Detecting page...",
+  "guideDetected": "Guide management page detected",
+  "storeDetected": "Game store page detected (appId: {{appId}})",
+  "reviewDetected": "Review page detected",
+  "nonSteamPage": "This page is not a Steam guide or review page",
+  "unknownPage": "Unknown page type",
+  "editGuide": "Edit This Guide",
+  "editReview": "Edit This Review",
+  "offlineGuide": "Offline Guide",
+  "offlineReview": "Offline Review"
+}

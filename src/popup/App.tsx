@@ -1,10 +1,12 @@
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useCurrentPage } from "./hooks/useCurrentPage";
 import { loggers } from "../shared/logger";
 
 const runtime = chrome?.runtime;
 
 const App: React.FC = () => {
+  const { t } = useTranslation('popup');
   const pageInfo = useCurrentPage();
   const editorUrl = useMemo(() => runtime?.getURL("src/editor/index.html"), []);
   const version = useMemo(() => runtime?.getManifest()?.version || "0.0.0", []);
@@ -57,18 +59,18 @@ const App: React.FC = () => {
   // 根据页面类型显示提示信息
   const getStatusText = () => {
     if (!pageInfo) {
-      return "正在检测页面...";
+      return t('detecting');
     }
 
     switch (pageInfo.type) {
       case 'guide':
-        return `已检测到指南管理页`;
+        return t('guideDetected');
       case 'review':
-        return pageInfo.appId ? `已检测到游戏商店页（appId: ${pageInfo.appId}）` : `已检测到评测页`;
+        return pageInfo.appId ? t('storeDetected', { appId: pageInfo.appId }) : t('reviewDetected');
       case 'other':
-        return `当前页面不是 Steam 指南或评测页`;
+        return t('nonSteamPage');
       default:
-        return "未知页面类型";
+        return t('unknownPage');
     }
   };
 
@@ -148,7 +150,7 @@ const App: React.FC = () => {
               e.currentTarget.style.boxShadow = "0 8px 16px rgba(32, 64, 99, 0.35)";
             }}
           >
-            编辑此指南
+            {t('editGuide')}
           </button>
         )}
 
@@ -178,7 +180,7 @@ const App: React.FC = () => {
               e.currentTarget.style.boxShadow = "0 8px 16px rgba(91, 44, 111, 0.35)";
             }}
           >
-            编辑此评测
+            {t('editReview')}
           </button>
         )}
 
@@ -207,7 +209,7 @@ const App: React.FC = () => {
               e.currentTarget.style.borderColor = "rgba(102, 192, 244, 0.3)";
             }}
           >
-            离线指南
+            {t('offlineGuide')}
           </button>
           <button
             onClick={handleOpenOfflineReview}
@@ -232,7 +234,7 @@ const App: React.FC = () => {
               e.currentTarget.style.borderColor = "rgba(155, 89, 182, 0.3)";
             }}
           >
-            离线评测
+            {t('offlineReview')}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
  * 支持拖拽移动和窗口控制按钮
  */
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { SIZES } from "./styles";
 import { ImageIcon, TagIcon, MaximizeIcon, MinimizeIcon, MinusIcon } from "./icons";
 
@@ -35,6 +36,8 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onOpenTagManager,
   onToggleFullscreen
 }) => {
+  const { t } = useTranslation('editor');
+
   return (
     <div
       className="flex items-center justify-between bg-bg-app/90 border-b border-border-accent cursor-move"
@@ -47,7 +50,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
           <ImageIcon size={16} />
         </span>
         <span className={archiveName ? "max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap" : ""}>
-          {archiveName || '图片池'}
+          {archiveName || t('imagePanel.title')}
         </span>
         <span className="text-xs text-text-muted font-normal">
           ({isRefreshing ? "…" : imageCount})
@@ -63,7 +66,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         {onOpenTagManager && (
           <button
             type="button"
-            title="管理标签"
+            title={t('imagePanel.manageTags')}
             className={`${btnBase} ${btnHover}`}
             onClick={onOpenTagManager}
           >
@@ -75,7 +78,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         {onToggleFullscreen && (
           <button
             type="button"
-            title={isFullscreen ? "退出全屏" : "全屏模式"}
+            title={isFullscreen ? t('imagePanel.exitFullscreen') : t('imagePanel.fullscreen')}
             className={`${btnBase} ${btnHover}`}
             onClick={onToggleFullscreen}
           >
@@ -86,7 +89,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* 最小化 */}
         <button
           type="button"
-          title="最小化"
+          title={t('imagePanel.minimize')}
           className={`${btnBase} ${btnHover}`}
           onClick={onMinimize}
         >
@@ -96,7 +99,7 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         {/* 关闭 */}
         <button
           type="button"
-          title="关闭"
+          title={t('common:close')}
           className={`${btnBase} ${btnCloseHover}`}
           onClick={onClose}
         >

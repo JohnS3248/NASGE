@@ -3,6 +3,7 @@
  * 支持搜索、排序、状态筛选
  */
 import React, { useCallback, useRef, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SearchIcon, XIcon, ChevronDownIcon, ArrowUpIcon, ArrowDownIcon } from "./icons";
 import { SortBy, SortOrder, FilterStatus } from "../../stores/useImagePanelStore";
 
@@ -22,16 +23,16 @@ interface SearchBarProps {
   onFilterStatusChange: (status: FilterStatus) => void;
 }
 
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: "uploadTime", label: "时间" },
-  { value: "fileName", label: "名称" }
+const SORT_KEYS: { value: SortBy; key: string }[] = [
+  { value: "uploadTime", key: "search.sortTime" },
+  { value: "fileName", key: "search.sortName" }
 ];
 
-const FILTER_OPTIONS: { value: FilterStatus; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "pending", label: "待上传" },
-  { value: "success", label: "已上传" },
-  { value: "error", label: "失败" }
+const FILTER_KEYS: { value: FilterStatus; key: string }[] = [
+  { value: "all", key: "search.filterAll" },
+  { value: "pending", key: "search.filterPending" },
+  { value: "success", key: "search.filterSuccess" },
+  { value: "error", key: "search.filterError" }
 ];
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -46,7 +47,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
   filterStatus,
   onFilterStatusChange
 }) => {
+  const { t } = useTranslation('editor');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const SORT_OPTIONS = SORT_KEYS.map(o => ({ value: o.value, label: t(o.key) }));
+  const FILTER_OPTIONS = FILTER_KEYS.map(o => ({ value: o.value, label: t(o.key) }));
 
   // 清空搜索
   const handleClear = useCallback(() => {
@@ -89,7 +94,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           type="text"
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="搜索..."
+          placeholder={t('search.placeholder')}
           className="flex-1 border-none bg-transparent text-text-primary text-xs outline-none py-0.5 min-w-[60px]"
         />
 
@@ -106,7 +111,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
             type="button"
             onClick={handleClear}
             className="w-4 h-4 flex items-center justify-center border-none bg-accent-subtle text-text-secondary rounded-full cursor-pointer shrink-0"
-            title="清空搜索 (ESC)"
+            title={t('search.clear')}
           >
             <XIcon size={10} />
           </button>
@@ -127,7 +132,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
           type="button"
           onClick={onToggleSortOrder}
           className="w-5 h-5 flex items-center justify-center border-none bg-transparent text-text-secondary cursor-pointer rounded-sm"
-          title={sortOrder === "asc" ? "升序" : "降序"}
+          title={sortOrder === "asc" ? t('search.ascending') : t('search.descending')}
         >
           {sortOrder === "asc" ? <ArrowUpIcon size={11} /> : <ArrowDownIcon size={11} />}
         </button>
