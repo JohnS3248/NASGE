@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useDialogStore } from "../stores/useDialogStore";
 
 const ConfirmDialog: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const state = useDialogStore((s) => s.state);
   const confirmBtnRef = useRef<HTMLButtonElement>(null);
 
@@ -51,7 +51,7 @@ const ConfirmDialog: React.FC = () => {
 };
 
 const PromptDialog: React.FC = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const state = useDialogStore((s) => s.state);
   const inputRef = useRef<HTMLInputElement>(null);
 

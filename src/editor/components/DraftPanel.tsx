@@ -106,7 +106,7 @@ const DraftContextMenu: React.FC<{
   onDuplicate: () => void;
   onDelete: () => void;
 }> = ({ anchorRef, floatingRef, onClose, onRename, onDuplicate, onDelete }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('common');
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
 
@@ -236,14 +236,14 @@ const DraftPanel: React.FC = () => {
       linkedAppName: inReview ? (reviewState.gameName || undefined) : undefined,
     });
     if (newDraft) selectDraft(newDraft.id);
-  }, [addDraft, selectDraft, mode, currentArchiveId]);
+  }, [addDraft, selectDraft, mode, currentArchiveId, t]);
 
   const handleRename = useCallback(async (id: string, currentName: string) => {
     const newName = await dialog.prompt({ message: t('draft.renameDialog'), defaultValue: currentName });
     if (newName && newName.trim()) {
       updateDraft(id, { draftName: newName.trim() });
     }
-  }, [updateDraft]);
+  }, [updateDraft, t]);
 
   const handleDuplicate = useCallback((id: string) => {
     const newDraft = duplicateDraft(id);
@@ -254,7 +254,7 @@ const DraftPanel: React.FC = () => {
     if (await dialog.confirm({ message: t('draft.deleteConfirm', { name }), danger: true })) {
       deleteDraft(id);
     }
-  }, [deleteDraft]);
+  }, [deleteDraft, t]);
 
   const handleBatchDelete = useCallback(async () => {
     if (selectedIds.size === 0) return;
@@ -263,7 +263,7 @@ const DraftPanel: React.FC = () => {
       setSelectedIds(new Set());
       setBatchMode(false);
     }
-  }, [selectedIds, deleteDraft]);
+  }, [selectedIds, deleteDraft, t]);
 
   const exitBatchMode = useCallback(() => {
     setBatchMode(false);

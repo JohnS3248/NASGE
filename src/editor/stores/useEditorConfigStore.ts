@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { setDebugMode, loggers } from "../../shared/logger";
 import { i18n, resolveLocale } from "../../i18n";
+import type { LocaleSetting } from "../../i18n/types";
 
 /**
  * 快捷键配置
@@ -303,7 +304,7 @@ export type EditorConfig = {
   debugMode: boolean;           // 调试模式开关
   shortcuts: ShortcutConfig;    // 快捷键配置
   // 语言
-  locale: string;                     // 'auto' | 'zh-CN' | 'en-US'
+  locale: LocaleSetting;
   // 主题
   theme: string;                      // 主题名称
   // 智能布局配置（全屏模式）
@@ -336,7 +337,7 @@ type EditorConfigState = EditorConfig & {
   setShortcut: (key: keyof ShortcutConfig, value: string) => void;
   resetShortcuts: () => void;
   // 语言
-  setLocale: (locale: string) => void;
+  setLocale: (locale: LocaleSetting) => void;
   // 主题
   setTheme: (theme: string) => void;
   // 智能布局相关

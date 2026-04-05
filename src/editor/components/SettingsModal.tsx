@@ -8,6 +8,7 @@ import {
   MenuItemConfig,
   MenuGroupConfig,
 } from "../stores/useEditorConfigStore";
+import type { LocaleSetting } from "../../i18n/types";
 import {
   useImagePanelStore,
   ThumbnailSizePreset,
@@ -243,7 +244,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     { value: "zh-CN", label: "简体中文" },
                     { value: "en-US", label: "English" },
                   ]}
-                  onChange={setLocale}
+                  onChange={(v) => setLocale(v as LocaleSetting)}
                 />
 
                 <div className={divider} />

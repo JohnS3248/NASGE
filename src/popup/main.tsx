@@ -2,9 +2,10 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { initI18n } from "../i18n";
+import type { LocaleSetting } from "../i18n/types";
 
 // 从 localStorage 读取用户选择的 locale，与编辑器保持一致
-function getPersistedLocale(): string {
+function getPersistedLocale(): LocaleSetting {
   try {
     const raw = localStorage.getItem("nasge-editor-config");
     if (raw) {

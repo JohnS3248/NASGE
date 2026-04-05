@@ -241,7 +241,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       .extendMarkRange("link")
       .setLink({ href: url })
       .run();
-  }, [editor]);
+  }, [editor, t]);
 
   const toggleSpoiler = useCallback(() => {
     editor?.chain().focus().toggleSpoiler().run();
@@ -384,7 +384,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       loggers.image.error('TipTapEditor 图片上传失败:', errorMessage);
       toast.error(t('image.uploadFail', { error: errorMessage }));
     }
-  }, [contextMenu, editor]);
+  }, [contextMenu, editor, t]);
 
   const insertImage = useCallback(async () => {
     if (!editor) return;
@@ -392,7 +392,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     if (!src) return;
     const alt = (await dialog.prompt({ message: t('imageLink.altText'), defaultValue: "" })) ?? "";
     editor.chain().focus().setImage({ src, alt }).run();
-  }, [editor]);
+  }, [editor, t]);
 
   const insertQuote = useCallback(async () => {
     if (!editor) return;
@@ -414,7 +414,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         ]
       })
       .run();
-  }, [editor]);
+  }, [editor, t]);
 
   const insertCodeBlock = useCallback(() => {
     editor?.chain().focus().toggleCodeBlock().run();
@@ -967,7 +967,6 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
               {/* 动态渲染空白处菜单 */}
               {(() => {
                 const emptyMenuI18nKeys: Record<string, string> = {
-                  insertImage: t('imageLink.inputUrl'),
                   codeBlock: t('contextMenu.insertCodeBlock'),
                   quote: t('contextMenu.insertQuote'),
                   table: t('contextMenu.insertTable')

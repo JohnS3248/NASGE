@@ -226,7 +226,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       loggers.image.error('TitleEditor 图片上传失败:', error);
       toast.error(t('image.uploadFail', { error: error instanceof Error ? error.message : '未知错误' }));
     }
-  }, [contextMenu.payload]);
+  }, [contextMenu.payload, t]);
 
   // 处理拖拽/粘贴的图片
   const handleIncomingFiles = useCallback(
@@ -321,7 +321,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       {/* 标题编辑器内容区 */}
       <div
         className="w-full text-accent text-lg font-normal outline-none"
-        style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif' }}
+        style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif', '--title-placeholder': `'${t('titleEditor.placeholder')}'` } as React.CSSProperties}
         onContextMenu={(event) => {
           event.preventDefault();
           if (!editor) {
@@ -500,9 +500,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           margin: 0.25rem;
         }
 
-        /* 占位符样式 */
+        /* 占位符样式 — 通过 CSS 变量实现 i18n */
         .title-editor-content .ProseMirror p.is-editor-empty:first-child::before {
-          content: '章节标题（支持拖拽/粘贴图片）';
+          content: var(--title-placeholder);
           color: rgba(102, 192, 244, 0.4);
           opacity: 1;
           pointer-events: none;

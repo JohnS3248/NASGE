@@ -74,7 +74,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
     } finally {
       setIsSubmitting(false);
     }
-  }, [currentHtml, settings]);
+  }, [currentHtml, settings, t]);
 
   return (
     <div className="flex flex-col gap-3 p-4 rounded-lg bg-bg-surface border border-border-default shadow-panel min-w-56">

@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import type { LocaleCode, LocaleSetting } from "./types";
 
 // zh-CN (fallback, always loaded)
 import zhCommon from "./locales/zh-CN/common.json";
@@ -17,7 +18,7 @@ import enPopup from "./locales/en-US/popup.json";
  * 根据 locale 设置解析实际语言代码
  * 'auto' → 根据 navigator.language 自动检测
  */
-export function resolveLocale(locale: string): string {
+export function resolveLocale(locale: LocaleSetting): LocaleCode {
   if (locale !== "auto") return locale;
   const lang = navigator.language;
   if (lang.startsWith("zh")) return "zh-CN";
@@ -28,7 +29,7 @@ export function resolveLocale(locale: string): string {
  * 初始化 i18next
  * @param locale 用户选择的 locale（'auto' | 'zh-CN' | 'en-US'）
  */
-export function initI18n(locale: string): Promise<void> {
+export function initI18n(locale: LocaleSetting): Promise<void> {
   const resolvedLocale = resolveLocale(locale);
 
   return i18n.use(initReactI18next).init({
