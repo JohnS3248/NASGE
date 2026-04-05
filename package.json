@@ -1,7 +1,7 @@
 {
   "name": "nasge",
   "version": "0.9.7",
-  "description": "创建者友好的 Steam 指南编辑浏览器扩展",
+  "description": "A creator-friendly WYSIWYG browser extension for editing Steam community guides",
   "type": "module",
   "scripts": {
     "sync-version": "node scripts/sync-version.js",
@@ -25,6 +25,10 @@
     "type": "git",
     "url": "https://github.com/JohnS3248/NASGE.git"
   },
+  "bugs": {
+    "url": "https://github.com/JohnS3248/NASGE/issues"
+  },
+  "homepage": "https://github.com/JohnS3248/NASGE#readme",
   "license": "MIT",
   "dependencies": {
     "@tiptap/extension-heading": "^3.9.0",
