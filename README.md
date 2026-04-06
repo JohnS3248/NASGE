@@ -4,7 +4,7 @@
 
 # NASGE — Not A Steam Guide Editor
 
-**创建者友好的 Steam 社区指南所见即所得编辑器浏览器扩展**
+**指南创作者友好的 Steam 社区指南所见即所得编辑器浏览器扩展**
 
 [![Version](https://img.shields.io/badge/version-0.9.7-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -16,14 +16,47 @@
 
 ---
 
-<!-- TODO: Highlights 截图表格 — 需要准备截图后替换 -->
+<!-- TODO: GIF 准备好后替换占位图 -->
 
-| | |
-|:---:|:---:|
-| ![所见即所得编辑器](https://placehold.co/480x300/1b2838/ffffff?text=WYSIWYG+Editor) | ![章节导航](https://placehold.co/480x300/1b2838/ffffff?text=Chapter+Navigation) |
-| **所见即所得编辑器** — 富文本编辑，BBCode 发布 | **章节管理** — 拖拽排序，一键同步 |
-| ![图片池](https://placehold.co/480x300/1b2838/ffffff?text=Image+Pool) | ![多主题](https://placehold.co/480x300/1b2838/ffffff?text=Themes) |
-| **图片池** — 浏览并插入 Steam 指南图片库 | **多主题** — steam-dark · midnight · classic |
+### 所见即所得编辑器
+无需手搓 BBCode，样式像素级复刻 Steam 官方指南
+
+![所见即所得编辑器](assets/highlights/h1-33-15.gif)
+
+### 格式灵活
+选中 + 右键 = 更改格式，黑条/加粗/下划线/标题等高频功能一键实现
+
+![格式灵活](assets/highlights/h1-33-10.gif)
+
+### 设置齐全
+深度自定义设置，包括自定义快捷键，随心所欲调整右键菜单位置
+
+![设置齐全](https://placehold.co/1440x900/1b2838/ffffff?text=Settings)
+
+### 图片一键上传
+自研上传队列算法，支持粘贴改名，双击自动上传
+
+![图片一键上传](https://placehold.co/1440x900/1b2838/ffffff?text=Image+Upload)
+
+### 实时预览
+自研实时预览算法，上传前双保险，直接显示预览效果
+
+![实时预览](https://placehold.co/1440x900/1b2838/ffffff?text=Live+Preview)
+
+### 章节管理
+拉取对应章节，草稿持久化保存，刷新不丢，不破坏原有指南
+
+![章节管理](https://placehold.co/1440x900/1b2838/ffffff?text=Chapter+Management)
+
+### 离线草稿管理
+多指南编辑友好，会话隔离，离线模式可以访问存档
+
+![离线草稿管理](https://placehold.co/1440x900/1b2838/ffffff?text=Offline+Mode)
+
+### 评测模式
+同样支持评测，写新评测/改评测，持久化草稿，离线功能
+
+![评测模式](https://placehold.co/1440x900/1b2838/ffffff?text=Review+Mode)
 
 ---
 
