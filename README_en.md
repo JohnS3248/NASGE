@@ -4,7 +4,7 @@
 
 # NASGE — Not A Steam Guide Editor
 
-**A creator-friendly WYSIWYG browser extension for editing Steam community guides**
+**A guide-creator-friendly WYSIWYG browser extension for editing Steam community guides**
 
 [![Version](https://img.shields.io/badge/version-0.9.7-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -16,15 +16,51 @@
 
 ---
 
-<!-- TODO: Highlights 截图表格 — 需要准备截图后替换 -->
-<!-- 参考 Refined GitHub: https://github.com/refined-github/refined-github#highlights -->
+<!-- TODO: Replace placeholders with GIFs when ready -->
 
-| | |
-|:---:|:---:|
-| ![WYSIWYG Editor](https://placehold.co/480x300/1b2838/ffffff?text=WYSIWYG+Editor) | ![Chapter Navigation](https://placehold.co/480x300/1b2838/ffffff?text=Chapter+Navigation) |
-| **WYSIWYG BBCode Editor** — Edit with rich text, publish as BBCode | **Chapter Management** — Drag-and-drop reorder, batch sync |
-| ![Image Pool](https://placehold.co/480x300/1b2838/ffffff?text=Image+Pool) | ![Themes](https://placehold.co/480x300/1b2838/ffffff?text=Themes) |
-| **Image Pool** — Browse & insert from Steam's guide image library | **Multi-theme** — steam-dark · midnight · classic |
+<div align="center">
+
+### WYSIWYG Editor
+No manual BBCode — pixel-perfect replica of Steam's official guide rendering
+
+![WYSIWYG Editor](assets/highlights/h1-wysiwyg.gif)
+
+### Rich Formatting
+Select + right-click to restyle. Bold, spoiler, underline, headings — all one click away
+
+![Rich Formatting](assets/highlights/h2-formatting.gif)
+
+### Deep Customization
+Fully customizable settings including keyboard shortcuts and context menu layout
+
+![Deep Customization](assets/highlights/h3-settings.gif)
+
+### One-click Image Upload
+Custom upload queue, paste-and-rename, double-click to upload
+
+![One-click Image Upload](assets/highlights/h4-image-upload.gif)
+
+### Live Preview
+Custom real-time preview algorithm, double-check before upload, see exactly what you'll get
+
+![Live Preview](assets/highlights/h5-live-preview.gif)
+
+### Chapter Management
+Pull chapters, persistent draft storage, refresh-safe, never overwrites your original guide
+
+![Chapter Management](assets/highlights/h6-chapter.gif)
+
+### Offline Draft Management
+Multi-guide friendly, session isolation, access archives in offline mode
+
+![Offline Draft Management](assets/highlights/h7-offline.gif)
+
+### Review Mode
+Write and edit Steam reviews with the same WYSIWYG experience, persistent drafts, offline support
+
+![Review Mode](assets/highlights/h8-review.gif)
+
+</div>
 
 ---
 
@@ -45,20 +81,20 @@
 
 ## Why NASGE?
 
-Steam's built-in guide editor is a plain-text BBCode editor with no preview, no image management, and no draft system. Writing a well-formatted guide means constantly switching between editing and previewing, manually typing BBCode tags, and risking lost work with no auto-save.
+Steam's built-in guide editor is a plain-text BBCode editor — no preview, no image management, no draft system. Writing a well-formatted guide means constantly switching between editing and previewing, wrestling with complex BBCode tags for formatting, manually uploading images one by one, and risking lost work with no auto-save.
 
-**NASGE replaces that workflow** with a full WYSIWYG editor that opens in its own tab — you write in rich text, and NASGE handles the BBCode conversion and Steam sync behind the scenes.
+**NASGE completely transforms the BBCode editing experience**: a full WYSIWYG editor opens in its own tab where you write in rich text. NASGE handles BBCode conversion and Steam sync behind the scenes, and you can submit and upload directly to the corresponding Steam chapter through NASGE.
 
 ## Features
 
-- **WYSIWYG Editing** — Full rich-text editor powered by TipTap. Bold, italic, headings, lists, links, tables, spoiler tags, blockquotes — all rendered visually, converted to BBCode on publish
-- **Chapter Management** — View all chapters in a sidebar, drag to reorder, pull from / push to Steam with one click
-- **Image Pool** — Browse your guide's uploaded images in a floating panel. Search, filter by tags, insert with one click. Upload new images directly from the editor
+- **WYSIWYG Editing** — Full rich-text editor powered by TipTap. Bold, italic, headings, lists, links, tables, spoiler tags (black bars), blockquotes — all rendered visually, aligned with official guide styling
+- **Chapter Management** — View all chapters in a sidebar, drag to reorder, pull from / push to Steam with one click, never overwrites your original guide chapters
+- **Image Pool** — Browse your guide's uploaded images in a floating panel. Search, filter by tags, paste-and-rename, one-click insert. Drag into the image pool and right-click to change format
 - **Review Mode** — Write and publish Steam game reviews with the same WYSIWYG experience. Recommend/not-recommend, visibility, language settings all in one panel
 - **Multi-theme** — Three built-in themes: steam-dark, midnight, classic. Follows your preference across sessions
-- **Drafts & Archives** — Auto-saved local drafts with manual archive snapshots. Never lose work again
+- **Drafts & Archives** — Multi-guide and review editing friendly. Auto-saved local drafts + manual archive snapshots. Never lose work again
 - **Offline Mode** — Create and edit drafts without a Steam connection. Sync when you're ready
-- **i18n** — Bilingual interface (简体中文 / English), auto-detects browser language
+- **i18n** — Multi-language support, launching with Chinese and English, auto-detects browser language
 - **BBCode Roundtrip Fidelity** — `BBCode → HTML → BBCode` produces semantically equivalent output. Your formatting is preserved, not "normalized"
 
 ## Installation
@@ -92,7 +128,9 @@ Steam's built-in guide editor is a plain-text BBCode editor with no preview, no 
 3. A new tab opens with the WYSIWYG editor
 4. Edit your guide → click **Push** to sync chapters back to Steam
 
-**Offline mode**: Click the extension icon → **Open Editor (Offline Mode)** to work on drafts without Steam.
+**Review mode**: Navigate to any Steam store page, click the extension icon → **Edit Review** to edit an existing review or write a new one.
+
+**Offline mode**: Click the extension icon → **Offline Guide** or **Offline Review** to edit drafts without opening a Steam page. Sync when you're ready.
 
 ## Tech Stack
 

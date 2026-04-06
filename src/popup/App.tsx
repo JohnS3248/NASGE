@@ -105,7 +105,7 @@ const App: React.FC = () => {
             color: "#9eb7d6"
           }}
         >
-          New Awesome Steam Guide Editor · v{version}
+          Not A Steam Guide Editor · v{version}
         </p>
       </header>
 
