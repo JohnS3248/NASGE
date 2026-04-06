@@ -4,10 +4,10 @@ import { JSONContent } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
+import { addFilesToPool } from "../services/imagePoolIntake";
 import { ImageUploadService } from "../services/ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
-import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { MenuItem, MenuSectionLabel, MenuDivider } from "./ContextMenuParts";
 import {
   useEditorConfigStore,
@@ -26,131 +26,6 @@ import { toast } from "../stores/useToastStore";
 import { dialog } from "../stores/useDialogStore";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
 import { SkeletonLine, SkeletonBlock } from "./Skeleton";
-import i18n from "i18next";
-
-// Steam 图片大小限制：2MB
-const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
-
-/**
- * 统一的图片入池流程（粘贴/拖入编辑器共用）
- * 1. 单图合规 → 直接入池 + 内联重命名
- * 2. 单图超限 → 弹窗提示 → 不入池
- * 3. 多图 → 批量重命名弹窗（超限的灰色禁用）→ 只入池合规图片
- */
-async function addFilesToPool(
-  files: File[],
-  imagePoolStore: ReturnType<typeof useSteamGuideImageStore.getState>,
-  imagePanelStore: ReturnType<typeof useImagePanelStore.getState>,
-  configStore: ReturnType<typeof useEditorConfigStore.getState>,
-  currentArchiveId: string | null,
-  source: "paste" | "drop"
-) {
-  const shouldRename = source === "paste" ? configStore.promptRenameOnPaste : configStore.promptRenameOnDrop;
-  const shouldAutoUpload = configStore.autoUploadInPanel;
-
-  // 收集文件信息（生成临时 URL 供弹窗预览，不入池）
-  const fileInfos = files.map(file => ({
-    file,
-    fileName: file.name,
-    fileSize: file.size,
-    thumbnailUrl: URL.createObjectURL(file),
-    isOversize: file.size > STEAM_IMAGE_SIZE_LIMIT
-  }));
-
-  const validFiles = fileInfos.filter(f => !f.isOversize);
-  const oversizeFiles = fileInfos.filter(f => f.isOversize);
-
-  // 单图超限 → 弹窗提示，不入池
-  if (fileInfos.length === 1 && oversizeFiles.length === 1) {
-    const f = oversizeFiles[0];
-    const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
-    await dialog.confirm({
-      message: i18n.t('image.tooLargeBlocked', { ns: 'editor', fileName: f.fileName, size: sizeMB }),
-      confirmText: i18n.t('gotIt', { ns: 'common' }),
-      cancelText: ""
-    });
-    // 清理临时 URL
-    for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-    return;
-  }
-
-  // 多图 → 批量重命名弹窗（含超限灰色行）
-  if (fileInfos.length > 1 && shouldRename) {
-    const batchImages = fileInfos.map(f => ({
-      id: f.fileName,
-      currentName: f.fileName,
-      fileSize: f.fileSize,
-      thumbnailUrl: f.thumbnailUrl
-    }));
-    const renameResult = await dialog.batchRename({ images: batchImages });
-    // 清理临时 URL
-    for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-
-    if (!renameResult) return; // 用户取消
-
-    // 只入池合规图片（renameResult 已过滤掉超限的）
-    const addedFileNames: string[] = [];
-    for (const f of validFiles) {
-      const newBaseName = renameResult.get(f.fileName);
-      if (newBaseName === undefined) continue; // 不在结果中，跳过
-      const ext = f.fileName.match(/\.[^.]+$/)?.[0] ?? "";
-      const targetName = newBaseName + ext;
-
-      // 用目标名创建重命名后的 File
-      const renamedFile = new File([f.file], targetName, { type: f.file.type, lastModified: f.file.lastModified });
-      const result = await useSteamGuideImageStore.getState().addLocalImage(renamedFile, currentArchiveId ?? undefined);
-      if (!result.skipped) {
-        addedFileNames.push(result.image.fileName);
-      }
-    }
-
-    if (addedFileNames.length > 0) {
-      imagePanelStore.open();
-      if (shouldAutoUpload) {
-        for (const fileName of addedFileNames) {
-          imagePanelStore.addPendingUploadAfterRename(fileName);
-        }
-      }
-    }
-    loggers.image.info("批量重命名完成，已入池", { addedFileNames });
-    return;
-  }
-
-  // 清理多图临时 URL（单图 / 不重命名场景不需要弹窗预览）
-  for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-
-  // 单图合规 / 不重命名 → 直接入池
-  const addedFileNames: string[] = [];
-  for (const f of validFiles) {
-    const result = await useSteamGuideImageStore.getState().addLocalImage(f.file, currentArchiveId ?? undefined);
-    if (!result.skipped) {
-      addedFileNames.push(result.image.fileName);
-    }
-  }
-
-  // 如果有超限图片被过滤掉，toast 通知
-  if (oversizeFiles.length > 0) {
-    for (const f of oversizeFiles) {
-      const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
-      toast.error(i18n.t('image.tooLargeSkipped', { ns: 'editor', fileName: f.fileName, size: sizeMB }));
-    }
-  }
-
-  if (addedFileNames.length > 0) {
-    imagePanelStore.open();
-    if (shouldRename && addedFileNames.length === 1) {
-      setTimeout(() => {
-        imagePanelStore.setEditingImageId(addedFileNames[0]);
-      }, 100);
-    }
-    if (shouldAutoUpload) {
-      for (const fileName of addedFileNames) {
-        imagePanelStore.addPendingUploadAfterRename(fileName);
-      }
-    }
-  }
-  loggers.image.info("已添加图片到图片池", { addedFileNames, source });
-}
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -635,15 +510,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       event.preventDefault();
       event.stopPropagation();
 
-      // 新流程：粘贴图片到图片池，而不是直接插入编辑器
-      const imagePoolStore = useSteamGuideImageStore.getState();
-      const imagePanelStore = useImagePanelStore.getState();
-      const configStore = useEditorConfigStore.getState();
       const currentArchiveId = useGuideStore.getState().currentArchiveId;
-
-      loggers.image.info("粘贴图片到图片池", { fileCount: files.length, currentArchiveId });
-
-      void addFilesToPool(files, imagePoolStore, imagePanelStore, configStore, currentArchiveId, "paste");
+      void addFilesToPool(files, { source: "paste", currentArchiveId, openPanelOnAdd: true });
     };
 
     const onDrop = (event: DragEvent) => {
@@ -676,14 +544,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       event.preventDefault();
       event.stopPropagation();
 
-      const imagePoolStore = useSteamGuideImageStore.getState();
-      const imagePanelStore = useImagePanelStore.getState();
-      const configStore = useEditorConfigStore.getState();
       const currentArchiveId = useGuideStore.getState().currentArchiveId;
-
-      loggers.image.info("拖入图片到编辑器，走图片池流程", { fileCount: files.length, currentArchiveId });
-
-      void addFilesToPool(files, imagePoolStore, imagePanelStore, configStore, currentArchiveId, "drop");
+      void addFilesToPool(files, { source: "drop", currentArchiveId, openPanelOnAdd: true });
     };
 
     const onDragOver = (event: DragEvent) => {

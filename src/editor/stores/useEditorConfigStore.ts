@@ -296,8 +296,6 @@ function mergeImageMenuConfig(
 }
 
 export type EditorConfig = {
-  autoUploadOnPaste: boolean;   // 编辑器：粘贴自动上传
-  autoUploadOnDrop: boolean;    // 编辑器：拖放自动上传
   autoUploadInPanel: boolean;   // 悬浮窗：拖放/粘贴自动上传
   promptRenameOnPaste: boolean; // 悬浮窗：粘贴时启用内联重命名
   promptRenameOnDrop: boolean;  // 悬浮窗：拖拽时启用内联重命名
@@ -327,8 +325,6 @@ export type EditorConfig = {
 };
 
 type EditorConfigState = EditorConfig & {
-  setAutoUploadOnPaste: (enabled: boolean) => void;
-  setAutoUploadOnDrop: (enabled: boolean) => void;
   setAutoUploadInPanel: (enabled: boolean) => void;
   setPromptRenameOnPaste: (enabled: boolean) => void;
   setPromptRenameOnDrop: (enabled: boolean) => void;
@@ -361,8 +357,6 @@ type EditorConfigState = EditorConfig & {
 };
 
 const DEFAULT_CONFIG: EditorConfig = {
-  autoUploadOnPaste: false, // 默认关闭自动上传
-  autoUploadOnDrop: false,
   autoUploadInPanel: false, // 默认关闭悬浮窗自动上传
   promptRenameOnPaste: true, // 默认开启粘贴时重命名（内联编辑）
   promptRenameOnDrop: true,  // 默认开启拖拽时重命名（内联编辑）
@@ -395,14 +389,6 @@ export const useEditorConfigStore = create<EditorConfigState>()(
   persist(
     (set) => ({
       ...DEFAULT_CONFIG,
-      setAutoUploadOnPaste: (enabled) => {
-        loggers.config.info("设置粘贴自动上传:", enabled);
-        set({ autoUploadOnPaste: enabled });
-      },
-      setAutoUploadOnDrop: (enabled) => {
-        loggers.config.info("设置拖放自动上传:", enabled);
-        set({ autoUploadOnDrop: enabled });
-      },
       setAutoUploadInPanel: (enabled) => {
         loggers.config.info("设置悬浮窗自动上传:", enabled);
         set({ autoUploadInPanel: enabled });

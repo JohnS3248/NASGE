@@ -56,9 +56,6 @@ export interface ImagePanelSettings {
   autoOpenOnStart: boolean;
   rememberPosition: boolean;
 
-  // 上传设置
-  autoUploadOnDrop: boolean; // 拖入外部图片后自动上传
-
   // 插入设置
   defaultInsertSize: "original" | "medium" | "small";
   defaultInsertAlignment: "floatLeft" | "floatRight" | "center" | "inline";
@@ -150,9 +147,6 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
   removePendingUploadAfterRename: (imageId: string) => void;
   isPendingUploadAfterRename: (imageId: string) => boolean;
 
-  // ============ 上传设置 Actions ============
-  setAutoUploadOnDrop: (enabled: boolean) => void;
-
   // ============ 插入设置 Actions ============
   setDefaultInsertSize: (size: "original" | "medium" | "small") => void;
   setDefaultInsertAlignment: (alignment: "floatLeft" | "floatRight" | "center" | "inline") => void;
@@ -175,7 +169,6 @@ const DEFAULT_SETTINGS: ImagePanelSettings = {
   showStatusIndicator: true,
   autoOpenOnStart: false, // 默认不自动打开，显示为左下角按钮
   rememberPosition: true,
-  autoUploadOnDrop: false, // 默认不自动上传，用户可在设置中开启
   defaultInsertSize: "original",
   defaultInsertAlignment: "inline",
   doubleClickToInsert: true,
@@ -501,12 +494,6 @@ export const useImagePanelStore = create<ImagePanelState>()(
         return get().pendingUploadAfterRename.includes(imageId);
       },
 
-      // ============ 上传设置 Actions ============
-      setAutoUploadOnDrop: (enabled) => {
-        loggers.image.verbose("设置拖入自动上传", enabled);
-        set({ autoUploadOnDrop: enabled });
-      },
-
       // ============ 插入设置 Actions ============
       setDefaultInsertSize: (size) => {
         loggers.image.verbose("设置默认插入尺寸", size);
@@ -565,7 +552,6 @@ export const useImagePanelStore = create<ImagePanelState>()(
         showStatusIndicator: state.showStatusIndicator,
         autoOpenOnStart: state.autoOpenOnStart,
         rememberPosition: state.rememberPosition,
-        autoUploadOnDrop: state.autoUploadOnDrop,
         defaultInsertSize: state.defaultInsertSize,
         defaultInsertAlignment: state.defaultInsertAlignment,
         doubleClickToInsert: state.doubleClickToInsert,

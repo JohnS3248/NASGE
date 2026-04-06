@@ -1,8 +1,6 @@
 import type { Editor } from "@tiptap/react";
 import type { ImageSource } from "../types/image";
-import { ImageUploadService } from "./ImageUploadService";
 import { useImageStore } from "../stores/useImageStore";
-import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 import { loggers } from "../../shared/logger";
 
 export type IncomingImageOptions = {
@@ -83,34 +81,6 @@ export async function processIncomingImages(
       );
       imageStore.removeImage(imageEntity.id);
       continue;
-    }
-
-    // 检查是否应该自动上传
-    const config = useEditorConfigStore.getState();
-    const shouldAutoUpload =
-      (options.source === "paste" && config.autoUploadOnPaste) ||
-      (options.source === "drop" && config.autoUploadOnDrop);
-
-    if (!shouldAutoUpload) {
-      loggers.image.info(
-        "自动上传已禁用，图片保持本地预览状态",
-        {
-          source: options.source,
-          fileName: file.name,
-          imageId: imageEntity.id
-        }
-      );
-      continue;
-    }
-
-    // 自动上传到 Steam
-    try {
-      const result = await ImageUploadService.uploadByImageId(imageEntity.id);
-      if (!result.success) {
-        loggers.image.error("图片自动上传失败:", result.error);
-      }
-    } catch (error) {
-      loggers.image.error("图片上传异常:", error);
     }
   }
 }

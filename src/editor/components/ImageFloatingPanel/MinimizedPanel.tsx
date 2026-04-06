@@ -9,12 +9,14 @@ import { useImagePanelStore, PanelPosition } from "../../stores/useImagePanelSto
 
 interface MinimizedPanelProps {
   imageCount: number;
+  isLoading?: boolean;
   archiveName?: string;
   onRestore: () => void;
 }
 
 const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
   imageCount,
+  isLoading = false,
   archiveName,
   onRestore
 }) => {
@@ -94,6 +96,9 @@ const MinimizedPanel: React.FC<MinimizedPanelProps> = ({
       <span className="text-xs text-text-muted font-normal">
         ({imageCount})
       </span>
+      {isLoading && (
+        <span className="w-1.5 h-1.5 rounded-full bg-accent/60 animate-pulse" />
+      )}
     </div>
   );
 };

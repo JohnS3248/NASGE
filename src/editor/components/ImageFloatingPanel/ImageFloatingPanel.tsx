@@ -5,10 +5,9 @@
 import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
 import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useImagePanelStore";
 import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
-import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
 import { useGuideStore } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
-import { ImageUploadService } from "../../services/ImageUploadService";
+import { addFilesToPool } from "../../services/imagePoolIntake";
 import PanelHeader from "./PanelHeader";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
@@ -19,20 +18,7 @@ import { resizeHandleStyle, SIZES, Z_INDEX } from "./styles";
 import { ImageIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
-import { dialog } from "../../stores/useDialogStore";
 import { extractFilesFromPaste } from "../../utils/imageInput";
-import i18n from "i18next";
-
-/**
- * 根据 MIME 类型获取默认文件名
- */
-function getDefaultFileName(mimeType: string): string {
-  const ext = mimeType === 'image/png' ? 'png' :
-              mimeType === 'image/jpeg' ? 'jpg' :
-              mimeType === 'image/gif' ? 'gif' :
-              mimeType === 'image/webp' ? 'webp' : 'png';
-  return `image.${ext}`;
-}
 
 const ImageFloatingPanel: React.FC = () => {
   // ============ 所有 Hooks 必须在 early return 之前 ============
@@ -58,7 +44,7 @@ const ImageFloatingPanel: React.FC = () => {
     restore
   } = useImagePanelStore();
 
-  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, addLocalImage, getImagesByGuide } = useSteamGuideImageStore();
+  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, getImagesByGuide } = useSteamGuideImageStore();
 
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
   const currentArchive = useArchiveStore((state) => currentArchiveId ? state.archives[currentArchiveId] : undefined);
@@ -66,9 +52,6 @@ const ImageFloatingPanel: React.FC = () => {
   const archiveImages = useMemo(() => {
     return getImagesByGuide(currentArchiveId);
   }, [getImagesByGuide, currentArchiveId, images]);
-
-  const autoUploadInPanel = useEditorConfigStore((state) => state.autoUploadInPanel);
-  const promptRenameOnPaste = useEditorConfigStore((state) => state.promptRenameOnPaste);
 
   const panelRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -186,97 +169,8 @@ const ImageFloatingPanel: React.FC = () => {
     const files = extractFilesFromPaste(e);
     if (files.length === 0) return;
     e.preventDefault();
-
-    loggers.image.info('剪贴板粘贴图片到图片池', { fileCount: files.length });
-
-    const STEAM_SIZE_LIMIT = 2 * 1024 * 1024;
-
-    const fileInfos = files.map(file => ({
-      file,
-      fileName: file.name || getDefaultFileName(file.type),
-      fileSize: file.size,
-      thumbnailUrl: URL.createObjectURL(file),
-      isOversize: file.size > STEAM_SIZE_LIMIT
-    }));
-
-    const validFileInfos = fileInfos.filter(f => !f.isOversize);
-    const oversizeFileInfos = fileInfos.filter(f => f.isOversize);
-
-    // 单图超限 → 弹窗阻止
-    if (fileInfos.length === 1 && oversizeFileInfos.length === 1) {
-      const f = oversizeFileInfos[0];
-      const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
-      await dialog.confirm({
-        message: i18n.t('image.tooLargeBlocked', { ns: 'editor', fileName: f.fileName, size: sizeMB }),
-        confirmText: i18n.t('gotIt', { ns: 'common' }),
-        cancelText: ""
-      });
-      for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-      return;
-    }
-
-    // 多图 + 重命名开启 → 批量重命名弹窗（超限灰色）
-    if (fileInfos.length > 1 && promptRenameOnPaste) {
-      const batchImages = fileInfos.map(f => ({
-        id: f.fileName,
-        currentName: f.fileName,
-        fileSize: f.fileSize,
-        thumbnailUrl: f.thumbnailUrl
-      }));
-      const renameResult = await dialog.batchRename({ images: batchImages });
-      for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-
-      if (!renameResult) return;
-
-      const addedFileNames: string[] = [];
-      for (const f of validFileInfos) {
-        const newBaseName = renameResult.get(f.fileName);
-        if (newBaseName === undefined) continue;
-        const ext = f.fileName.match(/\.[^.]+$/)?.[0] ?? "";
-        const renamedFile = new File([f.file], newBaseName + ext, { type: f.file.type, lastModified: f.file.lastModified });
-        const result = await addLocalImage(renamedFile, currentArchiveId ?? undefined);
-        if (!result.skipped) {
-          addedFileNames.push(result.image.fileName);
-        }
-      }
-
-      if (autoUploadInPanel && addedFileNames.length > 0) {
-        const latestStore = useSteamGuideImageStore.getState();
-        const latestImages = addedFileNames.map(fn => latestStore.getImageById(fn)).filter(Boolean) as ImageWithState[];
-        ImageUploadService.queuePoolBatchUpload(latestImages);
-      }
-      loggers.image.info("批量重命名完成，已入池", { addedFileNames });
-      return;
-    }
-
-    // 清理临时 URL
-    for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
-
-    // 直接入池（不重命名 / 单图合规）
-    const addedImages: ImageWithState[] = [];
-    for (const f of validFileInfos) {
-      const file = new File([f.file], f.fileName, { type: f.file.type, lastModified: f.file.lastModified });
-      const result = await addLocalImage(file, currentArchiveId ?? undefined);
-      if (!result.skipped) {
-        addedImages.push(result.image);
-      }
-    }
-
-    // 超限通知
-    for (const f of oversizeFileInfos) {
-      const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
-      toast.error(i18n.t('image.tooLargeSkipped', { ns: 'editor', fileName: f.fileName, size: sizeMB }));
-    }
-
-    if (promptRenameOnPaste && addedImages.length === 1) {
-      const imageId = addedImages[0].previewId || addedImages[0].fileName;
-      setEditingImageId(imageId);
-    }
-
-    if (autoUploadInPanel && addedImages.length > 0) {
-      ImageUploadService.queuePoolBatchUpload(addedImages);
-    }
-  }, [addLocalImage, autoUploadInPanel, promptRenameOnPaste, currentArchiveId, setEditingImageId]);
+    void addFilesToPool(files, { source: "paste", currentArchiveId, openPanelOnAdd: false });
+  }, [currentArchiveId]);
 
   useEffect(() => {
     if (!isOpen || isMinimized) return;
@@ -315,7 +209,7 @@ const ImageFloatingPanel: React.FC = () => {
   }
 
   if (isMinimized) {
-    return <MinimizedPanel imageCount={filteredImages.length} archiveName={currentArchive?.guideName} onRestore={restore} />;
+    return <MinimizedPanel imageCount={filteredImages.length} isLoading={imagePoolStatus === "loading"} archiveName={currentArchive?.guideName} onRestore={restore} />;
   }
 
   return (
