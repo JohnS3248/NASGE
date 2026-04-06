@@ -13,6 +13,18 @@ import { useSteamGuideImageStore, type ImageWithState } from "../stores/useSteam
 import { uploadSteamImage } from "./steamBridge";
 import type { SteamImageUrls } from "../types/image";
 import { loggers } from "../../shared/logger";
+import { toast } from "../stores/useToastStore";
+import i18n from "i18next";
+
+// Steam 图片大小限制：2MB
+const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
+
+/**
+ * 格式化文件大小为可读字符串（MB，保留1位小数）
+ */
+function formatFileSize(bytes: number): string {
+  return (bytes / (1024 * 1024)).toFixed(1);
+}
 
 // ============================================================================
 // Types
@@ -337,6 +349,15 @@ class ImageUploadServiceImpl {
   queuePoolUpload(image: ImageWithState): void {
     const store = useSteamGuideImageStore.getState();
 
+    // 前置检查：文件大小超限
+    if (image.fileSize && image.fileSize > STEAM_IMAGE_SIZE_LIMIT) {
+      const sizeMB = formatFileSize(image.fileSize);
+      loggers.image.warn("图片超出 Steam 2MB 限制，阻止上传", { fileName: image.fileName, size: sizeMB });
+      toast.error(i18n.t('image.uploadTooLarge', { ns: 'editor', fileName: image.fileName, size: sizeMB }));
+      store.setImageState(image.fileName, "error", `超出 Steam 2MB 限制（${sizeMB}MB）`);
+      return;
+    }
+
     // 已上传成功
     if (image.previewId && image.state === "success") {
       loggers.image.verbose("图片已上传成功，跳过入队", { fileName: image.fileName, previewId: image.previewId });
@@ -511,6 +532,15 @@ class ImageUploadServiceImpl {
 
     const response = await fetch(image.localUrl);
     const blob = await response.blob();
+
+    // 二次校验：blob 实际大小
+    if (blob.size > STEAM_IMAGE_SIZE_LIMIT) {
+      const sizeMB = formatFileSize(blob.size);
+      toast.error(i18n.t('image.uploadTooLarge', { ns: 'editor', fileName: image.fileName, size: sizeMB }));
+      store.setImageState(image.fileName, "error", `超出 Steam 2MB 限制（${sizeMB}MB）`);
+      return;
+    }
+
     const file = new File([blob], image.fileName, { type: blob.type || "image/png" });
 
     store.setUploadProgress(image.fileName, 30);

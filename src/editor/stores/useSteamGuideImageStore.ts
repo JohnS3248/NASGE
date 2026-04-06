@@ -28,6 +28,7 @@ export type ImageWithState = SteamGuideImage & {
   uploadProgress?: number;  // 上传进度（0-100）
   contentHash?: string;     // 内容哈希（用于去重检测）
   linkedGuideId?: string;   // 关联的存档 ID（用于图片池隔离）
+  fileSize?: number;        // 文件大小（字节）
 };
 
 /**
@@ -309,7 +310,8 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
           state: "pending",
           uploadProgress: 0,
           contentHash, // 保存哈希用于后续去重
-          linkedGuideId // 关联存档 ID
+          linkedGuideId, // 关联存档 ID
+          fileSize: file.size // 文件大小（字节）
         };
 
         set((state) => ({

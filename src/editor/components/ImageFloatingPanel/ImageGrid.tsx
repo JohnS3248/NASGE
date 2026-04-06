@@ -18,6 +18,7 @@ import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
 import { dialog } from "../../stores/useDialogStore";
 import { SkeletonBlock } from "../Skeleton";
+import i18n from "i18next";
 
 interface ImageGridProps {
   images: ImageWithState[];
@@ -292,14 +293,81 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       autoUpload: autoUploadInPanel
     });
 
+    const STEAM_SIZE_LIMIT = 2 * 1024 * 1024;
+
+    // 收集文件信息（生成临时 URL 供弹窗预览）
+    const fileInfos = imageFiles.map(file => ({
+      file,
+      fileName: file.name,
+      fileSize: file.size,
+      thumbnailUrl: URL.createObjectURL(file),
+      isOversize: file.size > STEAM_SIZE_LIMIT
+    }));
+
+    const validFileInfos = fileInfos.filter(f => !f.isOversize);
+    const oversizeFileInfos = fileInfos.filter(f => f.isOversize);
+
+    // 单图超限 → 弹窗阻止
+    if (fileInfos.length === 1 && oversizeFileInfos.length === 1) {
+      const f = oversizeFileInfos[0];
+      const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
+      await dialog.confirm({
+        message: i18n.t('image.tooLargeBlocked', { ns: 'editor', fileName: f.fileName, size: sizeMB }),
+        confirmText: i18n.t('gotIt', { ns: 'common' }),
+        cancelText: ""
+      });
+      for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
+      return;
+    }
+
+    // 多图 + 重命名开启 → 批量重命名弹窗（超限灰色）
+    if (fileInfos.length > 1 && promptRenameOnDrop) {
+      const batchImages = fileInfos.map(f => ({
+        id: f.fileName,
+        currentName: f.fileName,
+        fileSize: f.fileSize,
+        thumbnailUrl: f.thumbnailUrl
+      }));
+      const renameResult = await dialog.batchRename({ images: batchImages });
+      for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
+
+      if (!renameResult) return; // 用户取消
+
+      // 只入池合规图片
+      const addedFileNames: string[] = [];
+      for (const f of validFileInfos) {
+        const newBaseName = renameResult.get(f.fileName);
+        if (newBaseName === undefined) continue;
+        const ext = f.fileName.match(/\.[^.]+$/)?.[0] ?? "";
+        const renamedFile = new File([f.file], newBaseName + ext, { type: f.file.type, lastModified: f.file.lastModified });
+        const result = await addLocalImage(renamedFile, currentArchiveId ?? undefined);
+        if (!result.skipped) {
+          addedFileNames.push(result.image.fileName);
+        }
+      }
+
+      if (autoUploadInPanel && addedFileNames.length > 0) {
+        loggers.image.info("自动加入上传队列", { count: addedFileNames.length });
+        const latestStore = useSteamGuideImageStore.getState();
+        const latestImages = addedFileNames.map(fn => latestStore.getImageById(fn)).filter(Boolean) as ImageWithState[];
+        ImageUploadService.queuePoolBatchUpload(latestImages);
+      }
+      loggers.image.info("批量重命名完成，已入池", { addedFileNames });
+      return;
+    }
+
+    // 清理临时 URL
+    for (const info of fileInfos) URL.revokeObjectURL(info.thumbnailUrl);
+
+    // 直接入池（不重命名 / 单图合规）
     const addedImages: ImageWithState[] = [];
     const skippedFiles: { fileName: string; existingFileName: string; reason: string }[] = [];
 
-    for (const file of imageFiles) {
-      const result = await addLocalImage(file, currentArchiveId ?? undefined);
+    for (const f of validFileInfos) {
+      const result = await addLocalImage(f.file, currentArchiveId ?? undefined);
       if (result.skipped) {
         skippedFiles.push({
-          fileName: file.name,
+          fileName: f.file.name,
           existingFileName: result.existingFileName || '',
           reason: result.reason === 'duplicate_uploaded' ? '已上传' : '待上传'
         });
@@ -308,10 +376,18 @@ const ImageGrid: React.FC<ImageGridProps> = ({
       }
     }
 
+    // 超限通知
+    if (oversizeFileInfos.length > 0) {
+      for (const f of oversizeFileInfos) {
+        const sizeMB = (f.fileSize / (1024 * 1024)).toFixed(1);
+        toast.error(i18n.t('image.tooLargeSkipped', { ns: 'editor', fileName: f.fileName, size: sizeMB }));
+      }
+    }
+
     if (skippedFiles.length > 0) {
       if (imageFiles.length === 1) {
         toast.info(`"${skippedFiles[0].fileName}" 已存在（${skippedFiles[0].reason}），已跳过`);
-      } else {
+      } else if (skippedFiles.length > 0 && addedImages.length > 0) {
         toast.info(`已添加 ${addedImages.length} 张图片\n跳过 ${skippedFiles.length} 张重复图片`);
       }
     }

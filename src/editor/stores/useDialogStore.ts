@@ -19,10 +19,23 @@ interface PromptOptions {
   placeholder?: string;
 }
 
+export interface BatchRenameImage {
+  id: string;           // fileName
+  currentName: string;  // 含扩展名
+  fileSize: number;     // 字节
+  thumbnailUrl: string;
+}
+
+export interface BatchRenameOptions {
+  title?: string;
+  images: BatchRenameImage[];
+}
+
 type DialogState =
   | { kind: "idle" }
   | { kind: "confirm"; options: ConfirmOptions; resolve: (v: boolean) => void }
-  | { kind: "prompt"; options: PromptOptions; resolve: (v: string | null) => void };
+  | { kind: "prompt"; options: PromptOptions; resolve: (v: string | null) => void }
+  | { kind: "batch-rename"; options: BatchRenameOptions; resolve: (v: Map<string, string> | null) => void };
 
 interface DialogStore {
   state: DialogState;
@@ -64,6 +77,19 @@ export const dialog = {
     return new Promise((resolve) => {
       useDialogStore.getState().open({
         kind: "prompt",
+        options: opts,
+        resolve: (v) => {
+          useDialogStore.getState().close();
+          resolve(v);
+        },
+      });
+    });
+  },
+
+  batchRename: (opts: BatchRenameOptions): Promise<Map<string, string> | null> => {
+    return new Promise((resolve) => {
+      useDialogStore.getState().open({
+        kind: "batch-rename",
         options: opts,
         resolve: (v) => {
           useDialogStore.getState().close();

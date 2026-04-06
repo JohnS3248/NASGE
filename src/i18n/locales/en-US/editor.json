@@ -113,7 +113,14 @@
     "selectTag": "Select Tag",
     "noTags": "No tags yet\nClick the tag icon in the header to create",
     "uploadFail": "Image upload failed: {{error}}",
-    "dataUnavailable": "Image data is not available."
+    "uploadTooLarge": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), cannot upload",
+    "tooLargeBlocked": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB) and cannot be added to the image pool.",
+    "tooLargeSkipped": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), skipped",
+    "dataUnavailable": "Image data is not available.",
+    "batchRename": {
+      "title": "Batch Rename ({{count}} images)",
+      "sizeWarning": "Exceeds 2MB limit"
+    }
   },
   "imagePanel": {
     "title": "Image Pool",

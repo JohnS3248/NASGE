@@ -113,7 +113,14 @@
     "selectTag": "选择标签",
     "noTags": "暂无标签\n在标题栏点击标签图标创建",
     "uploadFail": "图片上传失败: {{error}}",
-    "dataUnavailable": "图片数据暂不可用。"
+    "uploadTooLarge": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），无法上传",
+    "tooLargeBlocked": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），无法添加到图片池。",
+    "tooLargeSkipped": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），已跳过",
+    "dataUnavailable": "图片数据暂不可用。",
+    "batchRename": {
+      "title": "批量重命名（{{count}} 张图片）",
+      "sizeWarning": "超出 2MB 限制"
+    }
   },
   "imagePanel": {
     "title": "图片池",
