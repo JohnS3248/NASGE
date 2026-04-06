@@ -18,15 +18,17 @@
 
 <!-- TODO: GIF 准备好后替换占位图 -->
 
+<div align="center">
+
 ### 所见即所得编辑器
 无需手搓 BBCode，样式像素级复刻 Steam 官方指南
 
-![所见即所得编辑器](assets/highlights/h1-33-15.gif)
+![所见即所得编辑器](assets/highlights/h1-wysiwyg.gif)
 
 ### 格式灵活
 选中 + 右键 = 更改格式，黑条/加粗/下划线/标题等高频功能一键实现
 
-![格式灵活](assets/highlights/h1-33-10.gif)
+![格式灵活](https://placehold.co/1440x900/1b2838/ffffff?text=Rich+Formatting)
 
 ### 设置齐全
 深度自定义设置，包括自定义快捷键，随心所欲调整右键菜单位置
@@ -57,6 +59,8 @@
 同样支持评测，写新评测/改评测，持久化草稿，离线功能
 
 ![评测模式](https://placehold.co/1440x900/1b2838/ffffff?text=Review+Mode)
+
+</div>
 
 ---
 
