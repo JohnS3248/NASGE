@@ -15,11 +15,11 @@ jobs:
     steps:
       # 1. 把仓库代码拉到虚拟机
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # 2. 安装 Node.js（读取 .nvmrc）
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
