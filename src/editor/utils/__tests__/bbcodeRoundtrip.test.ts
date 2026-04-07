@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeAll } from "vitest";
 
 // Mock useSteamGuideImageStore — bbcode.ts 用它查图片 URL，roundtrip 测试不需要实际 URL
