@@ -182,9 +182,18 @@ async function loadFresh(): Promise<IntakeContext> {
   };
 }
 
-function makeFile(name: string, size: number, type = "image/png"): File {
-  // 用 Uint8Array 构造指定大小的 blob，避免 jsdom 把字符串长度当成 byte 长度的歧义
+/**
+ * 构造指定大小、可选 seed 的 File。
+ * 同 size 不同 seed → 不同内容 → 不同 contentHash，避免去重误判。
+ */
+function makeFile(name: string, size: number, type = "image/png", seed = 0): File {
   const bytes = new Uint8Array(size);
+  if (seed !== 0) {
+    // 用 seed 填充前几字节，让 hash 不同
+    for (let i = 0; i < Math.min(8, size); i++) {
+      bytes[i] = (seed + i) & 0xff;
+    }
+  }
   return new File([bytes], name, { type, lastModified: 1700000000000 });
 }
 
@@ -200,6 +209,24 @@ function autoConfirmDialog(
     if (state.state.kind === "confirm") {
       const { resolve } = state.state;
       resolve(result);
+    }
+  });
+}
+
+/**
+ * 自动应答 dialog.batchRename
+ * @param mapper 输入 BatchRenameImage[]，返回 fileName → newBaseName 的 Map
+ *               返回 null 模拟用户取消
+ */
+function autoBatchRenameDialog(
+  dialogStore: IntakeContext["dialogStore"],
+  mapper: (images: { id: string; currentName: string; fileSize: number }[]) =>
+    Map<string, string> | null
+): () => void {
+  return dialogStore.subscribe((state) => {
+    if (state.state.kind === "batch-rename") {
+      const { options, resolve } = state.state;
+      resolve(mapper(options.images));
     }
   });
 }
@@ -410,5 +437,235 @@ describe("无名剪贴板图片补全", () => {
       openPanelOnAdd: false
     });
     expect(ctx.steamImageStore.getState().items[0].fileName).toBe("screenshot-2025.png");
+  });
+});
+
+// ============================================================================
+// 多图 + 批量重命名（dialog.batchRename 路径）
+// ============================================================================
+describe("多图 + 批量重命名", () => {
+  it("用户取消批量重命名 → 不入池 + URL 已 revoke", async () => {
+    const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, () => null);
+    const files = [
+      makeFile("a.png", 100, "image/png", 1),
+      makeFile("b.png", 100, "image/png", 2)
+    ];
+    await ctx.addFilesToPool(files, {
+      source: "paste",
+      currentArchiveId: null,
+      openPanelOnAdd: true
+    });
+    unsub();
+    expect(ctx.steamImageStore.getState().items).toHaveLength(0);
+    expect(ctx.imagePanelStore.getState().isOpen).toBe(false);
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
+    // 弹窗对每张图都生成了预览 URL，取消后全部 revoke
+    expect(revokedUrls.size).toBe(2);
+  });
+
+  it("批量重命名 confirm → 按 newBaseName + 原扩展名入池", async () => {
+    const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      for (const img of images) {
+        // 去掉扩展名作为基础，再加 _new
+        const base = img.id.replace(/\.[^.]+$/, "");
+        m.set(img.id, base + "_new");
+      }
+      return m;
+    });
+    const files = [
+      makeFile("a.png", 100, "image/png", 1),
+      makeFile("b.jpg", 100, "image/jpeg", 2)
+    ];
+    await ctx.addFilesToPool(files, {
+      source: "paste",
+      currentArchiveId: "G1",
+      openPanelOnAdd: false
+    });
+    unsub();
+
+    const items = ctx.steamImageStore.getState().items;
+    expect(items.map(i => i.fileName).sort()).toEqual(["a_new.png", "b_new.jpg"]);
+    items.forEach(i => expect(i.linkedGuideId).toBe("G1"));
+  });
+
+  it("autoUpload=true → 批量重命名后立即 queuePoolBatchUpload", async () => {
+    const ctx = await loadFresh();
+    ctx.configStore.getState().setAutoUploadInPanel(true);
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      for (const img of images) {
+        m.set(img.id, img.id.replace(/\.[^.]+$/, "") + "_x");
+      }
+      return m;
+    });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    unsub();
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).toHaveBeenCalledTimes(1);
+    const arg = (ctx.ImageUploadService.queuePoolBatchUpload as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0];
+    expect(arg).toHaveLength(2);
+    expect(arg.map((i: { fileName: string }) => i.fileName).sort()).toEqual(["a_x.png", "b_x.png"]);
+  });
+
+  it("autoUpload=false → 多图重命名后只入池不上传", async () => {
+    const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "") + "_y"));
+      return m;
+    });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    unsub();
+    expect(ctx.steamImageStore.getState().items).toHaveLength(2);
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
+  });
+
+  it("openPanelOnAdd=true → 重命名后面板打开", async () => {
+    const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "") + "_z"));
+      return m;
+    });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: true }
+    );
+    unsub();
+    expect(ctx.imagePanelStore.getState().isOpen).toBe(true);
+  });
+
+  it("rename map 缺某个 fileName → 该文件被跳过", async () => {
+    const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, () => {
+      // 只对 a.png 提供新名字，b.png 故意省略
+      const m = new Map<string, string>();
+      m.set("a.png", "a_renamed");
+      return m;
+    });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    unsub();
+    const items = ctx.steamImageStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0].fileName).toBe("a_renamed.png");
+  });
+
+  it("混合超限 + 合规 → 只重命名合规图片", async () => {
+    const ctx = await loadFresh();
+    const seenInDialog: string[] = [];
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      images.forEach(img => seenInDialog.push(img.id));
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "") + "_ok"));
+      return m;
+    });
+    const files = [
+      makeFile("ok.png", 100, "image/png", 1),
+      makeFile("big.png", 2 * 1024 * 1024 + 1, "image/png", 2)
+    ];
+    await ctx.addFilesToPool(files, {
+      source: "paste",
+      currentArchiveId: null,
+      openPanelOnAdd: false
+    });
+    unsub();
+
+    // 弹窗看到了所有图片（含超限灰色行）
+    expect(seenInDialog.sort()).toEqual(["big.png", "ok.png"]);
+    // 但最终只有合规图片入池
+    const items = ctx.steamImageStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0].fileName).toBe("ok_ok.png");
+  });
+});
+
+// ============================================================================
+// 多图 + 不重命名（直接入池）
+// ============================================================================
+describe("多图直接入池（不重命名）", () => {
+  async function setupNoRename() {
+    const ctx = await loadFresh();
+    ctx.configStore.getState().setPromptRenameOnPaste(false);
+    return ctx;
+  }
+
+  it("3 张全合规 → 全部入池 + autoUpload 触发 queuePoolBatchUpload", async () => {
+    const ctx = await setupNoRename();
+    ctx.configStore.getState().setAutoUploadInPanel(true);
+    await ctx.addFilesToPool(
+      [
+        makeFile("a.png", 100, "image/png", 1),
+        makeFile("b.png", 100, "image/png", 2),
+        makeFile("c.png", 100, "image/png", 3)
+      ],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    expect(ctx.steamImageStore.getState().items).toHaveLength(3);
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).toHaveBeenCalledTimes(1);
+    const arg = (ctx.ImageUploadService.queuePoolBatchUpload as ReturnType<typeof vi.fn>)
+      .mock.calls[0][0];
+    expect(arg).toHaveLength(3);
+  });
+
+  it("含超限文件 → 跳过超限，剩余入池", async () => {
+    const ctx = await setupNoRename();
+    await ctx.addFilesToPool(
+      [
+        makeFile("ok1.png", 100, "image/png", 1),
+        makeFile("big.png", 2 * 1024 * 1024 + 1, "image/png", 2),
+        makeFile("ok2.png", 100, "image/png", 3)
+      ],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    const items = ctx.steamImageStore.getState().items;
+    expect(items).toHaveLength(2);
+    expect(items.map(i => i.fileName).sort()).toEqual(["ok1.png", "ok2.png"]);
+  });
+
+  it("内容重复 → 第二张被去重跳过", async () => {
+    const ctx = await setupNoRename();
+    // 同 size + 同 seed → 同 hash
+    const f1 = makeFile("first.png", 100, "image/png", 7);
+    const f2 = makeFile("dup.png", 100, "image/png", 7);
+    await ctx.addFilesToPool([f1, f2], {
+      source: "paste",
+      currentArchiveId: null,
+      openPanelOnAdd: false
+    });
+    const items = ctx.steamImageStore.getState().items;
+    expect(items).toHaveLength(1);
+    expect(items[0].fileName).toBe("first.png");
+  });
+
+  it("autoUpload=false → 多图入池但不上传", async () => {
+    const ctx = await setupNoRename();
+    ctx.configStore.getState().setAutoUploadInPanel(false);
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: false }
+    );
+    expect(ctx.steamImageStore.getState().items).toHaveLength(2);
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
+  });
+
+  it("openPanelOnAdd=true → 入池后面板打开", async () => {
+    const ctx = await setupNoRename();
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100, "image/png", 1), makeFile("b.png", 100, "image/png", 2)],
+      { source: "paste", currentArchiveId: null, openPanelOnAdd: true }
+    );
+    expect(ctx.imagePanelStore.getState().isOpen).toBe(true);
   });
 });
