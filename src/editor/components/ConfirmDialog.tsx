@@ -1,9 +1,7 @@
 import React, { useEffect, useCallback, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDialogStore, type BatchRenameImage } from "../stores/useDialogStore";
-
-// Steam 图片大小限制：2MB
-const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
+import { STEAM_IMAGE_SIZE_LIMIT } from "../constants/limits";
 
 const ConfirmDialog: React.FC = () => {
   const { t } = useTranslation('common');

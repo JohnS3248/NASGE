@@ -9,10 +9,8 @@ import { ImageUploadService } from "./ImageUploadService";
 import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
 import { dialog } from "../stores/useDialogStore";
+import { STEAM_IMAGE_SIZE_LIMIT } from "../constants/limits";
 import i18n from "i18next";
-
-// Steam 图片大小限制：2MB
-const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
 
 export interface PoolIntakeOptions {
   source: "paste" | "drop";

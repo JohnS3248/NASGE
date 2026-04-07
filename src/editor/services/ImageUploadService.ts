@@ -14,10 +14,8 @@ import { uploadSteamImage } from "./steamBridge";
 import type { SteamImageUrls } from "../types/image";
 import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
+import { STEAM_IMAGE_SIZE_LIMIT } from "../constants/limits";
 import i18n from "i18next";
-
-// Steam 图片大小限制：2MB
-const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
 
 /**
  * 格式化文件大小为可读字符串（MB，保留1位小数）

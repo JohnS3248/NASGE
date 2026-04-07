@@ -1,7 +1,7 @@
 /**
- * Steam 指南字符数限制常量
+ * Steam 指南字符数 / 图片大小限制常量
  *
- * 这些限制是 Steam 服务器端的硬性限制，超出会导致保存失败（8号错误）
+ * 这些限制是 Steam 服务器端的硬性限制，超出会导致保存失败（8号错误）或上传失败
  */
 
 /**
@@ -21,3 +21,9 @@ export const CONTENT_CHARACTER_LIMIT = 8000;
  * 超过此阈值显示橙色警告
  */
 export const WARNING_THRESHOLD_PERCENT = 0.9;
+
+/**
+ * Steam 单张图片上传大小限制：2MB
+ * 超出会导致上传失败，入池/上传链路均使用此常量做前置校验
+ */
+export const STEAM_IMAGE_SIZE_LIMIT = 2 * 1024 * 1024;
