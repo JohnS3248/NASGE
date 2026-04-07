@@ -4,13 +4,30 @@
  * 职责：
  * - 每个 test 前清理 localStorage / sessionStorage，避免 Zustand persist
  *   中间件导致的跨测试状态泄漏
- * - 预留 chrome.* API stub 入口（目前 store 层未依赖，Phase 4 服务测试时再补）
+ * - 为 `globalThis.chrome` 打最小桩：某些 store 经 titleHelpers →
+ *   useSteamGuideImageStore → steamBridge 链路加载时会访问 `chrome?.runtime`，
+ *   `chrome` 是裸标识符，在非扩展环境会抛 ReferenceError
  *
  * 不做：
  * - 不 mock fetch / XHR（当前测试链路不触达网络）
  * - 不全局 mock Zustand，单个测试用例可按需 vi.mock
  */
 import { beforeEach } from "vitest";
+
+// 最小 chrome 桩：保证 steamBridge 等模块能被 import 时求值不报 ReferenceError。
+// 需要真实行为的测试应自行 vi.mock 对应模块。
+if (typeof (globalThis as Record<string, unknown>).chrome === "undefined") {
+  (globalThis as Record<string, unknown>).chrome = {
+    runtime: {
+      sendMessage: () => Promise.resolve(undefined),
+      onMessage: {
+        addListener: () => {},
+        removeListener: () => {}
+      },
+      lastError: undefined
+    }
+  };
+}
 
 beforeEach(() => {
   // jsdom 原生提供 localStorage / sessionStorage，但不会自动在测试间清理
