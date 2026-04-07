@@ -32,10 +32,19 @@ jobs:
       - name: Type check
         run: npm run type-check
 
-      # 5. 单元测试
-      - name: Run tests
-        run: npm run test
+      # 5. 单元测试 + 覆盖率
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
-      # 6. 生产构建
+      # 6. 上传覆盖率 HTML 报告为 artifact（不设阈值，仅归档）
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+      # 7. 生产构建
       - name: Build
         run: npm run build
