@@ -7,9 +7,34 @@
  * - setup.ts 已 clear localStorage/sessionStorage，每个 test 起点干净
  * - onRehydrateStorage 用 queueMicrotask 延迟恢复 activeDraftId，
  *   import 后必须 await 一个 microtask 才能读到正确状态
- * - debouncedStorage 默认 500ms 防抖，测试中用 vi.useFakeTimers() 控制
+ * - debouncedStorage 被 mock 成同步写入，避免旧模块的 500ms 真实 setTimeout
+ *   在下一个 test 已经 clear localStorage 后才触发，把新 test 的数据覆盖掉
+ *   （本地快不会触发，CI Linux 慢机才会撞上）
  */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// 让 persist 在测试中同步写入，消除 debounce 定时器在跨 test 的竞态。
+vi.mock("../utils/debouncedStorage", () => ({
+  createDebouncedStorage: () => ({
+    getItem: (name: string) => {
+      const str = localStorage.getItem(name);
+      if (!str) return null;
+      try {
+        return JSON.parse(str);
+      } catch {
+        return null;
+      }
+    },
+    setItem: (name: string, value: unknown) => {
+      localStorage.setItem(name, JSON.stringify(value));
+    },
+    removeItem: (name: string) => {
+      localStorage.removeItem(name);
+    },
+    flush: () => {}
+  })
+}));
+
 import type { useDraftStore as UseDraftStoreType, Draft } from "../useDraftStore";
 
 type Store = typeof UseDraftStoreType;
@@ -23,11 +48,6 @@ async function importFreshStore(): Promise<Store> {
   await Promise.resolve();
   return mod.useDraftStore;
 }
-
-beforeEach(() => {
-  // setup.ts 已 clear，但 fake timer 要手动开
-  vi.useRealTimers();
-});
 
 // ============================================================================
 // addDraft
@@ -445,21 +465,14 @@ describe("persist / rehydrate", () => {
   });
 
   it("partialize 不持久化 activeDraftId（只存 drafts + nextDraftNumber）", async () => {
-    // debounced 默认 500ms，用 fake timer 推进
-    vi.useFakeTimers();
-    try {
-      const store = await importFreshStore();
-      store.getState().addDraft();
-      vi.advanceTimersByTime(600);
-      const raw = localStorage.getItem(STORE_KEY);
-      expect(raw).toBeTruthy();
-      const parsed = JSON.parse(raw!);
-      expect(parsed.state).toHaveProperty("drafts");
-      expect(parsed.state).toHaveProperty("nextDraftNumber");
-      expect(parsed.state).not.toHaveProperty("activeDraftId");
-      expect(parsed.state).not.toHaveProperty("isDirty");
-    } finally {
-      vi.useRealTimers();
-    }
+    const store = await importFreshStore();
+    store.getState().addDraft();
+    const raw = localStorage.getItem(STORE_KEY);
+    expect(raw).toBeTruthy();
+    const parsed = JSON.parse(raw!);
+    expect(parsed.state).toHaveProperty("drafts");
+    expect(parsed.state).toHaveProperty("nextDraftNumber");
+    expect(parsed.state).not.toHaveProperty("activeDraftId");
+    expect(parsed.state).not.toHaveProperty("isDirty");
   });
 });
