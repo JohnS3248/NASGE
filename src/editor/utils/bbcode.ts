@@ -390,6 +390,22 @@ export function bbcodeTitleToHtml(bbcode: string): string {
 export function bbcodeToHtml(bbcode: string): string {
   let html = bbcode;
 
+  // 关键：先把 [code]...[/code] 抠出来占位，防止内部 BBCode 被全局 replace 误解析。
+  // 没有这一步，[code][b]X[/b][/code] 会先被 [b]/[/b] 替换成 <strong>，
+  // 反向序列化时 <pre> 走 textContent 路径，[b] 标签永久丢失。
+  // 占位符使用 \x00 标记，普通文本不会包含此字符。
+  const codeBlocks: string[] = [];
+  html = html.replace(/\[code]([\s\S]*?)\[\/code]/gi, (_, content) => {
+    const idx = codeBlocks.length;
+    // HTML escape：防止 < > & 在 DOM parser 阶段被当成标签
+    const escaped = String(content)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    codeBlocks.push(escaped);
+    return `\x00CODE_PLACEHOLDER_${idx}\x00`;
+  });
+
   // 先处理引用（递归转换）
   html = html.replace(/\[quote=([^\]]+)]([\s\S]*?)\[\/quote]/gi, (_, author, body) => {
     const inner = bbcodeToHtml(body.trim());
@@ -425,8 +441,7 @@ export function bbcodeToHtml(bbcode: string): string {
   html = html.replace(/\[olist]/gi, "<ol>").replace(/\[\/olist]/gi, "</ol>");
   html = html.replace(/\[\*]/gi, "<li>");
 
-  // 代码块
-  html = html.replace(/\[code]/gi, "<pre><code>").replace(/\[\/code]/gi, "</code></pre>");
+  // [code] 已在函数顶部抠出占位，此处不再处理
 
   // 分隔线
   html = html.replace(/\[hr]/gi, "<hr />");
@@ -462,9 +477,18 @@ export function bbcodeToHtml(bbcode: string): string {
     return figureTag;
   });
 
-  // 链接和图片
+  // 链接：Steam 支持两种形式
+  // [url=https://example.com]label[/url] — 命名形式
+  // [url]https://example.com[/url] — 自动取 URL 做 label
+  // 注意：bare url 形式必须先于命名形式的 [/url] 替换处理
+  html = html.replace(/\[url]([^\[]+)\[\/url]/gi, (_, url) => `<a href="${url}">${url}</a>`);
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
+
+  // 还原 [code] 占位符为 <pre><code>...</code></pre>（块级元素，wrapTextInParagraphs 会正确处理）
+  html = html.replace(/\x00CODE_PLACEHOLDER_(\d+)\x00/g, (_, idx) => {
+    return `<pre><code>${codeBlocks[parseInt(idx, 10)]}</code></pre>`;
+  });
 
   // 检查是否有块级元素
   const hasBlock = /<(ul|ol|table|h[1-3]|pre|hr|blockquote|figure)/i.test(html);

@@ -528,3 +528,62 @@ describe("完整大章节 roundtrip", () => {
     testRoundtrip(bbcode, "复杂混合 section 11");
   });
 });
+
+// ============================================================
+// 十二、Steam 兼容性回归（hotfix 防退化）
+// ============================================================
+describe("Steam 兼容性回归", () => {
+  // [code] 内容必须按字面保留，不被全局 BBCode replace 误吞
+  // 历史 bug：[code][b]X[/b][/code] → <pre><code><strong>X</strong></code></pre>
+  //          反向走 textContent → [code]X[/code]，[b] 标签永久消失
+  it("[code] 内的 BBCode 标签按字面保留", () => {
+    testRoundtrip("[code][b]not bold[/b][/code]");
+  });
+
+  it("[code] 内的多种 BBCode 标签", () => {
+    testRoundtrip("[code][b]粗体[/b] [i]斜体[/i] [url=https://x.com]链接[/url][/code]");
+  });
+
+  it("[code] 内的尖括号字符", () => {
+    testRoundtrip("[code]if (x < 10 && y > 5) { return true; }[/code]");
+  });
+
+  it("[code] 内的实体字符 &amp;", () => {
+    testRoundtrip("[code]a & b && c[/code]");
+  });
+
+  // Negative assertion：确保 [code] 内的 [b] 不会被解析成 <strong>
+  it("[code] 内 [b] 不应被解析为 <strong>", () => {
+    const html = bbcodeToHtml("[code][b]X[/b][/code]");
+    expect(html).not.toContain("<strong>");
+    expect(html).toContain("[b]X[/b]");
+  });
+
+  // [url] 无等号形式：Steam 自动用 URL 做 label
+  // 历史 bug：[url]https://x[/url] → 输出畸形 [url]https://x（缺闭合标签）
+  // 修复后：bare 形式被规范化为命名形式 [url=X]X[/url]，Steam 渲染等价。
+  // 这是合法规范化（类似 [/td]\n[/tr] → [/td][/tr]），需验证：
+  //   1. 不再产生畸形输出
+  //   2. 规范化后的形式幂等
+  it("[url] 无等号形式不再产生畸形输出", () => {
+    const input = "[url]https://example.com[/url]";
+    const html = bbcodeToHtml(input);
+    const out = htmlToBBCode(html);
+    // 必须含完整闭合标签
+    expect(out).toContain("[/url]");
+    // 必须能被解析为有效链接
+    expect(html).toContain('<a href="https://example.com">');
+    // 规范化为命名形式后必须幂等
+    testRoundtrip(out);
+  });
+
+  it("[url] 无等号形式与文字混排", () => {
+    const input = "访问 [url]https://store.steampowered.com[/url] 查看详情";
+    const html = bbcodeToHtml(input);
+    const out = htmlToBBCode(html);
+    expect(out).toContain("访问 ");
+    expect(out).toContain(" 查看详情");
+    expect(out).toContain("[/url]");
+    testRoundtrip(out);  // 规范化后幂等
+  });
+});
