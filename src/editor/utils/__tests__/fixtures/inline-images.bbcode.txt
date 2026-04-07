@@ -1,0 +1,9 @@
+[h1]内联图片测试[/h1]
+
+测试1：文字前[previewicon=10000005;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]文字后
+
+测试2：生命值图标[previewicon=10000005;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]显示在这里[previewicon=10000006;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]金币图标
+
+测试3：普通浮动图片
+[previewimg=10000005;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+这是浮动图片旁边的文字

@@ -1,0 +1,338 @@
+[h1]一、纯文本换行测试[/h1]
+
+1.1 单换行（应显示为两个段落，无空行）
+第一行
+第二行
+
+1.2 双换行（应显示为两个段落，中间1个空行）
+第一行
+
+第二行
+
+1.3 三换行（应显示为两个段落，中间2个空行）
+第一行
+
+
+第二行
+
+1.4 四换行（应显示为两个段落，中间3个空行）
+第一行
+
+
+
+第二行
+
+[h1]二、标题与文本混合测试[/h1]
+
+2.1 标题后紧跟文字（无空行）
+[h2]小标题A[/h2]
+紧跟标题的文字
+
+2.2 标题后空一行再跟文字
+[h2]小标题B[/h2]
+
+空一行后的文字
+
+2.3 文字后空一行再跟标题
+这是一段文字
+
+[h2]小标题C[/h2]
+
+2.4 连续标题测试
+[h1]一级标题[/h1]
+[h2]二级标题[/h2]
+[h3]三级标题[/h3]
+
+2.5 标题之间有空行
+[h2]标题D[/h2]
+
+[h2]标题E[/h2]
+
+[h1]三、文本格式测试[/h1]
+
+3.1 基本格式
+[b]粗体文字[/b]
+[i]斜体文字[/i]
+[u]下划线文字[/u]
+[strike]删除线文字[/strike]
+[spoiler]剧透文字[/spoiler]
+
+3.2 格式组合
+[b][i]粗斜体[/i][/b]
+[u][b]粗体下划线[/b][/u]
+[strike][i]斜体删除线[/i][/strike]
+
+3.3 格式跨段落（每个格式独立一行）
+[b]粗体第一行[/b]
+
+[i]斜体第二行[/i]
+
+[u]下划线第三行[/u]
+
+[h1]四、链接测试[/h1]
+
+4.1 基本链接
+[url=https://store.steampowered.com]Steam商店[/url]
+
+4.2 链接中带格式
+[url=https://example.com][b]粗体链接[/b][/url]
+
+4.3 文字中夹杂链接
+这是一段包含[url=https://google.com]链接[/url]的文字，链接后面还有文字。
+
+[h1]五、图片测试[/h1]
+
+5.1 单独图片（原始尺寸，左浮动）
+[previewimg=10000001;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+5.2 图片前后有文字
+图片前的文字
+[previewimg=10000002;sizeOriginal,floatLeft;测试用图片400x400.jpg][/previewimg]
+图片后的文字
+
+5.3 图片在段落中间
+这是第一段文字，下面是一张图片。
+
+[previewimg=10000003;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+这是图片后的第二段文字。
+
+5.4 内联图标（previewicon）
+这是一段文字[previewicon=10000003;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]中间有个图标，图标后还有文字。
+
+5.5 连续多张图片
+[previewimg=10000001;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+[previewimg=10000002;sizeOriginal,floatLeft;测试用图片400x400.jpg][/previewimg]
+[previewimg=10000003;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+5.6 图片不同尺寸
+[previewimg=10000001;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+[previewimg=10000001;sizeFull,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+[previewimg=10000001;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+5.7 图片不同对齐
+[previewimg=10000002;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+左浮动图片
+
+[previewimg=10000002;sizeThumb,floatRight;测试用图片400x400.jpg][/previewimg]
+右浮动图片
+
+[h1]六、列表测试[/h1]
+
+6.1 无序列表
+[list]
+[*]列表项1
+[*]列表项2
+[*]列表项3
+[/list]
+
+6.2 有序列表
+[olist]
+[*]第一项
+[*]第二项
+[*]第三项
+[/olist]
+
+6.3 列表前后有文字
+列表前的文字
+[list]
+[*]项目A
+[*]项目B
+[/list]
+列表后的文字
+
+6.4 列表前后有空行
+列表前的文字
+
+[list]
+[*]项目X
+[*]项目Y
+[/list]
+
+列表后的文字
+
+[h1]七、表格测试[/h1]
+
+7.1 基本表格
+[table]
+[tr][th]表头1[/th][th]表头2[/th][th]表头3[/th][/tr]
+[tr][td]数据1[/td][td]数据2[/td][td]数据3[/td][/tr]
+[tr][td]数据4[/td][td]数据5[/td][td]数据6[/td][/tr]
+[/table]
+
+7.2 表格前后有文字
+表格前的文字
+[table]
+[tr][th]列A[/th][th]列B[/th][/tr]
+[tr][td]A1[/td][td]B1[/td][/tr]
+[/table]
+表格后的文字
+
+7.3 表格前后有空行
+表格前有空行
+
+[table]
+[tr][th]X[/th][th]Y[/th][/tr]
+[tr][td]1[/td][td]2[/td][/tr]
+[/table]
+
+表格后有空行
+
+7.4 表格内带格式
+[table]
+[tr][th][b]粗体表头[/b][/th][th][i]斜体表头[/i][/th][/tr]
+[tr][td][url=https://example.com]链接[/url][/td][td][strike]删除线[/strike][/td][/tr]
+[/table]
+
+[h1]八、代码块测试[/h1]
+
+8.1 单行代码
+[code]console.log("Hello World");[/code]
+
+8.2 多行代码
+[code]function test() {
+    console.log("line 1");
+    console.log("line 2");
+    return true;
+}[/code]
+
+8.3 代码块前后有文字
+代码前的文字
+[code]var x = 1;[/code]
+代码后的文字
+
+8.4 代码块前后有空行
+代码前有空行
+
+[code]var y = 2;[/code]
+
+代码后有空行
+
+[h1]九、引用测试[/h1]
+
+9.1 基本引用
+[quote]这是一段引用内容[/quote]
+
+9.2 带作者引用
+[quote=某作者]这是某作者说的话[/quote]
+
+9.3 引用内多段落
+[quote]引用第一段
+
+引用第二段
+
+引用第三段[/quote]
+
+9.4 引用前后有文字
+引用前的文字
+[quote]引用内容[/quote]
+引用后的文字
+
+9.5 引用前后有空行
+引用前有空行
+
+[quote]引用内容[/quote]
+
+引用后有空行
+
+[h1]十、分隔线测试[/h1]
+
+10.1 基本分隔线
+上面的文字
+[hr]
+下面的文字
+
+10.2 分隔线前后有空行
+上面有空行
+
+[hr]
+
+下面有空行
+
+[h1]十一、复杂混合测试[/h1]
+
+11.1 标题+图片+文字
+[h2]混合场景A[/h2]
+[previewimg=10000002;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+这是图片旁边的说明文字，测试图片和文字的混排效果。
+
+11.2 列表+图片
+[list]
+[*]列表项带图片[previewicon=10000003;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+[*]普通列表项
+[/list]
+
+11.3 表格+图片
+[table]
+[tr][th]图片列[/th][th]说明列[/th][/tr]
+[tr][td][previewicon=10000003;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][/td][td]这是图片说明[/td][/tr]
+[/table]
+
+11.4 引用内含格式
+[quote=测试者]这段引用包含[b]粗体[/b]、[i]斜体[/i]和[url=https://example.com]链接[/url][/quote]
+
+11.5 完整文章模拟
+[h1]游戏攻略标题[/h1]
+
+欢迎阅读本攻略，下面是详细内容。
+
+[h2]第一章：入门[/h2]
+
+首先，你需要了解基本操作：
+
+[list]
+[*]W键前进
+[*]S键后退
+[*]空格跳跃
+[/list]
+
+[previewimg=10000001;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+如图所示，这是游戏的主界面。
+
+[h2]第二章：进阶[/h2]
+
+进阶技巧包括：
+
+[olist]
+[*]学会闪避
+[*]掌握连招
+[*]合理配装
+[/olist]
+
+[quote=老玩家]熟能生巧，多练习就会了[/quote]
+
+[h2]附录：数据表[/h2]
+
+[table]
+[tr][th]属性[/th][th]效果[/th][th]推荐度[/th][/tr]
+[tr][td]力量[/td][td]+攻击[/td][td]★★★[/td][/tr]
+[tr][td]敏捷[/td][td]+速度[/td][td]★★☆[/td][/tr]
+[tr][td]智力[/td][td]+魔法[/td][td]★☆☆[/td][/tr]
+[/table]
+
+祝游戏愉快！
+
+[h1]十二、边界情况测试[/h1]
+
+12.1 开头有空行
+
+（上面是空行）第一行实际内容
+
+12.2 结尾有空行
+最后一行内容
+（下面是空行）
+
+12.3 超长单行文字
+这是一行非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常非常长的文字
+
+12.4 特殊字符
+<html>&amp;&lt;&gt;"'</html>
+中文【】「」『』
+Emoji测试（如果支持）
+
+12.5 空内容标签
+[b][/b]
+[quote][/quote]
