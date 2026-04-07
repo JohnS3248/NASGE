@@ -29,6 +29,13 @@ export type Draft = {
 // 模块级变量
 // ============================================================================
 
+/**
+ * sessionStorage key — 标签页级的 activeDraftId 持久化。
+ * 使用 sessionStorage（不是 localStorage）以实现多窗口隔离：
+ * 每个标签页可以独立打开不同的草稿，互不影响。
+ */
+const TAB_ACTIVE_DRAFT_KEY = 'nasge-tab-activeDraft';
+
 let deletedCache: Draft | null = null;
 
 // ============================================================================
@@ -257,31 +264,40 @@ export const useDraftStore = create<DraftState>()(
 
       onRehydrateStorage: () => (state, error) => {
         if (error) { loggers.persist.error('useDraftStore rehydration 失败', error); return; }
-        // 从 sessionStorage 恢复标签页级的 activeDraftId
-        const savedId = sessionStorage.getItem('nasge-tab-activeDraft');
-        if (savedId && state?.drafts.some(d => d.id === savedId)) {
-          useDraftStore.setState({ activeDraftId: savedId });
-        }
+        if (!state) return;
+
+        // 注意：zustand 5 的 persist middleware 用同步 thenable 包装 localStorage，
+        // 此回调是在 `create(persist(...))` 表达式返回之前被同步触发的。
+        // 此时模块顶层的 `export const useDraftStore` 还处于 TDZ（const 未完成赋值），
+        // 直接访问 useDraftStore.setState 会抛 ReferenceError。
+        // 用 queueMicrotask 推迟到下一个 microtask 队列，届时 const 已完成赋值。
+        queueMicrotask(() => {
+          const savedId = sessionStorage.getItem(TAB_ACTIVE_DRAFT_KEY);
+          const drafts = useDraftStore.getState().drafts;
+
+          // 1) 优先：从 sessionStorage 恢复标签页级的 activeDraftId（多窗口隔离）
+          if (savedId && drafts.some(d => d.id === savedId)) {
+            useDraftStore.setState({ activeDraftId: savedId });
+            return;
+          }
+
+          // 2) 兜底：sessionStorage 无效或没保存过 → 选择第一个草稿
+          if (drafts.length > 0) {
+            useDraftStore.setState({ activeDraftId: drafts[0].id });
+          }
+        });
       },
     }
   )
 );
 
-// 启动时修复 activeDraftId
-setTimeout(() => {
-  const state = useDraftStore.getState();
-  if (!state.activeDraftId && state.drafts.length > 0) {
-    useDraftStore.setState({ activeDraftId: state.drafts[0].id });
-  }
-}, 100);
-
 // 同步 activeDraftId 到 sessionStorage（标签页隔离）
 useDraftStore.subscribe((state, prev) => {
   if (state.activeDraftId !== prev.activeDraftId) {
     if (state.activeDraftId) {
-      sessionStorage.setItem('nasge-tab-activeDraft', state.activeDraftId);
+      sessionStorage.setItem(TAB_ACTIVE_DRAFT_KEY, state.activeDraftId);
     } else {
-      sessionStorage.removeItem('nasge-tab-activeDraft');
+      sessionStorage.removeItem(TAB_ACTIVE_DRAFT_KEY);
     }
   }
 });
