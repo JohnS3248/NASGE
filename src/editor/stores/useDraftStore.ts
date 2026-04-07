@@ -4,6 +4,7 @@ import { JSONContent } from "@tiptap/core";
 import { createEmptyDoc } from "../utils/editorExtensions";
 import { createTitleFromText, createEmptyTitle } from "../utils/titleHelpers";
 import { loggers } from "../../shared/logger";
+import { createDebouncedStorage } from "./utils/debouncedStorage";
 
 
 // ============================================================================
@@ -223,36 +224,7 @@ export const useDraftStore = create<DraftState>()(
     {
       name: "nasge-drafts",
       version: 2,
-      storage: (() => {
-        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-        let pendingValue: { name: string; value: unknown } | null = null;
-
-        const debouncedSetItem = (name: string, value: unknown) => {
-          pendingValue = { name, value };
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
-            if (pendingValue) {
-              const valueStr = typeof pendingValue.value === 'string'
-                ? pendingValue.value
-                : JSON.stringify(pendingValue.value);
-              loggers.persist.verbose('setItem (debounced)', { name: pendingValue.name });
-              localStorage.setItem(pendingValue.name, valueStr);
-              pendingValue = null;
-              debounceTimer = null;
-            }
-          }, 500);
-        };
-
-        return {
-          getItem: (name: string) => {
-            const str = localStorage.getItem(name);
-            if (!str) return null;
-            try { return JSON.parse(str); } catch { return null; }
-          },
-          setItem: debouncedSetItem,
-          removeItem: (name: string) => localStorage.removeItem(name),
-        };
-      })(),
+      storage: createDebouncedStorage(),
 
       partialize: (state) => ({
         drafts: state.drafts,
