@@ -1,9 +1,14 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { loggers } from "../../shared/logger";
-
+import { useDraftStore } from "./useDraftStore";
+import { useArchiveStore } from "./useArchiveStore";
+import { useReviewStore } from "./useReviewStore";
+import { useSteamGuideImageStore } from "./useSteamGuideImageStore";
 
 // Re-export 子 store 的类型，保持向后兼容的 import 路径
+// 注意：useSteamGuideImageStore 顶层 import 了 useGuideStore（循环依赖），
+// 但所有访问都在函数体内通过 getState() 懒加载，模块初始化时不会触发，所以安全。
 export type { Draft } from "./useDraftStore";
 export type { GuideArchive, ImageTag, ChapterInfo } from "./useArchiveStore";
 export { TAG_COLORS } from "./useArchiveStore";
@@ -76,9 +81,7 @@ export const useGuideStore = create<SessionState>()(
 
         // 进入 offline-review 时清除旧连接信息（在线 review 会通过 setReviewInfo 重填）
         if (mode === 'offline-review') {
-          import("./useReviewStore").then(({ useReviewStore }) => {
-            useReviewStore.getState().clearConnection();
-          });
+          useReviewStore.getState().clearConnection();
         }
 
         set(updates);
@@ -86,17 +89,12 @@ export const useGuideStore = create<SessionState>()(
         // 委托 useDraftStore 选择最佳草稿
         const afterState = get();
         const isReview = mode === 'review' || mode === 'offline-review';
-        import("./useDraftStore").then(({ useDraftStore }) => {
-          if (isReview) {
-            // review 模式：从 useReviewStore 获取 appId
-            import("./useReviewStore").then(({ useReviewStore }) => {
-              const reviewAppId = useReviewStore.getState().appId;
-              useDraftStore.getState().selectBestDraft(null, true, reviewAppId);
-            });
-          } else {
-            useDraftStore.getState().selectBestDraft(afterState.currentArchiveId, false);
-          }
-        });
+        if (isReview) {
+          const reviewAppId = useReviewStore.getState().appId;
+          useDraftStore.getState().selectBestDraft(null, true, reviewAppId);
+        } else {
+          useDraftStore.getState().selectBestDraft(afterState.currentArchiveId, false);
+        }
       },
 
       setGuideInfo: (info) => {
@@ -105,26 +103,24 @@ export const useGuideStore = create<SessionState>()(
           return;
         }
 
-        // 创建或更新存档（via useArchiveStore）
-        import("./useArchiveStore").then(({ useArchiveStore }) => {
-          const archiveStore = useArchiveStore.getState();
-          const existing = archiveStore.getArchive(info.id);
-          if (existing) {
-            archiveStore.updateArchive(info.id, {
-              guideName: info.title,
-              coverUrl: info.coverUrl,
-              chapters: info.chapters,
-              chaptersUpdatedAt: Date.now(),
-              lastAccessedAt: Date.now(),
-            });
-          } else {
-            archiveStore.createArchive(info.id, {
-              title: info.title,
-              coverUrl: info.coverUrl,
-              chapters: info.chapters,
-            });
-          }
-        });
+        // 创建或更新存档
+        const archiveStore = useArchiveStore.getState();
+        const existing = archiveStore.getArchive(info.id);
+        if (existing) {
+          archiveStore.updateArchive(info.id, {
+            guideName: info.title,
+            coverUrl: info.coverUrl,
+            chapters: info.chapters,
+            chaptersUpdatedAt: Date.now(),
+            lastAccessedAt: Date.now(),
+          });
+        } else {
+          archiveStore.createArchive(info.id, {
+            title: info.title,
+            coverUrl: info.coverUrl,
+            chapters: info.chapters,
+          });
+        }
 
         set({
           guideInfo: info,
@@ -133,14 +129,10 @@ export const useGuideStore = create<SessionState>()(
         });
 
         // 加载图片池
-        import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
-          useSteamGuideImageStore.getState().loadFromArchive(info.id);
-        });
+        useSteamGuideImageStore.getState().loadFromArchive(info.id);
 
         // 选择最佳草稿
-        import("./useDraftStore").then(({ useDraftStore }) => {
-          useDraftStore.getState().selectBestDraft(info.id, false);
-        });
+        useDraftStore.getState().selectBestDraft(info.id, false);
       },
 
       clearGuideInfo: () => {
@@ -155,56 +147,45 @@ export const useGuideStore = create<SessionState>()(
             mode: 'offline-guide',
           });
 
-          import("./useDraftStore").then(({ useDraftStore }) => {
-            useDraftStore.getState().selectBestDraft(null, false);
-          });
-
-          import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
-            useSteamGuideImageStore.getState().loadFromArchive(null, false);
-          });
+          useDraftStore.getState().selectBestDraft(null, false);
+          useSteamGuideImageStore.getState().loadFromArchive(null, false);
           return;
         }
 
-        import("./useArchiveStore").then(({ useArchiveStore }) => {
-          const archive = useArchiveStore.getState().getArchive(guideId);
-          if (!archive) {
-            loggers.store.warn('存档不存在', { guideId });
-            return;
-          }
+        const archive = useArchiveStore.getState().getArchive(guideId);
+        if (!archive) {
+          loggers.store.warn('存档不存在', { guideId });
+          return;
+        }
 
-          const guideInfo: GuideInfo = {
-            id: archive.guideId,
-            title: archive.guideName,
-            coverUrl: archive.coverUrl,
-            chapters: archive.chapters,
-          };
+        const guideInfo: GuideInfo = {
+          id: archive.guideId,
+          title: archive.guideName,
+          coverUrl: archive.coverUrl,
+          chapters: archive.chapters,
+        };
 
-          const state = get();
-          const newMode = state.mode === 'offline-guide' ? 'offline-guide' : 'guide';
+        const state = get();
+        const newMode = state.mode === 'offline-guide' ? 'offline-guide' : 'guide';
 
-          set({
-            currentArchiveId: guideId,
-            guideInfo,
-            mode: newMode,
-          });
-
-          // 更新 lastAccessedAt
-          useArchiveStore.getState().updateArchive(guideId, {
-            lastAccessedAt: Date.now(),
-          });
-
-          // 选择最佳草稿（switchArchive 只在指南模式下调用，isReview 始终为 false）
-          import("./useDraftStore").then(({ useDraftStore }) => {
-            useDraftStore.getState().selectBestDraft(guideId, false);
-          });
-
-          // 加载图片池
-          import('./useSteamGuideImageStore').then(({ useSteamGuideImageStore }) => {
-            useSteamGuideImageStore.getState().loadFromArchive(guideId, false);
-          });
-
-          loggers.store.info('切换存档', { guideId, guideName: archive.guideName });
+        set({
+          currentArchiveId: guideId,
+          guideInfo,
+          mode: newMode,
         });
+
+        // 更新 lastAccessedAt
+        useArchiveStore.getState().updateArchive(guideId, {
+          lastAccessedAt: Date.now(),
+        });
+
+        // 选择最佳草稿（switchArchive 只在指南模式下调用，isReview 始终为 false）
+        useDraftStore.getState().selectBestDraft(guideId, false);
+
+        // 加载图片池
+        useSteamGuideImageStore.getState().loadFromArchive(guideId, false);
+
+        loggers.store.info('切换存档', { guideId, guideName: archive.guideName });
       },
 
       setCurrentChapter: (chapterId) => set({ currentChapterId: chapterId }),
