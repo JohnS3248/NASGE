@@ -20,7 +20,7 @@ vi.mock("../../../shared/logger", () => ({
   }
 }));
 
-import { bbcodeToHtml, htmlToBBCode } from "../bbcode";
+import { bbcodeToHtml, htmlToBBCode, bbcodeTitleToHtml } from "../bbcode";
 
 /**
  * 标准化 BBCode 用于比较：
@@ -585,5 +585,150 @@ describe("Steam 兼容性回归", () => {
     expect(out).toContain(" 查看详情");
     expect(out).toContain("[/url]");
     testRoundtrip(out);  // 规范化后幂等
+  });
+
+  // Negative assertion 模式补强：[code] 内任意 inline 标签都不应被解析
+  it("[code] 内 [i] 不应被解析为 <em>", () => {
+    const html = bbcodeToHtml("[code][i]X[/i][/code]");
+    expect(html).not.toContain("<em>");
+    expect(html).toContain("[i]X[/i]");
+  });
+
+  it("[code] 内 [url=] 不应被解析为 <a>", () => {
+    const html = bbcodeToHtml("[code][url=https://x.com]X[/url][/code]");
+    expect(html).not.toContain("<a ");
+    expect(html).toContain("[url=https://x.com]");
+  });
+});
+
+// ============================================================
+// 十三、嵌套引用规范化（idempotent，不严格 roundtrip）
+// ============================================================
+// 注：嵌套 quote 的 [/quote] 闭合前会被加 \n，这是 converter 的合法规范化
+// （Steam 渲染等价）。检查策略：第二次往返必须与第一次相同（幂等）。
+describe("嵌套引用规范化", () => {
+  function testIdempotent(input: string) {
+    const out1 = htmlToBBCode(bbcodeToHtml(input));
+    const out2 = htmlToBBCode(bbcodeToHtml(out1));
+    expect(out2).toBe(out1);
+  }
+
+  it("带作者嵌套 quote", () => {
+    testIdempotent("[quote=外][quote=内]inner[/quote]outer[/quote]");
+  });
+
+  it("无作者嵌套 quote", () => {
+    testIdempotent("[quote][quote]a[/quote]b[/quote]");
+  });
+
+  it("嵌套 quote 末尾无文字", () => {
+    testIdempotent("[quote=A][quote=B]X[/quote][/quote]");
+  });
+
+  it("嵌套 quote 前后都有文字", () => {
+    testIdempotent("[quote=A]pre[quote=B]X[/quote]post[/quote]");
+  });
+});
+
+// ============================================================
+// 十四、标题内换行（[h1]X\nY[/h1] → <h1>X<br>Y</h1>）
+// ============================================================
+describe("标题内换行", () => {
+  it("h1 含换行", () => {
+    testRoundtrip("[h1]第一行\n第二行[/h1]");
+  });
+
+  it("h2 含换行", () => {
+    testRoundtrip("[h2]A\nB[/h2]");
+  });
+
+  it("h3 单独使用", () => {
+    testRoundtrip("[h3]三级标题[/h3]");
+  });
+
+  it("h3 后紧跟文字", () => {
+    testRoundtrip("[h3]小节标题[/h3]\n小节内容");
+  });
+
+  it("h3 后空一行再跟文字", () => {
+    testRoundtrip("[h3]小节标题[/h3]\n\n空一行后的文字");
+  });
+});
+
+// ============================================================
+// 十五、图片尺寸/对齐组合补全
+// ============================================================
+describe("图片尺寸对齐组合", () => {
+  // previewicon 完整尺寸/对齐矩阵
+  it("previewicon sizeFull,inline", () => {
+    testRoundtrip("[previewicon=12345;sizeFull,inline;a.png][/previewicon]");
+  });
+
+  it("previewicon sizeThumb,floatLeft", () => {
+    testRoundtrip("X[previewicon=12345;sizeThumb,floatLeft;a.png][/previewicon]Y");
+  });
+
+  it("previewicon sizeThumb,floatRight", () => {
+    testRoundtrip("X[previewicon=12345;sizeThumb,floatRight;a.png][/previewicon]Y");
+  });
+
+  // previewimg 补 sizeFull + 各种对齐
+  it("previewimg sizeFull,floatRight", () => {
+    testRoundtrip("[previewimg=12345;sizeFull,floatRight;a.png][/previewimg]");
+  });
+
+  it("previewimg sizeThumb,floatRight", () => {
+    testRoundtrip("[previewimg=12345;sizeThumb,floatRight;a.png][/previewimg]");
+  });
+
+  // 原始 [img] 标签（非 preview 形式）
+  it("[img] 原始图片标签", () => {
+    testRoundtrip("[img]https://example.com/a.png[/img]");
+  });
+
+  it("[img] 与文字混排", () => {
+    testRoundtrip("前文\n[img]https://example.com/a.png[/img]\n后文");
+  });
+});
+
+// ============================================================
+// 十六、bbcodeTitleToHtml — 章节标题预览
+// ============================================================
+describe("bbcodeTitleToHtml", () => {
+  it("纯文本标题不解析任何 BBCode", () => {
+    // 标题预览不解析 [b] 等格式标签，按字面保留
+    expect(bbcodeTitleToHtml("普通章节标题")).toBe("普通章节标题");
+    expect(bbcodeTitleToHtml("[b]粗体[/b]")).toBe("[b]粗体[/b]");
+  });
+
+  it("含 previewicon 的标题渲染为 <img> 并丢弃后续文字", () => {
+    const html = bbcodeTitleToHtml(
+      "[previewicon=12345;sizeOriginal,inline;a.png][/previewicon]章节文字"
+    );
+    expect(html).toContain("<img");
+    expect(html).toContain("nasge-chapter-preview-image");
+    // 图片后的"章节文字"应被剥离
+    expect(html).not.toContain("章节文字");
+  });
+
+  it("含 previewimg 的标题渲染为 <img>", () => {
+    const html = bbcodeTitleToHtml(
+      "[previewimg=12345;sizeOriginal,floatLeft;a.png][/previewimg]"
+    );
+    expect(html).toContain("<img");
+    expect(html).toContain('alt="a.png"');
+  });
+
+  it("含原始 [img] 的标题", () => {
+    const html = bbcodeTitleToHtml("[img]https://example.com/a.png[/img]");
+    expect(html).toContain("<img");
+    expect(html).toContain('src="https://example.com/a.png"');
+  });
+
+  it("非字符串输入：fallback 到字符串化", () => {
+    // @ts-expect-error 故意传非字符串
+    expect(bbcodeTitleToHtml(null)).toBe("");
+    // @ts-expect-error 故意传非字符串
+    expect(bbcodeTitleToHtml(123)).toBe("123");
   });
 });
