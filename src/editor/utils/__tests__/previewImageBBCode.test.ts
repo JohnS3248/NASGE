@@ -51,7 +51,7 @@ describe("decodePreviewImage", () => {
     ).toEqual({
       previewId: "10000004",
       fileName: "Legacy.jpg",
-      size: "thumb",
+      size: "half",  // sizeThumb 的标准内部名是 "half"
       alignment: "floatLeft"
     });
   });

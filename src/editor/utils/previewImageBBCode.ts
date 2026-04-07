@@ -31,14 +31,11 @@ const DEFAULT_ALIGNMENT: ImageAlignment = "floatLeft";
 
 /**
  * 将图片信息编码为 Steam BBCode 格式
- * @param attrs 图片属性
- * @param allowEmptyPreviewId 是否允许空预览码（用于离线编辑）
  */
-export function encodePreviewImage(attrs: PreviewImageBBCode, allowEmptyPreviewId = false): string {
+export function encodePreviewImage(attrs: PreviewImageBBCode): string {
   const previewId = attrs.previewId.trim();
 
-  // 如果不允许空预览码，则抛出错误
-  if (!previewId && !allowEmptyPreviewId) {
+  if (!previewId) {
     throw new Error("previewId 不能为空");
   }
 
@@ -48,7 +45,6 @@ export function encodePreviewImage(attrs: PreviewImageBBCode, allowEmptyPreviewI
 
   const sanitizedFileName = sanitizeFileName(attrs.fileName);
 
-  // 支持空预览码：[previewimg=;sizeThumb,floatLeft;image.jpg][/previewimg]
   return `[previewimg=${previewId};${sizeToken},${alignmentToken};${sanitizedFileName}][/previewimg]`;
 }
 
@@ -65,8 +61,9 @@ export function decodePreviewImage(rawValue: string | null | undefined): Preview
   const segments = rawValue.split(";");
   const previewId = segments[0]?.trim() ?? "";
 
-  // 允许空预览码（用于离线编辑的图片）
-  // 空预览码表示图片尚未上传到 Steam
+  if (!previewId) {
+    throw new Error("previewimg 标签缺少 previewId");
+  }
 
   const flagSegment = segments[1] ?? "";
   const [sizeTokenRaw, alignmentTokenRaw] = flagSegment.split(",");
@@ -80,7 +77,7 @@ export function decodePreviewImage(rawValue: string | null | undefined): Preview
   const alignment = parseAlignmentToken(alignmentToken);
 
   return {
-    previewId, // 可能为空字符串
+    previewId,
     fileName,
     size,
     alignment
