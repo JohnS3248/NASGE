@@ -1,15 +1,13 @@
 /**
- * 统一图片状态管理 Store
+ * 本地图片库 Store（含标签）
  *
- * 设计原则：
- * - 单一真相源：替代原有的三个分散 Store
- * - 统一状态机：清晰的生命周期管理
- * - 简化数据流：减少状态同步复杂度
+ * 职责：
+ * - 维护用户本地图片库的元数据（ImageEntity）
+ * - 管理图片标签（tags）和生命周期状态
  *
- * 替代的 Store：
- * - useImageUploadStore (上传记录)
- * - useEditorImageNodeStore (编辑器节点)
- * - useSteamGuideImageStore (Steam 图片池)
+ * 与其他 Store 的关系：
+ * - `useSteamGuideImageStore`：Steam 图片池 + 上传状态（独立维护）
+ * - `useImagePanelStore`：图片面板 UI 状态（筛选、选中等）
  */
 
 import { create } from "zustand";
