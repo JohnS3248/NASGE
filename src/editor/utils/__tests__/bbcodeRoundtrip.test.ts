@@ -660,8 +660,13 @@ describe("标题内换行", () => {
 // ============================================================
 describe("图片尺寸对齐组合", () => {
   // previewicon 完整尺寸/对齐矩阵
-  it("previewicon sizeFull,inline", () => {
-    testRoundtrip("[previewicon=12345;sizeFull,inline;a.png][/previewicon]");
+  it("previewicon sizeFull,inline → 输出 previewimg（Steam 官方规则）", () => {
+    // Steam 规则：inline + sizeFull → previewimg，即使输入是 previewicon
+    const input = "[previewicon=12345;sizeFull,inline;a.png][/previewicon]";
+    const expected = "[previewimg=12345;sizeFull,inline;a.png][/previewimg]";
+    const html = bbcodeToHtml(input);
+    const output = htmlToBBCode(html);
+    expect(output).toBe(expected);
   });
 
   it("previewicon sizeThumb,floatLeft", () => {

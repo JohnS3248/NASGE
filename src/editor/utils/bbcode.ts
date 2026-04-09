@@ -183,8 +183,9 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
       : alignment === "floatRight" ? "floatRight"
       : "inline";
 
-    // SteamImageInline (span) 总是使用 previewicon 标签
-    return `[previewicon=${previewId};${sizeToken},${alignToken};${fileName}][/previewicon]`;
+    // Steam 官方规则：inline + sizeFull → previewimg，其他 inline 组合 → previewicon
+    const tagType = (alignToken === "inline" && sizeToken === "sizeFull") ? "previewimg" : "previewicon";
+    return `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
   }
 
   if (tagName === "img") {
