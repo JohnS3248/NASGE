@@ -26,6 +26,7 @@ import { toast } from "../stores/useToastStore";
 import { dialog } from "../stores/useDialogStore";
 import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from "./ImageFloatingPanel";
 import { SkeletonLine, SkeletonBlock } from "./Skeleton";
+import ExternalImageDialog from "./ExternalImageDialog";
 
 // 类型别名，保持向后兼容
 type ImageDisplayPreset = ImageSizePreset;
@@ -392,6 +393,27 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     const alt = (await dialog.prompt({ message: t('imageLink.altText'), defaultValue: "" })) ?? "";
     editor.chain().focus().setImage({ src, alt }).run();
   }, [editor, t]);
+
+  // 外链图片弹窗
+  const [externalImageDialogVisible, setExternalImageDialogVisible] = useState(false);
+
+  const insertExternalImage = useCallback(() => {
+    setExternalImageDialogVisible(true);
+  }, []);
+
+  const handleExternalImageConfirm = useCallback((url: string) => {
+    setExternalImageDialogVisible(false);
+    if (!editor) return;
+    editor.commands.insertSteamImage({
+      previewId: "1",  // 假 ID,Steam 不校验
+      fileName: "",
+      sizePreset: "original",
+      alignment: "inline",
+      source: "screenshot",
+      imageUrl: url
+    });
+    loggers.editor.info("插入外链图片", { url });
+  }, [editor]);
 
   const insertQuote = useCallback(async () => {
     if (!editor) return;
@@ -894,6 +916,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
               {/* 动态渲染空白处菜单 */}
               {(() => {
                 const emptyMenuI18nKeys: Record<string, string> = {
+                  insertExternalImage: t('contextMenu.insertExternalImage'),
                   codeBlock: t('contextMenu.insertCodeBlock'),
                   quote: t('contextMenu.insertQuote'),
                   table: t('contextMenu.insertTable')
@@ -904,6 +927,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                     const def = EMPTY_MENU_ITEMS.find(d => d.id === item.id);
                     if (!def) return null;
                     const actionMap: Record<string, () => void> = {
+                      insertExternalImage: insertExternalImage,
                       insertImage: insertImage,
                       codeBlock: insertCodeBlock,
                       quote: insertQuote,
@@ -925,6 +949,13 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           )}
         </div>
       ) : null}
+
+      {/* 外链图片弹窗 */}
+      <ExternalImageDialog
+        visible={externalImageDialogVisible}
+        onConfirm={handleExternalImageConfirm}
+        onCancel={() => setExternalImageDialogVisible(false)}
+      />
     </>
   );
 };

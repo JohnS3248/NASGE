@@ -227,9 +227,18 @@
     "strike": "删除线",
     "underline": "下划线",
     "link": "插入链接",
+    "insertExternalImage": "插入外链图片",
     "insertCodeBlock": "插入代码块",
     "insertQuote": "插入引用",
     "insertTable": "插入表格"
+  },
+  "externalImage": {
+    "title": "插入外链图片",
+    "previewHint": "输入 URL 后预览",
+    "loading": "加载中...",
+    "loadFailed": "该图片不可用",
+    "hint": "仅支持 HTTPS 开头的外链，非 HTTPS 的外链图片（比如 Wikipedia）可能无法显示",
+    "insert": "插入"
   },
   "time": {
     "justNow": "刚刚",

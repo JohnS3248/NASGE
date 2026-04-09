@@ -227,9 +227,18 @@
     "strike": "Strikethrough",
     "underline": "Underline",
     "link": "Insert Link",
+    "insertExternalImage": "Insert External Image",
     "insertCodeBlock": "Insert Code Block",
     "insertQuote": "Insert Quote",
     "insertTable": "Insert Table"
+  },
+  "externalImage": {
+    "title": "Insert External Image",
+    "previewHint": "Enter URL to preview",
+    "loading": "Loading...",
+    "loadFailed": "Image unavailable",
+    "hint": "Only HTTPS URLs are supported. Non-HTTPS external images (e.g. Wikipedia) may not display correctly",
+    "insert": "Insert"
   },
   "time": {
     "justNow": "Just now",
