@@ -1,6 +1,7 @@
 import type {
   SteamUploadRequest,
   SteamGuideImage,
+  SteamScreenshotItem,
   UploadContext,
   UploadResult,
   UploadScope
@@ -921,4 +922,189 @@ function extractUploadContext(scope: UploadScope, explicitForm?: HTMLFormElement
   };
 }
 
+// === 截图库拉取 ===
 
+/**
+ * 解析 sessionid — 多级 fallback
+ * 复用现有的 sessionid 获取逻辑,抽取为独立函数
+ */
+function resolveSessionId(): string | undefined {
+  // 1. 从表单隐藏域
+  const allForms = document.querySelectorAll('form');
+  for (const form of allForms) {
+    const input = form.querySelector<HTMLInputElement>('input[name="sessionid"]');
+    if (input?.value?.trim()) {
+      return input.value.trim();
+    }
+  }
+
+  // 2. 从 cookie
+  const match = document.cookie.match(/sessionid=([^;]+)/);
+  if (match) {
+    return decodeURIComponent(match[1]);
+  }
+
+  // 3. 从全局变量(content script 在 ISOLATED world, 需要通过 MAIN world 桥接)
+  return window.g_sessionID;
+}
+
+/**
+ * 解析 consumer_app_id — 多级 fallback
+ * 截图 API 需要 appid 来按游戏过滤
+ */
+async function resolveConsumerAppId(): Promise<string | undefined> {
+  // 1. 从表单隐藏域(editguidesubsection 页面有 consumer_app_id)
+  const allForms = document.querySelectorAll('form');
+  for (const form of allForms) {
+    const input = form.querySelector<HTMLInputElement>('input[name="consumer_app_id"]');
+    if (input?.value?.trim()) {
+      return input.value.trim();
+    }
+  }
+
+  // 2. 从 URL
+  const urlMatch = window.location.href.match(/appid[=/](\d+)/);
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  // 3. 从 meta
+  const metaTag = document.querySelector<HTMLMetaElement>(
+    'meta[name="twitter:app:id:iphone"], meta[property="al:ios:app_store_id"]'
+  );
+  if (metaTag?.content) {
+    return metaTag.content;
+  }
+
+  // 4. 从 editguidesubsection 页面提取(manageguide 页面没有 consumer_app_id)
+  //    Steam 后端把 appid 硬编码在 GetMoreScreenshots 函数体中,只有章节编辑页有
+  const guideId = new URL(window.location.href).searchParams.get("id");
+  if (guideId) {
+    // 找到任意一个 sectionId 来构造 editguidesubsection URL
+    let sectionId: string | undefined;
+    const sectionInput = document.querySelector<HTMLInputElement>('input[name*="sub_sections"]');
+    if (sectionInput) {
+      const m = sectionInput.name.match(/\[(\d+)\]/);
+      if (m) sectionId = m[1];
+    }
+
+    if (sectionId) {
+      try {
+        const response = await fetch(
+          `https://steamcommunity.com/sharedfiles/editguidesubsection/?id=${guideId}&sectionid=${sectionId}`,
+          { method: "GET", credentials: "include" }
+        );
+        const html = await response.text();
+        // Steam 把 appid 硬编码在 GetMoreScreenshots 中: 'appid=' + 2129530 + '&...'
+        const appIdMatch = html.match(/appid='\s*\+\s*(\d+)/);
+        if (appIdMatch) {
+          loggers.bridge.info("从 editguidesubsection 提取 appid", appIdMatch[1]);
+          return appIdMatch[1];
+        }
+      } catch (error) {
+        loggers.bridge.warn("从 editguidesubsection 提取 appid 失败", error);
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * 从 Steam 拉取当前游戏的截图列表
+ *
+ * API: POST https://steamcommunity.com/sharedfiles/userfilesforguide
+ * 参数: appid + sessionid + p(页码) + filetype=4
+ * 注意: 不传 id(指南 ID),这样返回的是该用户在该游戏的所有截图
+ *
+ * @param page 页码,从 1 开始,默认拉取全部页
+ */
+export async function fetchScreenshots(page?: number): Promise<SteamScreenshotItem[]> {
+  const sessionId = resolveSessionId();
+  if (!sessionId) {
+    throw new Error("无法获取 Steam sessionid,请确认已登录 Steam");
+  }
+
+  const appId = await resolveConsumerAppId();
+  if (!appId) {
+    throw new Error("无法获取当前指南绑定的游戏 appid");
+  }
+
+  loggers.bridge.info("开始拉取游戏截图", { appId, page: page ?? "all" });
+
+  const allScreenshots: SteamScreenshotItem[] = [];
+  let currentPage = page ?? 1;
+  const maxPages = page ? page : 20; // 指定页码时只拉一页,否则拉全部
+
+  while (currentPage <= maxPages) {
+    const params = new URLSearchParams();
+    params.set("appid", appId);
+    params.set("sessionid", sessionId);
+    params.set("p", String(currentPage));
+    params.set("filetype", "4");
+
+    const response = await fetch("https://steamcommunity.com/sharedfiles/userfilesforguide", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: params.toString(),
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      throw new Error(`拉取截图列表失败: HTTP ${response.status}`);
+    }
+
+    const json = await response.json() as {
+      success: number;
+      publishedfiledetails?: Record<string, {
+        publishedfileid: string;
+        image_url: string;
+        preview_url: string;
+        filename: string;
+        short_description: string;
+        image_width: number;
+        image_height: number;
+        file_size: string;
+        time_created: number;
+      }>;
+    };
+
+    if (json.success !== 1) {
+      throw new Error(`Steam API 返回失败: success=${json.success}`);
+    }
+
+    const details = json.publishedfiledetails;
+    if (!details || Object.keys(details).length === 0) {
+      break; // 没有更多截图
+    }
+
+    for (const item of Object.values(details)) {
+      allScreenshots.push({
+        publishedfileid: item.publishedfileid,
+        imageUrl: item.image_url,
+        previewUrl: item.preview_url,
+        filename: item.filename,
+        description: item.short_description || "",
+        width: item.image_width,
+        height: item.image_height,
+        fileSize: parseInt(item.file_size, 10) || 0,
+        timeCreated: item.time_created
+      });
+    }
+
+    loggers.bridge.info("截图页加载完成", {
+      page: currentPage,
+      count: Object.keys(details).length,
+      total: allScreenshots.length
+    });
+
+    if (page) break; // 指定页码时只拉一页
+    currentPage++;
+  }
+
+  loggers.bridge.info("截图拉取完成", { total: allScreenshots.length });
+  return allScreenshots;
+}

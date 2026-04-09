@@ -102,6 +102,25 @@ export type SteamSubmitReviewRequest = BridgeBase & {
   };
 };
 
+// === 截图相关 ===
+
+export type SteamScreenshotItem = {
+  publishedfileid: string;
+  imageUrl: string;
+  previewUrl: string;
+  filename: string;
+  description: string;
+  width: number;
+  height: number;
+  fileSize: number;
+  timeCreated: number;
+};
+
+export type SteamFetchScreenshotsRequest = BridgeBase & {
+  action: "fetch-screenshots";
+  page?: number;  // 默认 1
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamPingRequest
@@ -113,7 +132,8 @@ export type SteamBridgeRequest =
   | SteamFetchGuideInfoRequest
   | SteamFetchReviewRequest
   | SteamWriteReviewTextRequest
-  | SteamSubmitReviewRequest;
+  | SteamSubmitReviewRequest
+  | SteamFetchScreenshotsRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

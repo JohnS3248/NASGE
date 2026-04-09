@@ -9,18 +9,20 @@ import type {
   SteamBridgeResponse,
   SteamDeleteImageRequest,
   SteamFetchChapterRequest,
+  SteamFetchScreenshotsRequest,
   SteamSaveChapterRequest,
   SteamFetchChapterListRequest,
   SteamFetchGuideInfoRequest,
   SteamGuideImage,
   SteamPageBridgeRequest,
   SteamPageBridgeResponse,
+  SteamScreenshotItem,
   SteamUploadRequest,
   UploadResult
 } from "../shared/messages";
 import type { ChapterContent } from "./chapterSync";
 import type { GuideInfoResult } from "./guideInfo";
-import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage } from "./steamBridge";
+import { handleUploadRequest, fetchGuideImagePool, deleteGuideImage, fetchScreenshots } from "./steamBridge";
 import { loggers, setDebugMode } from "../shared/logger";
 
 setDebugMode(false);
@@ -64,6 +66,7 @@ type DispatchPayload =
   | { ready: boolean }
   | { success: boolean }
   | SteamGuideImage[]
+  | SteamScreenshotItem[]
   | ChapterContent
   | { sectionId: string }
   | { chapters: Array<{ sectionId: string; title: string; order: number; titleImageUrl?: string }> }
@@ -143,6 +146,12 @@ async function dispatchSteamBridgeMessage(
         const infoRequest = message as SteamFetchGuideInfoRequest;
         const guideInfo = await fetchGuideInfo(infoRequest.guideId);
         sendResponse({ ok: true, data: guideInfo });
+        break;
+      }
+      case "fetch-screenshots": {
+        const screenshotRequest = message as SteamFetchScreenshotsRequest;
+        const screenshots = await fetchScreenshots(screenshotRequest.page);
+        sendResponse({ ok: true, data: screenshots });
         break;
       }
       default: {
