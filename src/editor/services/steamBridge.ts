@@ -2,9 +2,11 @@ import type {
   SteamBridgeRequest,
   SteamBridgeResponse,
   SteamDeleteImageRequest,
+  SteamFetchScreenshotsRequest,
   SteamUploadRequest,
   SteamFetchGuideImagesRequest,
   SteamGuideImage,
+  SteamScreenshotItem,
   UploadResult,
   UploadScope
 } from "../../shared/messages";
@@ -101,6 +103,21 @@ export async function fetchSteamGuideImages(scope: UploadScope = "chapter-previe
   }
 
   return (response.data as SteamGuideImage[]) ?? [];
+}
+
+export async function fetchSteamScreenshots(page?: number): Promise<SteamScreenshotItem[]> {
+  const request: SteamFetchScreenshotsRequest = {
+    channel: "nasge:steam",
+    action: "fetch-screenshots",
+    page
+  };
+
+  const response = await sendSteamRequest(request);
+  if (!response.ok) {
+    throw new Error(response.error);
+  }
+
+  return (response.data as SteamScreenshotItem[]) ?? [];
 }
 
 export async function deleteSteamImage(previewId: string, scope: UploadScope = "chapter-preview"): Promise<void> {

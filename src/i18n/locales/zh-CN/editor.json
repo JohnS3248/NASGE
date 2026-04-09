@@ -127,7 +127,11 @@
     "manageTags": "管理标签",
     "exitFullscreen": "退出全屏",
     "fullscreen": "全屏模式",
-    "minimize": "最小化"
+    "minimize": "最小化",
+    "tab": {
+      "pool": "图片池",
+      "screenshots": "游戏截图"
+    }
   },
   "search": {
     "placeholder": "搜索...",

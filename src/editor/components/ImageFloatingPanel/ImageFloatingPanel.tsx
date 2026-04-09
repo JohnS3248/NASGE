@@ -3,7 +3,7 @@
  * 支持拖拽移动、尺寸调整、折叠、最小化
  */
 import React, { useCallback, useRef, useState, useEffect, useMemo } from "react";
-import { useImagePanelStore, PanelPosition, PanelSize } from "../../stores/useImagePanelStore";
+import { useImagePanelStore, PanelPosition, PanelSize, ImageSourceTab } from "../../stores/useImagePanelStore";
 import { useSteamGuideImageStore, ImageWithState } from "../../stores/useSteamGuideImageStore";
 import { useGuideStore } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
@@ -15,13 +15,17 @@ import TagManager from "./TagManager";
 import SearchBar from "./SearchBar";
 import FullscreenPanel from "./FullscreenPanel";
 import { resizeHandleStyle, SIZES, Z_INDEX } from "./styles";
-import { ImageIcon } from "./icons";
+import { ImageIcon, CameraIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
 import { extractFilesFromPaste } from "../../utils/imageInput";
+import { useTranslation } from "react-i18next";
+import type { SteamScreenshotItem } from "../../../shared/messages";
 
 const ImageFloatingPanel: React.FC = () => {
   // ============ 所有 Hooks 必须在 early return 之前 ============
+
+  const { t } = useTranslation("editor");
 
   const {
     isOpen,
@@ -32,19 +36,29 @@ const ImageFloatingPanel: React.FC = () => {
     sortOrder,
     filterStatus,
     editingImageId,
+    sourceTab,
     setPosition,
     setSize,
     setSortBy,
     toggleSortOrder,
     setFilterStatus,
     setEditingImageId,
+    setSourceTab,
     open,
     close,
     minimize,
     restore
   } = useImagePanelStore();
 
-  const { items: images, status: imagePoolStatus, refresh: refreshImagePool, getImagesByGuide } = useSteamGuideImageStore();
+  const {
+    items: images,
+    status: imagePoolStatus,
+    refresh: refreshImagePool,
+    getImagesByGuide,
+    screenshots,
+    screenshotsStatus,
+    refreshScreenshots
+  } = useSteamGuideImageStore();
 
   const currentArchiveId = useGuideStore((state) => state.currentArchiveId);
   const currentArchive = useArchiveStore((state) => currentArchiveId ? state.archives[currentArchiveId] : undefined);
@@ -53,6 +67,17 @@ const ImageFloatingPanel: React.FC = () => {
     return getImagesByGuide(currentArchiveId);
   }, [getImagesByGuide, currentArchiveId, images]);
 
+  // 截图转换为 ImageWithState 格式，供 ImageGrid 复用
+  const screenshotImages = useMemo((): ImageWithState[] => {
+    return screenshots.map((s: SteamScreenshotItem) => ({
+      previewId: s.publishedfileid,
+      fileName: s.description || s.filename.split("/").pop() || `screenshot_${s.publishedfileid}`,
+      thumbnailUrl: s.previewUrl + "?imw=256&&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=false",
+      originalUrl: s.imageUrl,
+      state: "success" as const
+    }));
+  }, [screenshots]);
+
   const panelRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState<string | null>(null);
@@ -60,9 +85,11 @@ const ImageFloatingPanel: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 搜索、状态筛选、排序后的图片
+  // 根据 tab 选择数据源,然后搜索、状态筛选、排序
+  const sourceImages = sourceTab === "screenshots" ? screenshotImages : archiveImages;
+
   const filteredImages = useMemo(() => {
-    let result = archiveImages;
+    let result = sourceImages;
 
     if (filterStatus !== "all") {
       result = result.filter((image) => {
@@ -114,7 +141,7 @@ const ImageFloatingPanel: React.FC = () => {
     });
 
     return result;
-  }, [archiveImages, searchQuery, currentArchive, filterStatus, sortBy, sortOrder]);
+  }, [sourceImages, searchQuery, currentArchive, filterStatus, sortBy, sortOrder]);
 
   const dragStartRef = useRef<{
     x: number; y: number; posX: number; posY: number; width: number; height: number;
@@ -159,10 +186,22 @@ const ImageFloatingPanel: React.FC = () => {
     }
   }, [imagePoolStatus, refreshImagePool, currentArchiveId]);
 
+  // 切换到截图 tab 时自动拉取(仅首次)
+  useEffect(() => {
+    if (sourceTab === "screenshots" && screenshotsStatus === "idle") {
+      void refreshScreenshots();
+    }
+  }, [sourceTab, screenshotsStatus, refreshScreenshots]);
+
   const handleRefresh = useCallback(() => {
-    loggers.image.info('手动刷新图片池');
-    void refreshImagePool();
-  }, [refreshImagePool]);
+    if (sourceTab === "screenshots") {
+      loggers.image.info("手动刷新截图库");
+      void refreshScreenshots();
+    } else {
+      loggers.image.info("手动刷新图片池");
+      void refreshImagePool();
+    }
+  }, [sourceTab, refreshImagePool, refreshScreenshots]);
 
   // 剪贴板粘贴处理
   const handlePaste = useCallback(async (e: ClipboardEvent) => {
@@ -226,9 +265,9 @@ const ImageFloatingPanel: React.FC = () => {
       >
         {/* 标题栏 */}
         <PanelHeader
-          imageCount={searchQuery ? filteredImages.length : archiveImages.length}
+          imageCount={searchQuery ? filteredImages.length : sourceImages.length}
           archiveName={currentArchive?.guideName}
-          isRefreshing={imagePoolStatus === "loading"}
+          isRefreshing={sourceTab === "screenshots" ? screenshotsStatus === "loading" : imagePoolStatus === "loading"}
           isFullscreen={isFullscreen}
           onDragStart={handleDragStart}
           onRefresh={handleRefresh}
@@ -238,12 +277,34 @@ const ImageFloatingPanel: React.FC = () => {
           onToggleFullscreen={() => setIsFullscreen(true)}
         />
 
+        {/* Tab 栏 */}
+        <div className="flex border-b border-border-accent">
+          {(["pool", "screenshots"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setSourceTab(tab)}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors duration-100 ${
+                sourceTab === tab
+                  ? "text-accent border-b-2 border-accent bg-[rgba(102,192,244,0.08)]"
+                  : "text-text-muted hover:text-text-primary hover:bg-[rgba(102,192,244,0.04)]"
+              }`}
+            >
+              {tab === "pool" ? <ImageIcon size={13} /> : <CameraIcon size={13} />}
+              {t(`imagePanel.tab.${tab}`)}
+              <span className="text-[10px] text-text-muted font-normal">
+                ({tab === "pool" ? archiveImages.length : screenshots.length})
+              </span>
+            </button>
+          ))}
+        </div>
+
         {/* 搜索栏 */}
         <SearchBar
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           resultCount={filteredImages.length}
-          totalCount={archiveImages.length}
+          totalCount={sourceImages.length}
           sortBy={sortBy}
           sortOrder={sortOrder}
           onSortByChange={setSortBy}
@@ -259,7 +320,7 @@ const ImageFloatingPanel: React.FC = () => {
             onImageDoubleClick={handleImageDoubleClick}
             editingImageId={editingImageId}
             onEditingChange={setEditingImageId}
-            isLoading={imagePoolStatus === "loading"}
+            isLoading={sourceTab === "screenshots" ? screenshotsStatus === "loading" : imagePoolStatus === "loading"}
           />
         </div>
 

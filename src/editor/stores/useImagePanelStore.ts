@@ -27,6 +27,9 @@ export type SortOrder = "asc" | "desc";
 /** 筛选状态 */
 export type FilterStatus = "all" | "pending" | "uploading" | "success" | "error";
 
+/** 图片来源 Tab */
+export type ImageSourceTab = "pool" | "screenshots";
+
 /** 窗口位置 */
 export interface PanelPosition {
   x: number;
@@ -93,6 +96,9 @@ export interface ImagePanelRuntimeState {
 
   // 待改名后上传的图片列表
   pendingUploadAfterRename: string[];
+
+  // 来源 Tab
+  sourceTab: ImageSourceTab;
 }
 
 /** Store 完整状态 */
@@ -153,6 +159,9 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
   setDoubleClickToInsert: (enabled: boolean) => void;
   setAfterInsertAction: (action: "none" | "close" | "minimize") => void;
 
+  // ============ Tab 切换 ============
+  setSourceTab: (tab: ImageSourceTab) => void;
+
   // ============ 工具方法 ============
   getThumbnailSizePixels: () => number;
   getImagesPerRow: () => number;
@@ -196,7 +205,8 @@ const DEFAULT_RUNTIME_STATE: ImagePanelRuntimeState = {
   focusedId: null,
   lastSelectedId: null,
   editingImageId: null,
-  pendingUploadAfterRename: []
+  pendingUploadAfterRename: [],
+  sourceTab: "pool"
 };
 
 /**
@@ -511,6 +521,11 @@ export const useImagePanelStore = create<ImagePanelState>()(
 
       setAfterInsertAction: (action) => {
         set({ afterInsertAction: action });
+      },
+
+      // ============ Tab 切换 ============
+      setSourceTab: (tab) => {
+        set({ sourceTab: tab, currentPage: 1, searchQuery: "" });
       },
 
       // ============ 工具方法 ============

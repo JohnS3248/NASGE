@@ -127,7 +127,11 @@
     "manageTags": "Manage Tags",
     "exitFullscreen": "Exit Fullscreen",
     "fullscreen": "Fullscreen",
-    "minimize": "Minimize"
+    "minimize": "Minimize",
+    "tab": {
+      "pool": "Image Pool",
+      "screenshots": "Screenshots"
+    }
   },
   "search": {
     "placeholder": "Search...",

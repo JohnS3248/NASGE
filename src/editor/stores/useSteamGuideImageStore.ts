@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { SteamGuideImage } from "../../shared/messages";
-import { fetchSteamGuideImages } from "../services/steamBridge";
+import type { SteamGuideImage, SteamScreenshotItem } from "../../shared/messages";
+import { fetchSteamGuideImages, fetchSteamScreenshots } from "../services/steamBridge";
 import { useImageStore } from "./useImageStore";
 import { useGuideStore } from "./useGuideStore";
 import { useArchiveStore } from "./useArchiveStore";
@@ -77,6 +77,12 @@ type SteamGuideImageState = {
   addLocalImage: (file: File, linkedGuideId?: string) => Promise<AddImageResult>;
   renameImage: (imageId: string, newFileName: string) => void;
 
+  // === 截图库 ===
+  screenshots: SteamScreenshotItem[];
+  screenshotsStatus: FetchStatus;
+  screenshotsError?: string;
+  refreshScreenshots: () => Promise<void>;
+
   // === 存档关联 ===
   /**
    * 从存档加载缓存的图片
@@ -95,6 +101,24 @@ export const useSteamGuideImageStore = create<SteamGuideImageState>()(
       items: [],
       status: "idle",
       error: undefined,
+
+      // === 截图库(内存级,不持久化) ===
+      screenshots: [],
+      screenshotsStatus: "idle",
+      screenshotsError: undefined,
+
+      refreshScreenshots: async () => {
+        set({ screenshotsStatus: "loading", screenshotsError: undefined });
+        try {
+          const list = await fetchSteamScreenshots();
+          loggers.image.info("截图库加载成功", { count: list.length });
+          set({ screenshots: list, screenshotsStatus: "ready" });
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          loggers.image.error("截图库加载失败:", msg);
+          set({ screenshotsStatus: "error", screenshotsError: msg });
+        }
+      },
 
       // === 基础操作 ===
       refresh: async () => {
