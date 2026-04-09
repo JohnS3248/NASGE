@@ -127,12 +127,26 @@ const App: React.FC = () => {
       void navigator.clipboard?.writeText(bbcode);
       toast.success(t('editor:bbcode.copied'));
     } catch {
-      await dialog.prompt({ message: t('editor:bbcode.copyPrompt'), defaultValue: bbcode });
+      await dialog.prompt({
+        message: t('editor:bbcode.copyPrompt'),
+        defaultValue: bbcode,
+        multiline: true,
+        rows: 16,
+        width: 720,
+        maxLength: 8000,
+      });
     }
   }, [currentHtml, t]);
 
   const handleImportBBCode = useCallback(async () => {
-    const input = await dialog.prompt({ message: t('editor:bbcode.pastePrompt'), defaultValue: "" });
+    const input = await dialog.prompt({
+      message: t('editor:bbcode.pastePrompt'),
+      defaultValue: "",
+      multiline: true,
+      rows: 16,
+      width: 720,
+      maxLength: 8000,
+    });
     if (input === null) return;
     const html = bbcodeToHtml(input);
     let doc: JSONContent;

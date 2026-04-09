@@ -56,7 +56,14 @@ const ConfirmDialog: React.FC = () => {
 const PromptDialog: React.FC = () => {
   const { t } = useTranslation('common');
   const state = useDialogStore((s) => s.state);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+
+  // 受控值（用于显示字符数 + 支持多行 textarea）
+  const [value, setValue] = useState("");
+  const promptDefault = state.kind === "prompt" ? (state.options.defaultValue ?? "") : null;
+  useEffect(() => {
+    if (promptDefault !== null) setValue(promptDefault);
+  }, [promptDefault]);
 
   if (state.kind !== "prompt") return null;
 
@@ -64,31 +71,52 @@ const PromptDialog: React.FC = () => {
   const {
     title = t("input"),
     message,
-    defaultValue = "",
     placeholder = "",
+    multiline = false,
+    rows = 12,
+    width,
+    maxLength,
   } = options;
 
-  const handleSubmit = () => {
-    const value = inputRef.current?.value ?? "";
-    resolve(value);
-  };
+  const dialogWidth = width ?? (multiline ? 720 : 340);
+  const showCounter = multiline || maxLength !== undefined;
+  const exceeded = maxLength !== undefined && value.length > maxLength;
 
+  const handleSubmit = () => resolve(value);
   const handleCancel = () => resolve(null);
 
   return (
-    <DialogShell onCancel={handleCancel} autoFocusRef={inputRef}>
+    <DialogShell onCancel={handleCancel} autoFocusRef={inputRef} width={dialogWidth}>
       <h3 className="text-base font-semibold text-text-primary m-0">{title}</h3>
       <p className="text-sm text-text-secondary leading-relaxed mt-1 mb-2 whitespace-pre-wrap">{message}</p>
-      <input
-        ref={inputRef}
-        type="text"
-        defaultValue={defaultValue}
-        placeholder={placeholder}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") handleSubmit();
-        }}
-        className="w-full px-3 py-1.5 rounded text-sm text-text-primary bg-bg-input border border-border-default focus:border-accent/50 focus:outline-none mb-3 nasge-transition-quick"
-      />
+      {multiline ? (
+        <textarea
+          ref={(el) => { inputRef.current = el; }}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          rows={rows}
+          className="w-full px-3 py-2 rounded text-sm text-text-primary bg-bg-input border border-border-default focus:border-accent/50 focus:outline-none mb-1 nasge-transition-quick font-mono resize-y"
+        />
+      ) : (
+        <input
+          ref={(el) => { inputRef.current = el; }}
+          type="text"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder={placeholder}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleSubmit();
+          }}
+          className="w-full px-3 py-1.5 rounded text-sm text-text-primary bg-bg-input border border-border-default focus:border-accent/50 focus:outline-none mb-1 nasge-transition-quick"
+        />
+      )}
+      {showCounter && (
+        <div className={`text-xs mb-3 text-right tabular-nums ${exceeded ? "text-danger font-medium" : "text-text-muted"}`}>
+          {value.length}{maxLength !== undefined ? ` / ${maxLength}` : ""}{exceeded ? " !" : ""}
+        </div>
+      )}
+      {!showCounter && <div className="mb-2" />}
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -317,12 +345,12 @@ const DialogShell: React.FC<{
   useEffect(() => {
     // 延迟 focus 以等待渲染完成
     const timer = setTimeout(() => {
-      if (autoFocusRef?.current) {
-        autoFocusRef.current.focus();
-        // 如果是 input，选中全部文本
-        if (autoFocusRef.current instanceof HTMLInputElement) {
-          autoFocusRef.current.select();
-        }
+      const el = autoFocusRef?.current;
+      if (!el) return;
+      el.focus();
+      // input 或 textarea 都支持 select()，选中全部内容方便用户直接覆盖
+      if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+        el.select();
       }
     }, 50);
     return () => clearTimeout(timer);

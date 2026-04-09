@@ -17,6 +17,14 @@ interface PromptOptions {
   message: string;
   defaultValue?: string;
   placeholder?: string;
+  /** 多行模式：渲染为 textarea。默认 false（单行 input） */
+  multiline?: boolean;
+  /** 多行模式下的行数。默认 12 */
+  rows?: number;
+  /** 对话框宽度（px）。默认：单行 340，多行 720 */
+  width?: number;
+  /** 字符数限制提示（不强制阻止输入，仅用于显示和超限红色提示） */
+  maxLength?: number;
 }
 
 export interface BatchRenameImage {
