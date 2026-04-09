@@ -686,6 +686,23 @@ describe("图片尺寸对齐组合", () => {
     testRoundtrip("[previewimg=12345;sizeThumb,floatRight;a.png][/previewimg]");
   });
 
+  // screenshot 标签
+  it("screenshot sizeThumb,floatLeft", () => {
+    testRoundtrip("[screenshot=3665948221;sizeThumb,floatLeft;https://images.steamusercontent.com/ugc/123/ABC/][/screenshot]");
+  });
+
+  it("screenshot sizeOriginal,inline", () => {
+    testRoundtrip("[screenshot=1;sizeOriginal,inline;https://cdn.fastly.steamstatic.com/image.jpg][/screenshot]");
+  });
+
+  it("screenshot sizeFull,floatRight", () => {
+    testRoundtrip("[screenshot=999;sizeFull,floatRight;https://example.com/photo.png][/screenshot]");
+  });
+
+  it("screenshot 与文字混排", () => {
+    testRoundtrip("前文\n[screenshot=1;sizeOriginal,floatLeft;https://example.com/a.jpg][/screenshot]\n后文");
+  });
+
   // 原始 [img] 标签（非 preview 形式）
   it("[img] 原始图片标签", () => {
     testRoundtrip("[img]https://example.com/a.png[/img]");

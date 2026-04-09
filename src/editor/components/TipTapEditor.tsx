@@ -472,20 +472,26 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const alignment = alignmentMap[defaultInsertAlignment] || "inline";
 
       // 插入每张图片
+      const isScreenshot = dragData.type === "steam-screenshot";
       for (const image of dragData.images) {
         editor.commands.insertSteamImage({
           previewId: image.previewId || null,
           fileName: image.fileName,
           previewDataUrl: image.localUrl || image.thumbnailUrl || null,
           sizePreset,
-          alignment
+          alignment,
+          ...(isScreenshot && image.imageUrl ? {
+            source: "screenshot",
+            imageUrl: image.imageUrl
+          } : {})
         });
 
         loggers.image.verbose("插入图片节点", {
           fileName: image.fileName,
           previewId: image.previewId,
           sizePreset,
-          alignment
+          alignment,
+          isScreenshot
         });
       }
 
@@ -523,7 +529,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
 
         try {
           const dragData = JSON.parse(nasgeData) as ImageDragData;
-          if (dragData.type === "steam-image" && dragData.images?.length > 0) {
+          if ((dragData.type === "steam-image" || dragData.type === "steam-screenshot") && dragData.images?.length > 0) {
             // 获取拖放位置
             const coords = editor.view.posAtCoords({
               left: event.clientX,

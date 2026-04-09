@@ -144,6 +144,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     const fileName = node.getAttribute("data-file-name") ?? "image.png";
     const sizePreset = node.getAttribute("data-size-preset") ?? "original";
     const alignment = node.getAttribute("data-alignment") ?? "floatLeft";
+    const source = node.getAttribute("data-source");
+    const imageUrl = node.getAttribute("data-image-url");
 
     // 将内部格式转换回 BBCode 格式
     // Steam BBCode: 半宽 = sizeThumb（不是 sizeHalf）
@@ -157,7 +159,13 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
       : alignment === "inline" ? "inline"
       : "floatLeft";
 
-    // SteamImage (figure) 总是使用 previewimg 标签
+    // screenshot 类型：[screenshot=ID;size,alignment;URL][/screenshot]
+    if (source === "screenshot" && imageUrl) {
+      const bbcode = `[screenshot=${previewId};${sizeToken},${alignToken};${imageUrl}][/screenshot]`;
+      return block(bbcode, context);
+    }
+
+    // 普通图片：previewimg 标签
     const tagType = "previewimg";
     const bbcode = `[${tagType}=${previewId};${sizeToken},${alignToken};${fileName}][/${tagType}]`;
 
@@ -353,7 +361,7 @@ export function bbcodeTitleToHtml(bbcode: string): string {
   let html = bbcode;
 
   // 检查是否包含图片 BBCode
-  const hasImage = /\[previewicon=|\[previewimg=|\[img]/i.test(html);
+  const hasImage = /\[previewicon=|\[previewimg=|\[screenshot=|\[img]/i.test(html);
 
   if (hasImage) {
     // Steam 图片格式：[previewicon=id;size,align;filename.png][/previewicon]
@@ -475,6 +483,17 @@ export function bbcodeToHtml(bbcode: string): string {
 
     const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="${filename}" data-size-preset="${preset}" data-alignment="${alignment}"></figure>`;
     loggers.editor.verbose('bbcodeToHtml previewimg 转换:', { id, styleStr, filename, preset, alignment, figureTag });
+    return figureTag;
+  });
+
+  // [screenshot=id;size,align;url][/screenshot]
+  html = html.replace(/\[screenshot=([^;]+);([^;]+);([^\]]+)]\[\/screenshot]/gi, (_, id, styleStr, imageUrl) => {
+    const [sizeToken, alignToken] = styleStr.split(',').map((s: string) => s.trim());
+    const preset = parseSizeToken(sizeToken);
+    const alignment = parseAlignmentToken(alignToken);
+
+    const figureTag = `<figure data-nasge-image="true" data-preview-id="${id}" data-file-name="" data-size-preset="${preset}" data-alignment="${alignment}" data-source="screenshot" data-image-url="${imageUrl}"></figure>`;
+    loggers.editor.verbose('bbcodeToHtml screenshot 转换:', { id, styleStr, imageUrl, preset, alignment });
     return figureTag;
   });
 

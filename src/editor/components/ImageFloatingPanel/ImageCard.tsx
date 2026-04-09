@@ -16,7 +16,7 @@ import { loggers } from "../../../shared/logger";
 
 /** 拖拽数据格式 */
 export interface ImageDragData {
-  type: "steam-image";
+  type: "steam-image" | "steam-screenshot";
   images: Array<{
     imageId: string;
     previewId: string;
@@ -24,6 +24,7 @@ export interface ImageDragData {
     thumbnailUrl?: string;
     originalUrl?: string;
     localUrl?: string;
+    imageUrl?: string;  // screenshot 专用: 完整 URL
   }>;
 }
 
@@ -217,15 +218,17 @@ const ImageCard: React.FC<ImageCardProps> = ({
       if (selectedImages.length > 1) imagesToDrag = selectedImages;
     }
 
+    const isScreenshotTab = useImagePanelStore.getState().sourceTab === "screenshots";
     const dragData: ImageDragData = {
-      type: "steam-image",
+      type: isScreenshotTab ? "steam-screenshot" : "steam-image",
       images: imagesToDrag.map(img => ({
         imageId: img.previewId || img.fileName,
         previewId: img.previewId || "",
         fileName: img.fileName,
         thumbnailUrl: img.thumbnailUrl,
         originalUrl: img.originalUrl,
-        localUrl: img.localUrl
+        localUrl: img.localUrl,
+        imageUrl: isScreenshotTab ? img.originalUrl : undefined
       }))
     };
 

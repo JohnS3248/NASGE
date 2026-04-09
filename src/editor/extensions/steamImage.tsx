@@ -109,6 +109,20 @@ const SteamImage = Node.create({
           default: null,
           renderHTML: () => ({}),
           parseHTML: () => null
+        },
+        source: {
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-source": attributes.source
+          }),
+          parseHTML: (element) => element.getAttribute("data-source")
+        },
+        imageUrl: {
+          default: null,
+          renderHTML: (attributes) => ({
+            "data-image-url": attributes.imageUrl
+          }),
+          parseHTML: (element) => element.getAttribute("data-image-url")
         }
       };
     },
@@ -124,7 +138,9 @@ const SteamImage = Node.create({
               fileName: el.getAttribute("data-file-name") || null,
               sizePreset: el.getAttribute("data-size-preset") || DEFAULT_IMAGE_PRESET,
               alignment: el.getAttribute("data-alignment") || DEFAULT_IMAGE_ALIGNMENT,
-              imageNodeId: el.getAttribute("data-image-node-id") || null
+              imageNodeId: el.getAttribute("data-image-node-id") || null,
+              source: el.getAttribute("data-source") || null,
+              imageUrl: el.getAttribute("data-image-url") || null
             };
           }
         }
@@ -186,6 +202,11 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const attrUploadId = node.attrs.uploadId as string | null;
   const attrFileName = node.attrs.fileName as string | null;
   const attrPreviewDataUrl = node.attrs.previewDataUrl as string | null;
+  const attrSource = node.attrs.source as string | null;
+  const attrImageUrl = node.attrs.imageUrl as string | null;
+
+  // screenshot 类型直接用 imageUrl，跳过 store 查找
+  const isScreenshot = attrSource === "screenshot" && !!attrImageUrl;
 
   // 从 useImageStore 获取图片实体
   const imageEntity = useImageFromStore(imageNodeId, attrPreviewId);
@@ -258,6 +279,18 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const { containerStyle, imageStyle, placeholderStyle, statusStyle, statusLabel } = useMemo(() => {
     const effectiveSizePreset = attrSizePreset || DEFAULT_IMAGE_PRESET;
     const effectiveAlignment = attrAlignment || DEFAULT_IMAGE_ALIGNMENT;
+
+    // screenshot 类型：有 imageUrl，直接渲染
+    if (isScreenshot) {
+      const { containerStyle, imageStyle } = computeDisplayStyles(effectiveSizePreset, effectiveAlignment);
+      return {
+        containerStyle,
+        imageStyle,
+        placeholderStyle: placeholderImageStyle(),
+        statusStyle: undefined,
+        statusLabel: undefined
+      };
+    }
 
     // 从 Steam 图片池导入的图片（尚未注册到 useImageStore）
     if (steamPoolImage && !imageEntity) {
@@ -343,6 +376,11 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   }, [imageEntity?.steamUrls?.originalUrl]);
 
   const src = useMemo(() => {
+    // screenshot 类型直接用 imageUrl
+    if (isScreenshot) {
+      return attrImageUrl!;
+    }
+
     const attrPreview = attrPreviewDataUrl ?? undefined;
 
     if (imageEntity) {
@@ -362,7 +400,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
     }
 
     return attrPreview;
-  }, [imageEntity, steamPoolImage, attrPreviewDataUrl, cdnUrlLoadFailed]);
+  }, [imageEntity, steamPoolImage, attrPreviewDataUrl, cdnUrlLoadFailed, isScreenshot, attrImageUrl]);
 
   const handleImageLoad = useCallback(() => {
     if (imageEntity && imageEntity.status === "uploaded" && imageEntity.source === "bbcode") {
