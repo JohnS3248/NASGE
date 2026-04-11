@@ -237,8 +237,14 @@
     "previewHint": "输入 URL 后预览",
     "loading": "加载中...",
     "loadFailed": "该图片不可用",
-    "hint": "仅支持 HTTPS 开头的外链，非 HTTPS 的外链图片（比如 Wikipedia）可能无法显示",
-    "insert": "插入"
+    "hint": "仅支持 HTTPS 开头的外链。Steam 会按字符白名单截断 URL，编辑器预览的就是 Steam 实际渲染的结果。注意：不保证外链可用性查询以及丢弃查询参数后的显示结果准确性，请以 Steam 实际渲染为准。",
+    "insert": "插入",
+    "steamChecking": "正在验证 Steam 端可用性...",
+    "steamAvailable": "Steam 端可正常显示",
+    "steamUnavailable": "Steam 端无法加载该图片，无法插入",
+    "steamTruncated": "URL 含字符 {{char}}，Steam 会截断到 {{truncated}}",
+    "steamDroppedQuery": "Steam 会丢弃查询参数，实际加载 {{truncated}}",
+    "steamDroppedHash": "Steam 会丢弃 # 后内容，实际加载 {{truncated}}"
   },
   "time": {
     "justNow": "刚刚",

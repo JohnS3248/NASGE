@@ -237,8 +237,14 @@
     "previewHint": "Enter URL to preview",
     "loading": "Loading...",
     "loadFailed": "Image unavailable",
-    "hint": "Only HTTPS URLs are supported. Non-HTTPS external images (e.g. Wikipedia) may not display correctly",
-    "insert": "Insert"
+    "hint": "Only HTTPS URLs are supported. Steam truncates URLs by a character whitelist — what you see in the preview is what Steam will actually render. Note: external URL availability checks and previews of query-dropped URLs are not guaranteed to match Steam's actual rendering — verify on Steam.",
+    "insert": "Insert",
+    "steamChecking": "Verifying Steam availability...",
+    "steamAvailable": "Renders correctly on Steam",
+    "steamUnavailable": "Steam cannot load this image — insertion blocked",
+    "steamTruncated": "URL contains {{char}}; Steam will truncate to {{truncated}}",
+    "steamDroppedQuery": "Steam will drop query parameters; actual URL: {{truncated}}",
+    "steamDroppedHash": "Steam will drop the # fragment; actual URL: {{truncated}}"
   },
   "time": {
     "justNow": "Just now",

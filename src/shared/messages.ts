@@ -121,6 +121,12 @@ export type SteamFetchScreenshotsRequest = BridgeBase & {
   page?: number;  // 默认 1
 };
 
+export type SteamVerifyImageUrlRequest = BridgeBase & {
+  action: "verify-image-url";
+  url: string;
+  timeout?: number;  // 毫秒,默认 5000
+};
+
 export type SteamBridgeRequest =
   | SteamUploadRequest
   | SteamPingRequest
@@ -133,7 +139,8 @@ export type SteamBridgeRequest =
   | SteamFetchReviewRequest
   | SteamWriteReviewTextRequest
   | SteamSubmitReviewRequest
-  | SteamFetchScreenshotsRequest;
+  | SteamFetchScreenshotsRequest
+  | SteamVerifyImageUrlRequest;
 
 export type SteamSuccessResponse<TData = unknown> = {
   ok: true;

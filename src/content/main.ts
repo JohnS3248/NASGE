@@ -10,6 +10,7 @@ import type {
   SteamDeleteImageRequest,
   SteamFetchChapterRequest,
   SteamFetchScreenshotsRequest,
+  SteamVerifyImageUrlRequest,
   SteamSaveChapterRequest,
   SteamFetchChapterListRequest,
   SteamFetchGuideInfoRequest,
@@ -65,6 +66,7 @@ type DispatchPayload =
   | UploadResult
   | { ready: boolean }
   | { success: boolean }
+  | { available: boolean; width?: number; height?: number }
   | SteamGuideImage[]
   | SteamScreenshotItem[]
   | ChapterContent
@@ -152,6 +154,28 @@ async function dispatchSteamBridgeMessage(
         const screenshotRequest = message as SteamFetchScreenshotsRequest;
         const screenshots = await fetchScreenshots(screenshotRequest.page);
         sendResponse({ ok: true, data: screenshots });
+        break;
+      }
+      case "verify-image-url": {
+        const verifyRequest = message as SteamVerifyImageUrlRequest;
+        const timeout = verifyRequest.timeout ?? 5000;
+        const result = await new Promise<{ available: boolean; width?: number; height?: number }>((resolve) => {
+          const img = new Image();
+          const timer = setTimeout(() => {
+            img.src = "";
+            resolve({ available: false });
+          }, timeout);
+          img.onload = () => {
+            clearTimeout(timer);
+            resolve({ available: true, width: img.naturalWidth, height: img.naturalHeight });
+          };
+          img.onerror = () => {
+            clearTimeout(timer);
+            resolve({ available: false });
+          };
+          img.src = verifyRequest.url;
+        });
+        sendResponse({ ok: true, data: result });
         break;
       }
       default: {

@@ -3,6 +3,7 @@ import type {
   SteamBridgeResponse,
   SteamDeleteImageRequest,
   SteamFetchScreenshotsRequest,
+  SteamVerifyImageUrlRequest,
   SteamUploadRequest,
   SteamFetchGuideImagesRequest,
   SteamGuideImage,
@@ -11,6 +12,7 @@ import type {
   UploadScope
 } from "../../shared/messages";
 import { loggers } from "../../shared/logger";
+import { simulateSteamUrlTruncation, type SteamUrlAnalysis } from "../utils/steamUrlTruncation";
 
 const RUNTIME = chrome?.runtime;
 
@@ -118,6 +120,35 @@ export async function fetchSteamScreenshots(page?: number): Promise<SteamScreens
   }
 
   return (response.data as SteamScreenshotItem[]) ?? [];
+}
+
+export interface VerifySteamImageUrlResult extends SteamUrlAnalysis {
+  available: boolean;
+  width?: number;
+  height?: number;
+}
+
+export async function verifySteamImageUrl(url: string): Promise<VerifySteamImageUrlResult> {
+  const analysis = simulateSteamUrlTruncation(url);
+
+  const request: SteamVerifyImageUrlRequest = {
+    channel: "nasge:steam",
+    action: "verify-image-url",
+    url: analysis.truncated
+  };
+
+  const response = await sendSteamRequest(request);
+  if (!response.ok) {
+    return { available: false, ...analysis };
+  }
+
+  const probe = response.data as { available: boolean; width?: number; height?: number };
+  return {
+    available: probe.available,
+    width: probe.width,
+    height: probe.height,
+    ...analysis
+  };
 }
 
 export async function deleteSteamImage(previewId: string, scope: UploadScope = "chapter-preview"): Promise<void> {

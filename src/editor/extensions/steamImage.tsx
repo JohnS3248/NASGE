@@ -10,6 +10,7 @@ import type { ImageEntity, ImageSizePreset, ImageAlignment, ImageSource } from "
 import { DEFAULT_IMAGE_PRESET, DEFAULT_IMAGE_ALIGNMENT } from "../types/image";
 import { ImageIcon } from "../components/ImageFloatingPanel/icons";
 import { loggers } from "../../shared/logger";
+import { simulateSteamUrlTruncation } from "../utils/steamUrlTruncation";
 
 // Steam 尺寸常量 (来自 Steam 实际测量 2025-12-31)
 const STEAM_CONTENT_WIDTH = 638;
@@ -377,8 +378,9 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
   const src = useMemo(() => {
     // screenshot 类型直接用 imageUrl
+    // 对外链 URL 套 Steam 截断，使编辑器渲染 = Steam 实际渲染
     if (isScreenshot) {
-      return attrImageUrl!;
+      return simulateSteamUrlTruncation(attrImageUrl!).truncated;
     }
 
     const attrPreview = attrPreviewDataUrl ?? undefined;
