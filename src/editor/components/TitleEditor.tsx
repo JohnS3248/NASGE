@@ -28,6 +28,9 @@ interface TitleEditorProps {
 
 type ImageContextPayload = {
   imageNodeId: string;
+  pos: number | null;
+  sizePreset: ImageSizePreset;
+  alignment: ImageAlignment;
 };
 
 type ContextMenuMode = "selection" | "empty" | "image";
@@ -175,41 +178,54 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     }
   }, [contextMenu]);
 
-  // 获取当前右键菜单对应的图片节点
-  const contextMenuImageEntity = contextMenu.mode === "image" && contextMenu.payload?.imageNodeId
-    ? resolveImage(contextMenu.payload.imageNodeId)
-    : undefined;
-  const contextMenuImageNode = contextMenuImageEntity
+  // 从 payload 直接读取当前 preset/alignment（来自节点 attrs，与 TipTapEditor 一致）
+  const contextMenuImageNode = contextMenu.mode === "image" && contextMenu.payload
     ? {
         display: {
-          preset: contextMenuImageEntity.display.preset,
-          alignment: contextMenuImageEntity.display.alignment,
-          customWidthPx: contextMenuImageEntity.display.customWidthPx
+          preset: contextMenu.payload.sizePreset,
+          alignment: contextMenu.payload.alignment
         }
       }
     : undefined;
 
-  // 应用图片尺寸预设
+  // 应用图片尺寸预设（双写：TipTap 节点属性 + Store）
   const applyImagePreset = useCallback((preset: ImageDisplayPreset) => {
-    if (!contextMenu.payload?.imageNodeId) return;
-    updateImageDisplay(contextMenu.payload.imageNodeId, { preset });
-  }, [contextMenu.payload?.imageNodeId, updateImageDisplay]);
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) return;
+    const pos = contextMenu.payload.pos;
+    const nodeId = contextMenu.payload.imageNodeId;
+    if (pos !== null) {
+      editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+        sizePreset: preset
+      }).run();
+      updateImageDisplay(nodeId, { preset });
+    }
+  }, [contextMenu, editor, updateImageDisplay]);
 
-  // 应用图片对齐方式
+  // 应用图片对齐方式（双写：TipTap 节点属性 + Store）
   const applyImageAlignment = useCallback((alignment: ImageAlignment) => {
-    if (!contextMenu.payload?.imageNodeId) return;
-    updateImageDisplay(contextMenu.payload.imageNodeId, { alignment });
-  }, [contextMenu.payload?.imageNodeId, updateImageDisplay]);
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) return;
+    const pos = contextMenu.payload.pos;
+    const nodeId = contextMenu.payload.imageNodeId;
+    if (pos !== null) {
+      editor.chain().focus().setNodeSelection(pos).updateAttributes("steamImage", {
+        alignment
+      }).run();
+      updateImageDisplay(nodeId, { alignment });
+    }
+  }, [contextMenu, editor, updateImageDisplay]);
 
-  // 删除图片
+  // 删除图片（双写：TipTap 删除节点 + Store 移除记录）
   const handleDeleteImage = useCallback(() => {
     if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
       return;
     }
-
+    const pos = contextMenu.payload.pos;
     const nodeId = contextMenu.payload.imageNodeId;
-    editor.commands.focus();
-    editor.chain().focus().deleteSelection().run();
+    if (pos !== null) {
+      editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
+    } else {
+      editor.chain().focus().deleteSelection().run();
+    }
     removeImageNode(nodeId);
   }, [contextMenu, editor, removeImageNode]);
 
@@ -379,73 +395,65 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         className="w-full text-accent text-lg font-normal outline-none"
         style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif', '--title-placeholder': `'${t('titleEditor.placeholder')}'` } as React.CSSProperties}
         onContextMenu={(event) => {
-          event.preventDefault();
-          if (!editor) {
-            loggers.editor.verbose('TitleEditor onContextMenu: editor not ready');
-            return;
-          }
+          if (!editor) return;
 
           const target = event.target as HTMLElement;
-          loggers.editor.verbose('TitleEditor onContextMenu triggered', {
-            target: target.tagName,
-            targetClass: target.className
-          });
+          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
 
-          // 检查是否点击了图片容器
-          const imageContainer = target.classList.contains('nasge-image-node')
-            ? target
-            : target.closest<HTMLElement>('.nasge-image-node');
-
-          if (imageContainer) {
-            // 直接从 DOM 属性获取 imageNodeId
-            const imageNodeId = imageContainer.dataset.imageNodeId;
-            loggers.editor.verbose('TitleEditor Found image container, imageNodeId from DOM:', imageNodeId);
-
+          if (imageElement) {
+            const imageNodeId = imageElement.dataset.imageNodeId;
             if (imageNodeId) {
-              // 获取点击坐标
+              event.preventDefault();
+
               const coords = editor.view.posAtCoords({
                 left: event.clientX,
                 top: event.clientY
               });
 
-              loggers.editor.verbose('TitleEditor Click coords:', coords);
+              // 从节点 attrs 读取当前 preset/alignment（与 TipTapEditor 一致）
+              let nodeSizePreset: ImageSizePreset = "original";
+              let nodeAlignment: ImageAlignment = "inline";
+              let targetPos: number | null = null;
 
-              // 遍历文档查找匹配的 steamImage 节点
-              let foundPos: number | null = null;
-              editor.state.doc.descendants((node, pos) => {
-                if (node.type.name === 'steamImage' && node.attrs.imageNodeId === imageNodeId) {
-                  foundPos = pos;
-                  return false; // 停止遍历
-                }
-              });
+              if (coords?.pos != null) {
+                const clickPos = coords.pos;
+                editor.state.doc.descendants((node, pos) => {
+                  if (node.type.name === "steamImage") {
+                    const nodeEnd = pos + node.nodeSize;
+                    if (clickPos >= pos && clickPos <= nodeEnd) {
+                      nodeSizePreset = (node.attrs.sizePreset as ImageSizePreset) || "original";
+                      nodeAlignment = (node.attrs.alignment as ImageAlignment) || "inline";
+                      targetPos = pos;
+                      return false;
+                    }
+                  }
+                  return true;
+                });
 
-              if (foundPos !== null) {
-                loggers.editor.verbose('TitleEditor Found steamImage node at position:', foundPos);
-
-                // 选中该节点
                 editor
                   .chain()
                   .focus()
-                  .setNodeSelection(foundPos)
+                  .setNodeSelection(targetPos ?? clickPos)
                   .run();
-
-                setContextMenu({
-                  visible: true,
-                  x: event.clientX,
-                  y: event.clientY,
-                  mode: "image",
-                  payload: { imageNodeId }
-                });
-                return;
               } else {
-                loggers.editor.warn('TitleEditor steamImage node not found in document for imageNodeId:', imageNodeId);
+                editor.commands.focus();
               }
-            } else {
-              loggers.editor.warn('TitleEditor Container found but no imageNodeId in dataset');
+
+              setContextMenu({
+                visible: true,
+                x: event.clientX,
+                y: event.clientY,
+                mode: "image",
+                payload: {
+                  imageNodeId,
+                  pos: targetPos ?? coords?.pos ?? null,
+                  sizePreset: nodeSizePreset,
+                  alignment: nodeAlignment
+                }
+              });
+              return;
             }
           }
-
-          loggers.editor.verbose('TitleEditor No valid image node found');
         }}
       >
         <EditorContent editor={editor} />
