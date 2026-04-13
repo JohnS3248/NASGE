@@ -538,7 +538,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
   if (isCollapsed) {
     return (
-      <aside style={positionStyle()}>
+      <aside data-tour="chapter-nav" style={positionStyle()}>
         <button
           type="button"
           onClick={() => setIsCollapsed(false)}
@@ -555,6 +555,7 @@ const ChapterNav: React.FC<ChapterNavProps> = ({ onRefresh, isRefreshing = false
 
   return (
     <aside
+      data-tour="chapter-nav"
       className="w-[300px] rounded-lg bg-bg-app/80 border border-border-subtle shadow-md flex flex-col max-h-full overflow-hidden animate-dropdown-enter"
       style={positionStyle()}
       onMouseDown={handleNavMouseDown}

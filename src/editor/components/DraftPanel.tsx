@@ -297,7 +297,7 @@ const DraftPanel: React.FC = () => {
   // ---- 渲染 ----
 
   return (
-    <div data-draft-panel ref={panelRef} className="relative">
+    <div data-draft-panel data-tour="draft-panel" ref={panelRef} className="relative">
       {/* 触发器 bar — 始终可见，样式不变 */}
       <div className="flex items-center gap-2">
         <button

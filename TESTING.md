@@ -15,7 +15,8 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 4. **迁移事故**：老版本数据升级时被破坏
 
 对这些风险之外的代码（React 组件、Chrome 扩展集成、TipTap 扩展渲染），我们**明确接受不用单元测试覆盖**，改用：
-- 手动验收（browser DevTools eval / 真实扩展加载）
+
+- 手动验收
 - TypeScript 类型检查
 - 代码审查
 
@@ -25,30 +26,30 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 ## 2. 当前测试资产
 
-| 指标 | 数值 |
-|------|------|
-| 测试文件 | 10 |
-| 测试用例 | 325 |
-| 总行覆盖率 | 21% |
-| 已测文件分支覆盖率 | 86% |
+| 指标               | 数值 |
+| ------------------ | ---- |
+| 测试文件           | 10   |
+| 测试用例           | 325  |
+| 总行覆盖率         | 21%  |
+| 已测文件分支覆盖率 | 86%  |
 
 **21% 不是"只有 21% 的代码安全"**，而是：
 
-| 区域 | 覆盖率 | 意图 |
-|------|------|------|
-| `editor/utils/bbcode.ts` | **97%** | 致命风险，必测 |
-| `editor/utils/previewImageBBCode.ts` | **100%** | 致命风险，必测 |
-| `editor/stores/useDraftStore.ts` | **100%** | 致命风险，必测 |
-| `editor/stores/useArchiveStore.ts` | **100%** | 致命风险，必测 |
-| `editor/stores/useGuideStore.ts` | **100%** | 致命风险，必测 |
-| `editor/stores/useSteamGuideImageStore.ts` | **99%** | 致命风险，必测 |
-| `editor/stores/useEditorConfigStore.ts` | **98%** | 中风险，必测 |
-| `editor/services/imagePoolIntake.ts` | **99%** | 致命风险，必测 |
-| `editor/services/ImageUploadService.ts` | 51% | 池队列路径完覆盖，editor 上传路径未覆盖 |
-| `editor/components/**` | ~0% | **刻意不测**（UI） |
-| `editor/hooks/**` | ~0% | **刻意不测**（UI 辅助） |
-| `editor/extensions/**` | ~7% | **刻意不测**（依赖 TipTap runtime） |
-| `content/**` / `background/**` / `popup/**` | 已排除 | **刻意不测**（Chrome 扩展集成） |
+| 区域                                              | 覆盖率         | 意图                                      |
+| ------------------------------------------------- | -------------- | ----------------------------------------- |
+| `editor/utils/bbcode.ts`                        | **97%**  | 致命风险，必测                            |
+| `editor/utils/previewImageBBCode.ts`            | **100%** | 致命风险，必测                            |
+| `editor/stores/useDraftStore.ts`                | **100%** | 致命风险，必测                            |
+| `editor/stores/useArchiveStore.ts`              | **100%** | 致命风险，必测                            |
+| `editor/stores/useGuideStore.ts`                | **100%** | 致命风险，必测                            |
+| `editor/stores/useSteamGuideImageStore.ts`      | **99%**  | 致命风险，必测                            |
+| `editor/stores/useEditorConfigStore.ts`         | **98%**  | 中风险，必测                              |
+| `editor/services/imagePoolIntake.ts`            | **99%**  | 致命风险，必测                            |
+| `editor/services/ImageUploadService.ts`         | 51%            | 池队列路径完覆盖，editor 上传路径未覆盖   |
+| `editor/components/**`                          | ~0%            | **刻意不测**（UI）                  |
+| `editor/hooks/**`                               | ~0%            | **刻意不测**（UI 辅助）             |
+| `editor/extensions/**`                          | ~7%            | **刻意不测**（依赖 TipTap runtime） |
+| `content/**` / `background/**` / `popup/**` | 已排除         | **刻意不测**（Chrome 扩展集成）     |
 
 把这些"刻意不测"的代码算进分母，总覆盖率必然低。这是正常的。
 
@@ -57,6 +58,7 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 ## 3. 致命风险清单 + 防护评级
 
 评级说明：
+
 - 🟢 **完善**：至少 3 个相关测试，分支覆盖充分，修改时会立即红
 - 🟡 **部分**：核心路径有测试，但边界或错误分支未完全覆盖
 - 🔴 **缺失**：无测试防护，靠手动验收
@@ -86,15 +88,15 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 - **相关代码**：所有 `persist(..., { version, migrate })` 的 store
 - **防护测试**：
 
-| Store | 当前 version | migrate 测试 | 评级 |
-|-------|------------|------------|------|
-| `useDraftStore` | v2 | ✅ `v0 → v1 migrate 自动补 nextDraftNumber` | 🟢 |
-| `useArchiveStore` | v1 | ✅ `v0 数据缺 imageTags/imageTagMap → migrate 自动补` + `空 persisted state → migrate 返回空 archives` | 🟢 |
-| `useEditorConfigStore` | 无显式 version | ✅ 6 个 merge 测试覆盖字段缺失自动补默认 | 🟢 |
-| `useGuideStore` | v1 | 无显式 migrate（结构稳定） | 🟡 |
-| `useSteamGuideImageStore` | v1 | 无 migrate（partialize 只存 pending） | 🟡 |
-| `useImagePanelStore` | v1 | 无测试 | 🟡 |
-| `useImageStore` | v1 | 无测试 | 🟡 |
+| Store                       | 当前 version   | migrate 测试                                                                                                | 评级 |
+| --------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------- | ---- |
+| `useDraftStore`           | v2             | ✅`v0 → v1 migrate 自动补 nextDraftNumber`                                                               | 🟢   |
+| `useArchiveStore`         | v1             | ✅`v0 数据缺 imageTags/imageTagMap → migrate 自动补` + `空 persisted state → migrate 返回空 archives` | 🟢   |
+| `useEditorConfigStore`    | 无显式 version | ✅ 6 个 merge 测试覆盖字段缺失自动补默认                                                                    | 🟢   |
+| `useGuideStore`           | v1             | 无显式 migrate（结构稳定）                                                                                  | 🟡   |
+| `useSteamGuideImageStore` | v1             | 无 migrate（partialize 只存 pending）                                                                       | 🟡   |
+| `useImagePanelStore`      | v1             | 无测试                                                                                                      | 🟡   |
+| `useImageStore`           | v1             | 无测试                                                                                                      | 🟡   |
 
 - **总评级**：🟡 部分
 - **风险**：核心数据 store（Draft / Archive / EditorConfig）已完善，但外围 store（SteamGuideImage / ImagePanel / Image）未来改 schema 时会有盲区
@@ -198,13 +200,13 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 ### 3.5 刻意不测的风险（接受，靠手动验收）
 
-| 风险 | 为什么不测 | 缓解 |
-|------|----------|------|
-| R13 — Steam 页面 DOM 变动导致 `steamBridge` 抓取失败 | 需要真实 Steam 页面 + Chrome 扩展环境，vitest 无法 mock 到有用程度 | 扩展加载后手动验收；CLAUDE.md 已 flag steamBridge 为 critical |
-| R14 — Chrome 扩展 manifest 权限遗漏 | manifest schema 由 Chrome runtime 校验 | build 阶段会 catch；真实加载时 Chrome 报错 |
-| R15 — TipTap 扩展渲染（`steamImage` / `steamImageInline` / `spoiler`）异常 | 依赖 TipTap runtime，单测代价 >> 收益 | BBCode roundtrip 间接验证 + 手动验收 |
-| R16 — React 组件交互（按钮、对话框、面板） | 需要 React Testing Library，违反"不过度"原则 | 浏览器 DevTools 手动验收 |
-| R17 — content script 与 Steam 页面通信 | 无 Chrome API mock | MVP 脚本 in `tests/` + 手动验收 |
+| 风险                                                                              | 为什么不测                                                         | 缓解                                                          |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| R13 — Steam 页面 DOM 变动导致 `steamBridge` 抓取失败                           | 需要真实 Steam 页面 + Chrome 扩展环境，vitest 无法 mock 到有用程度 | 扩展加载后手动验收；CLAUDE.md 已 flag steamBridge 为 critical |
+| R14 — Chrome 扩展 manifest 权限遗漏                                              | manifest schema 由 Chrome runtime 校验                             | build 阶段会 catch；真实加载时 Chrome 报错                    |
+| R15 — TipTap 扩展渲染（`steamImage` / `steamImageInline` / `spoiler`）异常 | 依赖 TipTap runtime，单测代价 >> 收益                              | BBCode roundtrip 间接验证 + 手动验收                          |
+| R16 — React 组件交互（按钮、对话框、面板）                                       | 需要 React Testing Library，违反"不过度"原则                       | 浏览器 DevTools 手动验收                                      |
+| R17 — content script 与 Steam 页面通信                                           | 无 Chrome API mock                                                 | MVP 脚本 in `tests/` + 手动验收                             |
 
 ---
 
@@ -212,12 +214,12 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 扫完 325 个测试，**没有发现明显可删的冗余**。略微可精简的候选：
 
-| 候选 | 测试数 | 删除理由 | 保留理由 | 结论 |
-|------|------|--------|--------|------|
-| `previewImageBBCode.test.ts > decodePreviewImage 结构缺失` | 5 | 结构异常输入是防御性编程，未必真实触发 | 已出现过 raw 值 null/空字符串的真实 bug（commit `ae2de8f`） | **保留** |
-| `useEditorConfigStore > matchShortcut 工具函数` | 10 | 快捷键匹配是小工具函数 | 修饰键组合容易出 bug，且测试跑得快 | **保留** |
-| `useEditorConfigStore > 右键菜单 reorderMenuItems` | 3 | UI 细节 | 纯函数 reducer，几乎零维护成本 | **保留** |
-| `useArchiveStore > 标签 CRUD` | 10 | 标签功能非核心 | 影响用户组织图片的数据结构，出 bug 会丢标签 | **保留** |
+| 候选                                                         | 测试数 | 删除理由                               | 保留理由                                                      | 结论           |
+| ------------------------------------------------------------ | ------ | -------------------------------------- | ------------------------------------------------------------- | -------------- |
+| `previewImageBBCode.test.ts > decodePreviewImage 结构缺失` | 5      | 结构异常输入是防御性编程，未必真实触发 | 已出现过 raw 值 null/空字符串的真实 bug（commit `ae2de8f`） | **保留** |
+| `useEditorConfigStore > matchShortcut 工具函数`            | 10     | 快捷键匹配是小工具函数                 | 修饰键组合容易出 bug，且测试跑得快                            | **保留** |
+| `useEditorConfigStore > 右键菜单 reorderMenuItems`         | 3      | UI 细节                                | 纯函数 reducer，几乎零维护成本                                | **保留** |
+| `useArchiveStore > 标签 CRUD`                              | 10     | 标签功能非核心                         | 影响用户组织图片的数据结构，出 bug 会丢标签                   | **保留** |
 
 **结论**：当前 325 个测试中无浪费，精简建议为空。
 
@@ -231,13 +233,13 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 ### 🟡 中 ROI — 可延后补
 
-| 补强项 | 估计新增测试数 | 触发条件 |
-|-------|-------------|--------|
-| `ImageUploadService.uploadEditorImage` 路径 | 3-5 | 若发现编辑器插图上传 bug |
-| `useImagePanelStore` persist migrate 测试 | 1-2 | 下次改该 store schema 时 |
-| `useImageStore` persist migrate 测试 | 1-2 | 同上 |
-| `useSteamGuideImageStore` migrate 预留测试 | 1 | 下次改 schema 版本时 |
-| `bbcodeTitleToHtml` 边界场景 | 2-3 | 若发现标题渲染 bug |
+| 补强项                                        | 估计新增测试数 | 触发条件                 |
+| --------------------------------------------- | -------------- | ------------------------ |
+| `ImageUploadService.uploadEditorImage` 路径 | 3-5            | 若发现编辑器插图上传 bug |
+| `useImagePanelStore` persist migrate 测试   | 1-2            | 下次改该 store schema 时 |
+| `useImageStore` persist migrate 测试        | 1-2            | 同上                     |
+| `useSteamGuideImageStore` migrate 预留测试  | 1              | 下次改 schema 版本时     |
+| `bbcodeTitleToHtml` 边界场景                | 2-3            | 若发现标题渲染 bug       |
 
 这些都不是当前必须做的。**原则：bug 驱动补测，而不是预测性补测**。
 
@@ -266,12 +268,12 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 ### 6.2 测试组织约定
 
-| 代码位置 | 测试策略 | 存放位置 |
-|---------|---------|---------|
-| 核心业务逻辑（utils、stores、services） | vitest 单元测试 | 就近 `__tests__/` 目录 |
-| React 组件、TipTap 扩展 | 浏览器 DevTools 手动验收 | 无 |
-| Chrome 扩展集成 | MVP 脚本（浏览器 console 粘贴运行） | `tests/` 目录 |
-| BBCode 复杂 bug | 先写 MVP → 再加 vitest | `tests/` + `__tests__/` |
+| 代码位置                                | 测试策略                            | 存放位置                    |
+| --------------------------------------- | ----------------------------------- | --------------------------- |
+| 核心业务逻辑（utils、stores、services） | vitest 单元测试                     | 就近 `__tests__/` 目录    |
+| React 组件、TipTap 扩展                 | 浏览器 DevTools 手动验收            | 无                          |
+| Chrome 扩展集成                         | MVP 脚本（浏览器 console 粘贴运行） | `tests/` 目录             |
+| BBCode 复杂 bug                         | 先写 MVP → 再加 vitest             | `tests/` + `__tests__/` |
 
 ### 6.3 DIY 变异测试（可选，用于复核）
 
@@ -296,21 +298,23 @@ NASGE 的测试不是覆盖率游戏，而是**精准守护几类不可接受的
 
 ## 7. 结论
 
-| 维度 | 结论 |
-|------|------|
-| 测试数量 | 325（刚好够用，无浪费） |
-| 致命风险覆盖 | 12 条核心风险中 **10 条 🟢 完善 / 2 条 🟡 部分**（都是预留而非当前盲区）/ **5 条 🔴 接受**（刻意不测区） |
-| 测试质量 | 核心文件 90%+ 行覆盖，86% 分支覆盖 |
-| 冗余程度 | 无显著冗余，精简候选为空 |
-| 开源就绪度 | **✅ 可以开源**。现有测试足以防止开源后最常见的 data loss / content corruption 类事故 |
+| 维度         | 结论                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 测试数量     | 325（刚好够用，无浪费）                                                                                             |
+| 致命风险覆盖 | 12 条核心风险中**10 条 🟢 完善 / 2 条 🟡 部分**（都是预留而非当前盲区）/ **5 条 🔴 接受**（刻意不测区） |
+| 测试质量     | 核心文件 90%+ 行覆盖，86% 分支覆盖                                                                                  |
+| 冗余程度     | 无显著冗余，精简候选为空                                                                                            |
+| 开源就绪度   | **✅ 可以开源**。现有测试足以防止开源后最常见的 data loss / content corruption 类事故                         |
 
 **不推荐追加的工作**：
+
 - ❌ 不要追求把 21% 总覆盖率拉高
 - ❌ 不要引入 stryker / playwright / RTL
 - ❌ 不要设覆盖率硬阈值
 - ❌ 不要为了"看起来更专业"添加低 ROI 测试
 
 **推荐的后续动作**：
+
 1. 把 §6.1 的 PR Checklist 加到 `.github/PULL_REQUEST_TEMPLATE.md`（1 行命令）
 2. 当后续发现具体 bug 时，按 §5 的 🟡 列表补测
 3. 定期（比如每半年）重新跑一次此审计，更新风险清单

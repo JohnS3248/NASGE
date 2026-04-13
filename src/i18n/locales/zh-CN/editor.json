@@ -7,6 +7,7 @@
   },
   "header": {
     "guideInfo": "ID {{id}} · {{count}} 个章节",
+    "guideConnecting": "正在连接 Steam 页面…",
     "editReview": "编辑 Steam 评测内容",
     "offlineSubtitle": "离线编辑模式 - 不关联任何 Steam 内容",
     "allGames": "全部游戏",
@@ -293,5 +294,84 @@
       "noSteamPage": "未找到已打开的 Steam 页面，请先在浏览器中打开对应页面。"
     },
     "unknown": "操作失败，请刷新页面后重试。如问题持续，请联系开发者反馈。"
+  },
+  "tour": {
+    "next": "下一步",
+    "prev": "上一步",
+    "done": "完成",
+    "skip": "跳过引导",
+    "start": "开始基础演示 →",
+    "gotIt": "我懂了，关闭",
+    "seeMore": "看看更多 →",
+    "welcome": {
+      "title": "欢迎使用 NASGE",
+      "desc": "Steam 指南 / 评测可视化编辑器。\n需要快速了解一下吗？（约 2 分钟）"
+    },
+    "mode": {
+      "title": "模式选择",
+      "desc": "NASGE 支持四种工作模式：在线指南、在线评测、离线指南、离线评测。\n在线指南需要在指南管理页进入，在线评测需要在游戏商店页进入。"
+    },
+    "draft": {
+      "title": "草稿管理",
+      "desc": "草稿自动保存，按模式隔离。\n支持新建、重命名、删除和批量管理。"
+    },
+    "editor": {
+      "title": "所见即所得编辑器",
+      "desc": "支持几乎所有 Steam BBCode 格式，渲染样式与 Steam 官方一致。\n工具栏可切换侧栏、顶部、悬浮三种位置。"
+    },
+    "upload": {
+      "title": "导入导出与上传",
+      "desc": "支持导入/导出 BBCode，往返保真。\n绑定章节后会出现「上传到 Steam」按钮，采用两阶段确认防止误操作。"
+    },
+    "basicComplete": {
+      "title": "基础引导完成",
+      "desc": "NASGE 还有很多进阶功能：图片池、右键菜单、实时预览、快捷键自定义…\n想继续了解吗？"
+    },
+    "chapterNav": {
+      "title": "章节导航",
+      "desc": "查看和管理指南章节。\n支持拖拽排序，刷新同步 Steam 最新状态。\n注意：删除章节请到指南管理页面操作，本编辑器不包含这类危险操作。"
+    },
+    "imagePool": {
+      "title": "图片池",
+      "desc": "自动读取 Steam 图片。\n支持粘贴/拖拽入池、标签系统、批量上传。\n还可切换到「游戏截图」Tab 浏览并拖入截图。"
+    },
+    "screenshotTab": {
+      "title": "游戏截图",
+      "desc": "切换到「游戏截图」Tab，查看并拖入游戏截图到编辑器。"
+    },
+    "imagePoolManage": {
+      "title": "图片池管理",
+      "desc": "图片池悬浮窗支持：\n· 拖拽调整大小和位置\n· 点击底栏收起/展开\n· 全屏模式浏览"
+    },
+    "settingsGeneral": {
+      "title": "设置 · 通用",
+      "desc": "· 语言切换（中文 / English / 自动）\n· 主题切换（默认 Steam Dark 效果最佳，将来可能支持更多主题）\n· 实时预览开关（右侧同步显示 Steam 渲染效果）"
+    },
+    "settingsImages": {
+      "title": "设置 · 图片",
+      "desc": "· 粘贴/拖拽图片时是否自动上传\n· 粘贴/拖拽时是否弹出重命名\n· 每页显示数量和缩略图大小"
+    },
+    "settingsMenus": {
+      "title": "设置 · 菜单",
+      "desc": "自定义四种右键菜单（选中文字、空白区、图片、图片池）：\n· 启用/禁用整个菜单或单个菜单项\n· 拖拽重排菜单项顺序"
+    },
+    "settingsShortcuts": {
+      "title": "设置 · 快捷键",
+      "desc": "自定义 12 个快捷键：\nCtrl+B 加粗、Ctrl+I 斜体、Ctrl+1/2/3 标题…\n点击快捷键栏后按下新组合即可修改。"
+    },
+    "advancedComplete": {
+      "title": "高级引导完成",
+      "desc": "你已经了解了 NASGE 的全部核心功能！\n如果有任何问题，欢迎在 GitHub 上提 Issue。\n祝你创作愉快！"
+    },
+    "reviewMode": {
+      "title": "评测模式",
+      "desc": "与指南一致的编辑体验。\n可设置推荐/不推荐、可见性、语言等评测元数据。"
+    },
+    "replay": {
+      "title": "新手引导",
+      "replayBasic": "重播基础引导",
+      "replayAdvanced": "重播高级引导",
+      "replayNote": "重播不会修改任何状态，纯演示"
+    }
   }
 }

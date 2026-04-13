@@ -3,7 +3,8 @@
     "general": "General",
     "image": "Image",
     "menu": "Menu",
-    "shortcuts": "Shortcuts"
+    "shortcuts": "Shortcuts",
+    "help": "Help"
   },
   "title": "Editor Settings",
   "theme": {
@@ -103,5 +104,11 @@
     "quote": "Insert Quote",
     "table": "Insert Table",
     "tags": "Tag Selection"
+  },
+  "tour": {
+    "title": "Onboarding Tour",
+    "replayBasic": "▶ Replay basic tour",
+    "replayAdvanced": "▶ Replay advanced tour",
+    "replayNote": "Replay is purely demonstrative and won't change any settings"
   }
 }

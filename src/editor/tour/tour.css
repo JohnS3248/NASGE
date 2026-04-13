@@ -1,0 +1,153 @@
+/* driver.js 主题覆盖 — 适配 NASGE 三主题 */
+
+/* z-index 确保在所有 UI 元素之上 */
+.driver-overlay {
+  z-index: 10000 !important;
+}
+
+.driver-popover {
+  z-index: 10001 !important;
+  font-family: inherit !important;
+  border-radius: 8px !important;
+  min-width: 400px !important;
+  max-width: 600px !important;
+}
+
+/* 通用主题适配（读取 CSS 变量，三主题自动生效） */
+.driver-popover {
+  background: var(--color-bg-surface) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border-default) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+.driver-popover-title {
+  color: var(--color-text-primary) !important;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: inherit !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-description {
+  color: var(--color-text-secondary) !important;
+  font-size: 14px;
+  line-height: 1.7;
+  white-space: pre-line;
+  font-family: inherit !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-close-btn {
+  color: var(--color-text-muted) !important;
+}
+
+.driver-popover-close-btn:hover {
+  color: var(--color-text-primary) !important;
+}
+
+.driver-popover-arrow-side-left,
+.driver-popover-arrow-side-right,
+.driver-popover-arrow-side-top,
+.driver-popover-arrow-side-bottom {
+  border-color: var(--color-border-default) !important;
+}
+
+/* 按钮样式 — 填充蓝色 */
+.driver-popover-prev-btn,
+.driver-popover-next-btn {
+  background: var(--color-accent) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 6px 18px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.driver-popover-prev-btn:hover,
+.driver-popover-next-btn:hover {
+  opacity: 0.85;
+}
+
+/* "上一步" 按钮 — 透明底色 + 边框 */
+.driver-popover-prev-btn {
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-border-default) !important;
+  text-shadow: none !important;
+}
+
+.driver-popover-prev-btn:hover {
+  color: var(--color-text-primary) !important;
+  opacity: 1;
+}
+
+/* 进度文字 */
+.driver-popover-progress-text {
+  color: var(--color-text-muted) !important;
+  font-size: 12px;
+}
+
+/* 欢迎窗 / 完成窗自定义按钮容器 */
+.nasge-tour-welcome-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  justify-content: flex-end;
+}
+
+/*
+ * 自定义按钮需要 .driver-popover-footer 前缀才能打赢
+ * driver.js 内置的 `.driver-popover-footer button { all: unset; ... }`
+ */
+
+/* 次要按钮 — 与 "上一步" 同风格 */
+.driver-popover-footer .nasge-tour-btn-skip {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: inline-block !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  border: 1px solid var(--color-border-default) !important;
+  border-radius: 4px !important;
+  padding: 6px 18px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+  transition: color 0.15s !important;
+}
+
+.driver-popover-footer .nasge-tour-btn-skip:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* 主要按钮 — 与 "下一步" 同风格：蓝色填充 */
+.driver-popover-footer .nasge-tour-btn-start {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: inline-block !important;
+  background: var(--color-accent) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: 4px !important;
+  padding: 6px 18px !important;
+  font-size: 13px !important;
+  font-family: inherit !important;
+  text-shadow: none !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s !important;
+}
+
+.driver-popover-footer .nasge-tour-btn-start:hover {
+  opacity: 0.85 !important;
+}
+
+/* 遮罩颜色 */
+.driver-overlay {
+  background: rgba(0, 0, 0, 0.55) !important;
+}

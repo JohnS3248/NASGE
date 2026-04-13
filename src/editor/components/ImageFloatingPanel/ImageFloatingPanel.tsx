@@ -254,6 +254,7 @@ const ImageFloatingPanel: React.FC = () => {
   return (
     <>
       <div
+        data-tour="image-panel"
         className="fixed flex flex-col bg-[rgba(13,23,36,0.95)] border border-border-accent rounded-md shadow-[0_8px_32px_rgba(0,0,0,0.4),0_0_1px_rgba(102,192,244,0.25)] overflow-hidden select-none"
         style={{
           left: position.x,
@@ -283,6 +284,7 @@ const ImageFloatingPanel: React.FC = () => {
             <button
               key={tab}
               type="button"
+              {...(tab === "screenshots" ? { "data-tour": "screenshot-tab" } : {})}
               onClick={() => setSourceTab(tab)}
               className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-colors duration-100 ${
                 sourceTab === tab

@@ -413,7 +413,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({ bbcode, title }) => 
   }, [bbcode, title, fetchPreview, guideInfo?.id]);
 
   return (
-    <div className="rounded-lg bg-bg-surface border border-border-accent p-[1.1rem] shadow-panel flex flex-col overflow-hidden min-w-[638px]">
+    <div data-tour="preview-panel" className="rounded-lg bg-bg-surface border border-border-accent p-[1.1rem] shadow-panel flex flex-col overflow-hidden min-w-[638px]">
       {/* 预览内容区域 */}
       <div className="flex-1 overflow-auto">
         {error ? (

@@ -9,6 +9,7 @@ import {
   MenuGroupConfig,
 } from "../stores/useEditorConfigStore";
 import type { LocaleSetting } from "../../i18n/types";
+import { useTour } from "../hooks/useTour";
 import {
   useImagePanelStore,
   ThumbnailSizePreset,
@@ -76,6 +77,12 @@ const CheckIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
   </svg>
 );
 
+const LightbulbIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" /><path d="M9 18h6" /><path d="M10 22h4" />
+  </svg>
+);
+
 // ============================================================================
 // Utility: format shortcut for display (Mod → ⌘ / Ctrl)
 // ============================================================================
@@ -92,13 +99,14 @@ function formatShortcut(value: string): string {
 // Tab types
 // ============================================================================
 
-type TabId = "general" | "images" | "menus" | "shortcuts";
+type TabId = "general" | "images" | "menus" | "shortcuts" | "help";
 
 const TAB_ICONS: Record<TabId, React.FC<{ className?: string }>> = {
   general: SlidersHorizontalIcon,
   images: ImageIcon,
   menus: ListIcon,
   shortcuts: KeyboardIcon,
+  help: LightbulbIcon,
 };
 
 const TAB_KEYS: Record<TabId, string> = {
@@ -106,9 +114,10 @@ const TAB_KEYS: Record<TabId, string> = {
   images: "settings:tabs.image",
   menus: "settings:tabs.menu",
   shortcuts: "settings:tabs.shortcuts",
+  help: "settings:tabs.help",
 };
 
-const TAB_IDS: TabId[] = ["general", "images", "menus", "shortcuts"];
+const TAB_IDS: TabId[] = ["general", "images", "menus", "shortcuts", "help"];
 
 // ============================================================================
 // SettingsModal
@@ -148,6 +157,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const showPreview = useEditorConfigStore((s) => s.showPreview);
   const setShowPreview = useEditorConfigStore((s) => s.setShowPreview);
 
+  // 新手引导重播
+  const { startBasicTour, startAdvancedTour } = useTour();
+  const handleReplayTour = useCallback((tier: "basic" | "advanced") => {
+    onClose();
+    // 等 modal 关闭动画结束后启动 tour
+    setTimeout(() => {
+      if (tier === "basic") {
+        startBasicTour({ replay: true });
+      } else {
+        startAdvancedTour({ replay: true });
+      }
+    }, 200);
+  }, [onClose, startBasicTour, startAdvancedTour]);
+
   // 图片池设置
   const thumbnailSizePreset = useImagePanelStore((s) => s.thumbnailSizePreset);
   const customThumbnailSize = useImagePanelStore((s) => s.customThumbnailSize);
@@ -186,7 +209,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     // Backdrop
     <div
-      className={`fixed inset-0 bg-black/65 z-[10000] flex items-center justify-center ${
+      className={`fixed inset-0 bg-black/65 z-[9990] flex items-center justify-center ${
         visible ? "animate-modal-backdrop" : "opacity-0 transition-opacity duration-[150ms]"
       }`}
       onClick={onClose}
@@ -203,6 +226,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <span className="text-[15px] font-semibold text-text-primary">{t("title")}</span>
           <button
             type="button"
+            data-tour="settings-close"
             onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-md text-text-muted hover:text-text-primary hover:bg-bg-hover nasge-transition-quick cursor-pointer border-0 bg-transparent"
           >
@@ -219,6 +243,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               return (
                 <button
                   key={id}
+                  data-tour-tab={id}
                   className={`${tabBase} ${activeTab === id ? tabActive : tabInactive}`}
                   onClick={() => handleTabChange(id)}
                 >
@@ -230,7 +255,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </nav>
 
           {/* Content */}
-          <div ref={contentRef} className="flex-1 overflow-y-auto p-5">
+          <div ref={contentRef} data-tour="settings-content" className="flex-1 overflow-y-auto p-5">
             {/* ===== 通用 Tab ===== */}
             {activeTab === "general" && (
               <div>
@@ -440,6 +465,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ===== 帮助 Tab ===== */}
+            {activeTab === "help" && (
+              <div>
+                <div className={sectionTitle}>{t("settings:tour.title")}</div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleReplayTour("basic")}
+                    className="px-3 py-1.5 rounded text-sm text-text-secondary border border-border-default hover:text-text-primary hover:border-border-accent nasge-transition-quick cursor-pointer bg-transparent"
+                  >
+                    {t("settings:tour.replayBasic")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleReplayTour("advanced")}
+                    className="px-3 py-1.5 rounded text-sm text-text-secondary border border-border-default hover:text-text-primary hover:border-border-accent nasge-transition-quick cursor-pointer bg-transparent"
+                  >
+                    {t("settings:tour.replayAdvanced")}
+                  </button>
+                </div>
+                <p className="text-xs text-text-muted mt-1.5">{t("settings:tour.replayNote")}</p>
               </div>
             )}
           </div>

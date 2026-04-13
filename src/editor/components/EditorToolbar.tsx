@@ -425,6 +425,7 @@ const EditorToolbar: React.FC<EditorToolbarProps> = ({ editor }) => {
     <div
       ref={toolbarRef}
       onMouseDown={handleMouseDown}
+      data-tour="editor-toolbar"
       className={`z-40 flex ${isVertical ? 'flex-col' : 'flex-row'} items-center gap-0.5 bg-bg-surface/95 backdrop-blur-md border border-border-default rounded-md shadow-panel p-1 select-none`}
       style={positionStyle()}
     >

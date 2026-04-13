@@ -7,6 +7,7 @@
   },
   "header": {
     "guideInfo": "ID {{id}} · {{count}} chapters",
+    "guideConnecting": "Connecting to Steam page…",
     "editReview": "Edit Steam Review",
     "offlineSubtitle": "Offline editing mode - not linked to any Steam content",
     "allGames": "All Games",
@@ -293,5 +294,84 @@
       "noSteamPage": "No open Steam page found. Please open the corresponding page in your browser first."
     },
     "unknown": "Operation failed. Please refresh the page and try again. If the issue persists, please report it to the developer."
+  },
+  "tour": {
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "skip": "Skip tour",
+    "start": "Start tour →",
+    "gotIt": "Got it",
+    "seeMore": "See more →",
+    "welcome": {
+      "title": "Welcome to NASGE",
+      "desc": "A WYSIWYG editor for Steam guides & reviews.\nWant a quick overview? (~2 min)"
+    },
+    "mode": {
+      "title": "Mode Selection",
+      "desc": "NASGE supports four modes: Online Guide, Online Review, Offline Guide, and Offline Review.\nOnline Guide requires the guide management page; Online Review requires the game store page."
+    },
+    "draft": {
+      "title": "Draft Management",
+      "desc": "Drafts are saved automatically and isolated by mode.\nCreate, rename, delete, and batch-manage drafts."
+    },
+    "editor": {
+      "title": "WYSIWYG Editor",
+      "desc": "Supports nearly all Steam BBCode formats with pixel-perfect rendering.\nThe toolbar can dock to the side, top, or float freely."
+    },
+    "upload": {
+      "title": "Import, Export & Upload",
+      "desc": "Import/export BBCode with roundtrip fidelity.\nOnce a chapter is linked, the \"Upload to Steam\" button appears — two-stage confirmation prevents accidental pushes."
+    },
+    "basicComplete": {
+      "title": "Basic Tour Complete",
+      "desc": "NASGE has many more advanced features: image pool, context menus, live preview, custom shortcuts…\nWant to learn more?"
+    },
+    "chapterNav": {
+      "title": "Chapter Navigation",
+      "desc": "View and manage guide chapters.\nDrag to reorder, refresh to sync with Steam.\nNote: To delete chapters, use the Steam guide management page — this editor does not include destructive operations."
+    },
+    "imagePool": {
+      "title": "Image Pool",
+      "desc": "Automatically loads Steam images.\nPaste/drag to add, tag system, batch upload.\nSwitch to the Screenshots tab to browse and drag in game screenshots."
+    },
+    "screenshotTab": {
+      "title": "Game Screenshots",
+      "desc": "Switch to the Screenshots tab to browse and drag game screenshots into the editor."
+    },
+    "imagePoolManage": {
+      "title": "Image Pool Controls",
+      "desc": "The image pool floating panel supports:\n· Drag to resize and reposition\n· Click the bottom bar to collapse/expand\n· Fullscreen mode for browsing"
+    },
+    "settingsGeneral": {
+      "title": "Settings · General",
+      "desc": "· Language (Chinese / English / Auto)\n· Theme (Steam Dark works best by default; more themes may come later)\n· Live Preview toggle (real-time Steam rendering on the right)"
+    },
+    "settingsImages": {
+      "title": "Settings · Images",
+      "desc": "· Auto-upload on paste/drag\n· Rename prompt on paste/drag\n· Items per page and thumbnail size"
+    },
+    "settingsMenus": {
+      "title": "Settings · Menus",
+      "desc": "Customize four context menus (text selection, blank area, images, image pool):\n· Enable/disable entire menus or individual items\n· Drag to reorder menu items"
+    },
+    "settingsShortcuts": {
+      "title": "Settings · Shortcuts",
+      "desc": "Customize 12 keyboard shortcuts:\nCtrl+B bold, Ctrl+I italic, Ctrl+1/2/3 headings…\nClick a shortcut field and press a new key combination."
+    },
+    "advancedComplete": {
+      "title": "Advanced Tour Complete",
+      "desc": "You've explored all the core features of NASGE!\nFeel free to open an Issue on GitHub if you have any questions.\nHappy creating!"
+    },
+    "reviewMode": {
+      "title": "Review Mode",
+      "desc": "Same editing experience as guides.\nSet recommended/not recommended, visibility, language, and other review metadata."
+    },
+    "replay": {
+      "title": "Onboarding Tour",
+      "replayBasic": "Replay basic tour",
+      "replayAdvanced": "Replay advanced tour",
+      "replayNote": "Replay is purely demonstrative and won't change any settings"
+    }
   }
 }

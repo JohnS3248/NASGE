@@ -45,6 +45,7 @@
     "@tiptap/html": "^3.9.1",
     "@tiptap/react": "^3.9.0",
     "@tiptap/starter-kit": "^3.9.0",
+    "driver.js": "^1.4.0",
     "i18next": "^26.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

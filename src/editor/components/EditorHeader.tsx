@@ -94,6 +94,8 @@ const EditorHeader: React.FC = () => {
   // 模式描述
   const subtitle = mode === 'guide' && guideInfo
     ? t('header.guideInfo', { id: guideInfo.id, count: guideInfo.chapters.length })
+    : mode === 'guide' && !guideInfo
+    ? t('header.guideConnecting')
     : inReviewMode && reviewGameName
     ? `${reviewGameName}${reviewAppId ? ` · ID ${reviewAppId}` : ''}`
     : inReviewMode
@@ -107,7 +109,7 @@ const EditorHeader: React.FC = () => {
 
   return (
     <>
-      <header className="
+      <header data-tour="editor-header" className="
         flex items-center gap-3 px-5 py-3
         rounded-lg
         bg-bg-surface border border-border-default
@@ -237,6 +239,7 @@ const EditorHeader: React.FC = () => {
           {/* 设置按钮 */}
           <button
             type="button"
+            data-tour="settings-button"
             onClick={() => setSettingsVisible(true)}
             className="
               w-8 h-8 flex items-center justify-center

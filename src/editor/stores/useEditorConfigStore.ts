@@ -3,6 +3,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { setDebugMode, loggers } from "../../shared/logger";
 import { i18n, resolveLocale } from "../../i18n";
 import type { LocaleSetting } from "../../i18n/types";
+import { DEFAULT_TOUR, type TourState } from "../tour/types";
+import { VERSION } from "../../../version";
 
 /**
  * 快捷键配置
@@ -323,6 +325,8 @@ export type EditorConfig = {
   selectionMenuConfig: ContextMenuConfig;   // 文字选择菜单
   emptyMenuConfig: ContextMenuConfig;       // 空白处菜单
   imagePoolMenuConfig: ContextMenuConfig;   // 图片池菜单
+  // 新手引导
+  tour: TourState;
 };
 
 type EditorConfigState = EditorConfig & {
@@ -354,6 +358,10 @@ type EditorConfigState = EditorConfig & {
   setMenuItemEnabled: (menuType: ContextMenuType, itemId: string, enabled: boolean, groupId?: 'preset' | 'align' | 'action') => void;
   reorderMenuItems: (menuType: ContextMenuType, itemIds: string[], groupId?: 'preset' | 'align' | 'action') => void;
   resetContextMenuConfig: (menuType: ContextMenuType) => void;
+  // 新手引导
+  completeTour: (tier: "basic" | "advanced") => void;
+  skipTour: (tier: "basic" | "advanced") => void;
+  resetTour: () => void;
   reset: () => void;
 };
 
@@ -383,7 +391,9 @@ const DEFAULT_CONFIG: EditorConfig = {
   imageMenuConfig: DEFAULT_IMAGE_MENU_CONFIG,
   selectionMenuConfig: DEFAULT_SELECTION_MENU_CONFIG,
   emptyMenuConfig: DEFAULT_EMPTY_MENU_CONFIG,
-  imagePoolMenuConfig: DEFAULT_IMAGE_POOL_MENU_CONFIG
+  imagePoolMenuConfig: DEFAULT_IMAGE_POOL_MENU_CONFIG,
+  // 新手引导默认值
+  tour: DEFAULT_TOUR,
 };
 
 export const useEditorConfigStore = create<EditorConfigState>()(
@@ -567,6 +577,25 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           }
         });
       },
+      // 新手引导
+      completeTour: (tier) =>
+        set((state) => ({
+          tour: {
+            ...state.tour,
+            [`${tier}Completed`]: true,
+            lastSeenVersion: VERSION,
+          },
+        })),
+      skipTour: (tier) =>
+        set((state) => ({
+          tour: {
+            ...state.tour,
+            [`${tier}Completed`]: true,
+            skippedAt: Date.now(),
+            lastSeenVersion: VERSION,
+          },
+        })),
+      resetTour: () => set({ tour: DEFAULT_TOUR }),
       reset: () => {
         loggers.config.info("重置配置");
         set(DEFAULT_CONFIG);
@@ -607,7 +636,12 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           imageMenuConfig: mergeImageMenuConfig(persisted?.imageMenuConfig),
           selectionMenuConfig: mergeContextMenuConfig(persisted?.selectionMenuConfig, DEFAULT_SELECTION_MENU_CONFIG),
           emptyMenuConfig: mergeContextMenuConfig(persisted?.emptyMenuConfig, DEFAULT_EMPTY_MENU_CONFIG),
-          imagePoolMenuConfig: mergeContextMenuConfig(persisted?.imagePoolMenuConfig, DEFAULT_IMAGE_POOL_MENU_CONFIG)
+          imagePoolMenuConfig: mergeContextMenuConfig(persisted?.imagePoolMenuConfig, DEFAULT_IMAGE_POOL_MENU_CONFIG),
+          // 新手引导合并：缺失字段用默认值填充
+          tour: {
+            ...DEFAULT_TOUR,
+            ...(persisted?.tour || {}),
+          },
         };
       },
       onRehydrateStorage: () => {

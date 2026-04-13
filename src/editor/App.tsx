@@ -26,6 +26,7 @@ import DialogContainer from "./components/ConfirmDialog";
 import { toast } from "./stores/useToastStore";
 import { dialog } from "./stores/useDialogStore";
 import ReviewSettingsPanel from "./components/ReviewSettingsPanel";
+import { useTour } from "./hooks/useTour";
 
 const MODE_LABEL_KEYS: Record<string, string> = {
   'guide': 'editor:mode.guide',
@@ -86,6 +87,24 @@ const App: React.FC = () => {
     if (!activeDraft) return true;
     return JSON.stringify(activeDraft.content) === JSON.stringify(createEmptyDoc());
   }, [activeDraft]);
+
+  // 新手引导 Tour — 等 mode 初始化完成后再启动
+  const { startBasicTour } = useTour();
+  const tourBasicCompleted = useEditorConfigStore((s) => s.tour.basicCompleted);
+  const tourStartedRef = useRef(false);
+  useEffect(() => {
+    if (tourBasicCompleted || tourStartedRef.current) return;
+    // useEditorMode 的 useEffect 在 mount 后同步 setMode(URL 参数值)
+    // 此处 mode 已经是正确值（guide/review/offline-*）
+    // 用 requestIdleCallback 确保 DOM 布局完成
+    const id = requestIdleCallback(() => {
+      if (!tourStartedRef.current) {
+        tourStartedRef.current = true;
+        startBasicTour();
+      }
+    });
+    return () => cancelIdleCallback(id);
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps -- mode 变化后重新检查
 
   // 为预览面板准备的 BBCode（按需计算：预览开启或上传确认模式时）
   const currentBBCode = useMemo(() => {
@@ -231,7 +250,7 @@ const App: React.FC = () => {
         }}
       >
         {/* 按钮行 - 独立于编辑区 */}
-        <div className="flex justify-end items-center gap-2">
+        <div data-tour="upload-button" className="flex justify-end items-center gap-2">
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -301,6 +320,7 @@ const App: React.FC = () => {
         >
           {/* 编辑器区域 */}
           <main
+            data-tour="tiptap-editor"
             className={`transition-opacity duration-fast ${editorFading ? "opacity-0" : "opacity-100"}`}
             style={{
               borderRadius: "var(--radius-lg, 1.05rem)",
