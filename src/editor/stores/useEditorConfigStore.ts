@@ -171,6 +171,7 @@ export const IMAGE_MENU_ALIGN_ITEMS: MenuItemDefinition[] = [
 
 export const IMAGE_MENU_ACTION_ITEMS: MenuItemDefinition[] = [
   { id: 'upload', label: '上传图片' },
+  { id: 'deleteSteam', label: '删除Steam端图片' },
   { id: 'delete', label: '删除图片' }
 ];
 

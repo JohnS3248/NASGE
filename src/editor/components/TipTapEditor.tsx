@@ -6,7 +6,9 @@ import { createEditorExtensions, EMPTY_DOC } from "../utils/editorExtensions";
 import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
 import { addFilesToPool } from "../services/imagePoolIntake";
 import { ImageUploadService } from "../services/ImageUploadService";
+import { deleteSteamImage } from "../services/steamBridge";
 import { useImageStore } from "../stores/useImageStore";
+import { useSteamGuideImageStore } from "../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
 import { MenuItem, MenuSectionLabel, MenuDivider } from "./ContextMenuParts";
 import {
@@ -385,6 +387,37 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       toast.error(t('image.uploadFail', { error: errorMessage }));
     }
   }, [contextMenu, editor, t]);
+
+  const handleDeleteSteamImage = useCallback(async () => {
+    if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) return;
+
+    const nodeId = contextMenu.payload.imageNodeId;
+    const store = useImageStore.getState();
+    const imageEntity =
+      store.getImageById(nodeId) ??
+      store.getImageBySourceNodeId(nodeId) ??
+      store.getImageBySteamPreviewId(nodeId);
+
+    if (!imageEntity?.steamPreviewId) return;
+
+    const confirmed = await dialog.confirm({
+      message: t('image.deleteSteamConfirm', { fileName: imageEntity.fileName }),
+      danger: true
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteSteamImage(imageEntity.steamPreviewId);
+      useSteamGuideImageStore.getState().removeItem(imageEntity.steamPreviewId);
+      editor.chain().focus().deleteSelection().run();
+      removeImageNode(nodeId);
+      toast.success(t('image.deleteSteamSuccess'));
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      loggers.image.error('TipTapEditor Steam 图片删除失败:', errorMsg);
+      toast.error(t('image.deleteFail', { error: errorMsg }));
+    }
+  }, [contextMenu, editor, removeImageNode, t]);
 
   const insertImage = useCallback(async () => {
     if (!editor) return;
@@ -786,6 +819,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                     'align-floatRight': t('image.alignRight'),
                     'align-inline': t('image.inline'),
                     'upload': t('image.upload'),
+                    'deleteSteam': t('image.deleteSteam'),
                     'delete': t('image.delete')
                   };
 
@@ -824,8 +858,10 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                           );
                         } else {
                           // action 组
-                          const actionMap: Record<string, { onClick: () => void; danger?: boolean }> = {
+                          const hasSteamPreviewId = !!contextMenuImageEntity?.steamPreviewId;
+                          const actionMap: Record<string, { onClick: () => void; danger?: boolean; disabled?: boolean }> = {
                             upload: { onClick: handleUploadImage },
+                            deleteSteam: { onClick: handleDeleteSteamImage, danger: true, disabled: !hasSteamPreviewId },
                             delete: { onClick: handleDeleteImage, danger: true }
                           };
                           const action = actionMap[item.id];
@@ -837,6 +873,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
                               onClick={action.onClick}
                               onComplete={closeContextMenu}
                               danger={action.danger}
+                              disabled={action.disabled}
                             />
                           );
                         }
