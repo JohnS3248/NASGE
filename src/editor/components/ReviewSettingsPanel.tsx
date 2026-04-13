@@ -21,6 +21,21 @@ const ThumbDownIcon: React.FC<{ className?: string }> = ({ className = "" }) => 
   </svg>
 );
 
+const XIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+  </svg>
+);
+
+const SlidersIcon: React.FC<{ className?: string }> = ({ className = "" }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" />
+    <line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" />
+    <line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" />
+    <line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" />
+  </svg>
+);
+
 type ReviewSettingsPanelProps = {
   currentHtml: string;
 };
@@ -33,6 +48,7 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
   const hasExistingReview = useReviewStore((s) => s.hasExistingReview);
   const updateSettings = useReviewStore((s) => s.updateSettings);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const online = isOnlineMode(mode);
 
@@ -76,17 +92,42 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
     }
   }, [currentHtml, settings, t]);
 
+  if (isCollapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setIsCollapsed(false)}
+        className="w-9 h-9 rounded-md bg-bg-app/95 border border-border-subtle text-text-muted hover:text-text-primary hover:bg-bg-hover nasge-transition-quick cursor-pointer flex items-center justify-center shadow-md"
+        title={t('review.expand')}
+      >
+        <SlidersIcon className="w-4 h-4" />
+      </button>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-3 p-4 rounded-lg bg-bg-surface border border-border-default shadow-panel min-w-56">
-      {/* 标题 */}
-      <div className="text-sm font-semibold text-text-primary">
-        {t('review.settings')}
-      </div>
-      {gameName && (
-        <div className="text-xs text-text-muted truncate" title={gameName}>
-          {gameName}
+    <div className="flex flex-col gap-3 p-4 rounded-lg bg-bg-surface border border-border-default shadow-panel min-w-56 animate-dropdown-enter">
+      {/* 标题 + 折叠按钮 */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-sm font-semibold text-text-primary">
+            {t('review.settings')}
+          </div>
+          {gameName && (
+            <div className="text-xs text-text-muted truncate mt-0.5" title={gameName}>
+              {gameName}
+            </div>
+          )}
         </div>
-      )}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(true)}
+          className="border-0 bg-transparent text-text-muted hover:text-text-primary p-1 nasge-transition-quick cursor-pointer"
+          title={t('review.collapse')}
+        >
+          <XIcon className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* 推荐/不推荐 */}
       <div className="flex gap-2">

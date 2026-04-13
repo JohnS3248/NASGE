@@ -213,7 +213,9 @@
     "submitFail": "Submit failed: {{message}}",
     "noReviewDrafts": "No review drafts yet",
     "startInstruction": "Click \"Edit This Review\" on a Steam game page to start, or create a new draft",
-    "guideInstruction": "Please create a new draft first, or pull existing chapters from the chapter navigation"
+    "guideInstruction": "Please create a new draft first, or pull existing chapters from the chapter navigation",
+    "collapse": "Collapse review settings",
+    "expand": "Expand review settings"
   },
   "welcomeContent": "Welcome to the NASGE Editor.",
   "titleEditor": {

@@ -213,7 +213,9 @@
     "submitFail": "提交失败：{{message}}",
     "noReviewDrafts": "还没有评测草稿",
     "startInstruction": "在 Steam 游戏页面点击「编辑此评测」开始，或创建一个新草稿",
-    "guideInstruction": "请先创建一个新草稿，或从章节导航中拉取现有章节"
+    "guideInstruction": "请先创建一个新草稿，或从章节导航中拉取现有章节",
+    "collapse": "收起评测设置",
+    "expand": "展开评测设置"
   },
   "welcomeContent": "欢迎使用 NASGE 编辑器。",
   "titleEditor": {
