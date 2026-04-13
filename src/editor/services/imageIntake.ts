@@ -1,7 +1,10 @@
 import type { Editor } from "@tiptap/react";
 import type { ImageSource } from "../types/image";
 import { useImageStore } from "../stores/useImageStore";
+import { useGuideStore, isOnlineMode } from "../stores/useGuideStore";
 import { loggers } from "../../shared/logger";
+import { toast } from "../stores/useToastStore";
+import i18n from "i18next";
 
 export type IncomingImageOptions = {
   source: "paste" | "drop";
@@ -14,6 +17,13 @@ export async function processIncomingImages(
   options: IncomingImageOptions
 ): Promise<void> {
   if (!files.length) {
+    return;
+  }
+
+  // 离线模式下图片无法上传到 Steam，提前拦截
+  const mode = useGuideStore.getState().mode;
+  if (!isOnlineMode(mode)) {
+    toast.warning(i18n.t("image.offlineBlocked", { ns: "editor" }));
     return;
   }
 

@@ -159,6 +159,7 @@ interface IntakeContext {
   imagePanelStore: typeof import("../../stores/useImagePanelStore").useImagePanelStore;
   configStore: typeof import("../../stores/useEditorConfigStore").useEditorConfigStore;
   dialogStore: typeof import("../../stores/useDialogStore").useDialogStore;
+  guideStore: typeof import("../../stores/useGuideStore").useGuideStore;
   ImageUploadService: typeof import("../ImageUploadService").ImageUploadService;
 }
 
@@ -169,15 +170,19 @@ async function loadFresh(): Promise<IntakeContext> {
   const panelMod = await import("../../stores/useImagePanelStore");
   const configMod = await import("../../stores/useEditorConfigStore");
   const dialogMod = await import("../../stores/useDialogStore");
+  const guideMod = await import("../../stores/useGuideStore");
   const uploadMod = await import("../ImageUploadService");
   await Promise.resolve();
   await Promise.resolve();
+  // 默认设为在线指南模式，避免离线拦截
+  guideMod.useGuideStore.setState({ mode: "guide" });
   return {
     addFilesToPool: intakeMod.addFilesToPool,
     steamImageStore: steamMod.useSteamGuideImageStore,
     imagePanelStore: panelMod.useImagePanelStore,
     configStore: configMod.useEditorConfigStore,
     dialogStore: dialogMod.useDialogStore,
+    guideStore: guideMod.useGuideStore,
     ImageUploadService: uploadMod.ImageUploadService
   };
 }
@@ -667,5 +672,41 @@ describe("多图直接入池（不重命名）", () => {
       { source: "paste", currentArchiveId: null, openPanelOnAdd: true }
     );
     expect(ctx.imagePanelStore.getState().isOpen).toBe(true);
+  });
+});
+
+// ============================================================================
+// 离线模式拦截
+// ============================================================================
+
+describe("离线模式拦截", () => {
+  it("offline-guide 模式 → toast.warning + 不入池", async () => {
+    const ctx = await loadFresh();
+    ctx.guideStore.setState({ mode: "offline-guide" });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100)],
+      { source: "paste", currentArchiveId: null }
+    );
+    expect(ctx.steamImageStore.getState().items).toHaveLength(0);
+  });
+
+  it("offline-review 模式 → toast.warning + 不入池", async () => {
+    const ctx = await loadFresh();
+    ctx.guideStore.setState({ mode: "offline-review" });
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100)],
+      { source: "paste", currentArchiveId: null }
+    );
+    expect(ctx.steamImageStore.getState().items).toHaveLength(0);
+  });
+
+  it("guide 模式 → 正常入池", async () => {
+    const ctx = await loadFresh();
+    // loadFresh 默认已设为 guide
+    await ctx.addFilesToPool(
+      [makeFile("a.png", 100)],
+      { source: "paste", currentArchiveId: null }
+    );
+    expect(ctx.steamImageStore.getState().items).toHaveLength(1);
   });
 });

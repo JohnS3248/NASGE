@@ -116,6 +116,7 @@
     "uploadTooLarge": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），无法上传",
     "tooLargeBlocked": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），无法添加到图片池。",
     "tooLargeSkipped": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），已跳过",
+    "offlineBlocked": "离线模式下无法添加图片，请连接 Steam 指南后再操作",
     "dataUnavailable": "图片数据暂不可用。",
     "batchRename": {
       "title": "批量重命名（{{count}} 张图片）",

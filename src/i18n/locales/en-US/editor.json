@@ -116,6 +116,7 @@
     "uploadTooLarge": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), cannot upload",
     "tooLargeBlocked": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB) and cannot be added to the image pool.",
     "tooLargeSkipped": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), skipped",
+    "offlineBlocked": "Cannot add images in offline mode. Please connect to a Steam guide first.",
     "dataUnavailable": "Image data is not available.",
     "batchRename": {
       "title": "Batch Rename ({{count}} images)",

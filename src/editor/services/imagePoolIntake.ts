@@ -5,6 +5,7 @@
 import { useSteamGuideImageStore, type ImageWithState } from "../stores/useSteamGuideImageStore";
 import { useImagePanelStore } from "../stores/useImagePanelStore";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
+import { useGuideStore, isOnlineMode } from "../stores/useGuideStore";
 import { ImageUploadService } from "./ImageUploadService";
 import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
@@ -46,6 +47,13 @@ export async function addFilesToPool(
   files: File[],
   options: PoolIntakeOptions
 ): Promise<void> {
+  // 离线模式下图片无法上传到 Steam，提前拦截
+  const mode = useGuideStore.getState().mode;
+  if (!isOnlineMode(mode)) {
+    toast.warning(i18n.t("image.offlineBlocked", { ns: "editor" }));
+    return;
+  }
+
   const configStore = useEditorConfigStore.getState();
   const imagePanelStore = useImagePanelStore.getState();
 
