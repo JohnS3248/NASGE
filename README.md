@@ -8,6 +8,9 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-427%20passed-brightgreen)](TESTING.md)
 
 <!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/EXTENSION_ID) -->
 
@@ -16,8 +19,6 @@
 </div>
 
 ---
-
-<!-- TODO: GIF 准备好后替换占位图 -->
 
 <div align="center">
 
@@ -227,7 +228,7 @@ src/
 - [X] 多主题支持（steam-dark / midnight / classic）
 - [X] 草稿与存档系统
 - [X] 国际化（zh-CN + en-US）
-- [ ] 新用户引导教程
+- [X] 新手引导 Tour
 - [ ] Chrome Web Store 上架
 - [ ] Firefox 支持
 - [ ] 更多语言（欢迎贡献！）

@@ -8,6 +8,9 @@
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-20%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-427%20passed-brightgreen)](TESTING.md)
 <!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/EXTENSION_ID) -->
 
 **[简体中文](README.md) | English**
@@ -15,8 +18,6 @@
 </div>
 
 ---
-
-<!-- TODO: Replace placeholders with GIFs when ready -->
 
 <div align="center">
 
@@ -217,7 +218,7 @@ See [CONTRIBUTING_en.md](CONTRIBUTING_en.md) for detailed guidelines.
 - [x] Multi-theme support (steam-dark / midnight / classic)
 - [x] Draft & archive system
 - [x] i18n (zh-CN + en-US)
-- [ ] Onboarding tour for new users
+- [x] Onboarding tour for new users
 - [ ] Chrome Web Store listing
 - [ ] Firefox support
 - [ ] More languages (contributions welcome!)
