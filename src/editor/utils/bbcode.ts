@@ -1,5 +1,5 @@
 import { useSteamGuideImageStore } from '../stores/useSteamGuideImageStore';
-import { parseSizeToken, parseAlignmentToken } from './previewImageBBCode';
+import { parseSizeToken, parseAlignmentToken, sanitizeFileName } from './previewImageBBCode';
 import { loggers } from '../../shared/logger';
 
 const INLINE_MARKS: Record<string, { open: string; close: string }> = {
@@ -141,7 +141,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   if (tagName === "figure" && node.hasAttribute("data-nasge-image")) {
     // 处理 SteamImage 节点：<figure data-nasge-image>
     const previewId = node.getAttribute("data-preview-id") ?? "";
-    const fileName = node.getAttribute("data-file-name") ?? "image.png";
+    const fileName = sanitizeFileName(node.getAttribute("data-file-name") ?? "image.png");
     const sizePreset = node.getAttribute("data-size-preset") ?? "original";
     const alignment = node.getAttribute("data-alignment") ?? "floatLeft";
     const source = node.getAttribute("data-source");
@@ -176,7 +176,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   // 处理 SteamImageInline 节点：<span data-nasge-image="inline">
   if (tagName === "span" && node.getAttribute("data-nasge-image") === "inline") {
     const previewId = node.getAttribute("data-preview-id") ?? "";
-    const fileName = node.getAttribute("data-file-name") ?? "image.png";
+    const fileName = sanitizeFileName(node.getAttribute("data-file-name") ?? "image.png");
     const sizePreset = node.getAttribute("data-size-preset") ?? "original";
     const alignment = node.getAttribute("data-alignment") ?? "inline";
 

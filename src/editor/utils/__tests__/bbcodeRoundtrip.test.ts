@@ -703,6 +703,27 @@ describe("图片尺寸对齐组合", () => {
     testRoundtrip("前文\n[screenshot=1;sizeOriginal,floatLeft;https://example.com/a.jpg][/screenshot]\n后文");
   });
 
+  // fileName 大小后缀清理（防止 Steam DOM 的 "(xx kb)" 污染 BBCode 输出）
+  it("previewimg fileName 带 (xx kb) 后缀 → 导出时清理", () => {
+    const input = "[previewimg=10000007;sizeOriginal,inline;图片1.png (33.786 kb)][/previewimg]";
+    const expected = "[previewimg=10000007;sizeOriginal,inline;图片1.png][/previewimg]";
+    const html = bbcodeToHtml(input);
+    const output = htmlToBBCode(html);
+    expect(output).toBe(expected);
+  });
+
+  it("previewicon fileName 带 (1.5 MB) 后缀 → 导出时清理", () => {
+    const input = "X[previewicon=123;sizeOriginal,inline;test.jpg (1.5 MB)][/previewicon]Y";
+    const expected = "X[previewicon=123;sizeOriginal,inline;test.jpg][/previewicon]Y";
+    const html = bbcodeToHtml(input);
+    const output = htmlToBBCode(html);
+    expect(output).toBe(expected);
+  });
+
+  it("previewimg fileName 无后缀 → 不变", () => {
+    testRoundtrip("[previewimg=123;sizeOriginal,floatLeft;clean.png][/previewimg]");
+  });
+
   // 原始 [img] 标签（非 preview 形式）
   it("[img] 原始图片标签", () => {
     testRoundtrip("[img]https://example.com/a.png[/img]");

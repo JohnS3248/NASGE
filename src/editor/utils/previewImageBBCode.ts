@@ -98,7 +98,7 @@ export function parseAlignmentToken(token: string): ImageAlignment {
   return (entry?.[0] as ImageAlignment) ?? DEFAULT_ALIGNMENT;
 }
 
-function sanitizeFileName(fileName: string): string {
+export function sanitizeFileName(fileName: string): string {
   if (!fileName) {
     return "image.jpg";
   }
