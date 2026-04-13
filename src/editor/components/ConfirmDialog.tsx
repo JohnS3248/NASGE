@@ -96,7 +96,8 @@ const PromptDialog: React.FC = () => {
           onChange={(e) => setValue(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full px-3 py-2 rounded text-sm text-text-primary bg-bg-input border border-border-default focus:border-accent/50 focus:outline-none mb-1 nasge-transition-quick font-mono resize-y"
+          style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif' }}
+          className="w-full px-3 py-2 rounded text-sm text-text-primary bg-bg-input border border-border-default focus:border-accent/50 focus:outline-none mb-1 nasge-transition-quick resize-y"
         />
       ) : (
         <input

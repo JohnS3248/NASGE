@@ -138,6 +138,10 @@ const App: React.FC = () => {
   }, [activeDraft?.content, activeDraft?.id, docToHtml]);
 
   const handleExportBBCode = useCallback(async () => {
+    if (!activeDraft) {
+      toast.error(t('editor:bbcode.noDraft'));
+      return;
+    }
     if (!currentHtml) {
       toast.error(t('editor:bbcode.emptyContent'));
       return;
@@ -159,6 +163,10 @@ const App: React.FC = () => {
   }, [currentHtml, t]);
 
   const handleImportBBCode = useCallback(async () => {
+    if (!activeDraft) {
+      toast.error(t('editor:bbcode.noDraft'));
+      return;
+    }
     const input = await dialog.prompt({
       message: t('editor:bbcode.pastePrompt'),
       defaultValue: "",
@@ -177,13 +185,51 @@ const App: React.FC = () => {
       toast.error(t('editor:bbcode.invalidFormat'));
       return;
     }
-    setExternalDoc(doc);
-    setCurrentHtml(docToHtml(doc));
-    lastAppliedSerializedRef.current = JSON.stringify(doc);
-    if (activeDraft) {
-      updateDraft(activeDraft.id, { content: doc });
+
+    const applyDoc = (finalDoc: JSONContent) => {
+      setExternalDoc(finalDoc);
+      setCurrentHtml(docToHtml(finalDoc));
+      lastAppliedSerializedRef.current = JSON.stringify(finalDoc);
+      if (activeDraft) {
+        updateDraft(activeDraft.id, { content: finalDoc });
+      }
+    };
+
+    // 编辑器为空 → 直接导入
+    if (isDraftEmpty) {
+      applyDoc(doc);
+      return;
     }
-  }, [activeDraft, updateDraft, htmlExtensions, docToHtml, t]);
+
+    // 编辑器有内容 → 选择导入方式
+    const append = await dialog.confirm({
+      title: t('editor:bbcode.importModeTitle'),
+      message: t('editor:bbcode.importModeMessage'),
+      confirmText: t('editor:bbcode.appendImport'),
+      cancelText: t('editor:bbcode.overwriteImport'),
+    });
+
+    if (!append) {
+      // 覆盖导入 — 二次确认
+      const confirmed = await dialog.confirm({
+        message: t('editor:bbcode.overwriteConfirm'),
+        confirmText: t('editor:bbcode.overwriteImport'),
+        danger: true,
+      });
+      if (!confirmed) return;
+      applyDoc(doc);
+    } else {
+      // 增量导入 — 追加到末尾
+      const currentDoc = editorInstance?.getJSON();
+      const currentContent = currentDoc?.content ?? [];
+      const newContent = doc.content ?? [];
+      const mergedDoc: JSONContent = {
+        type: "doc",
+        content: [...currentContent, ...newContent],
+      };
+      applyDoc(mergedDoc);
+    }
+  }, [activeDraft, updateDraft, htmlExtensions, docToHtml, isDraftEmpty, editorInstance, t]);
 
   // 上传按钮点击：两阶段流程
   const handleUploadClick = useCallback(() => {

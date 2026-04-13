@@ -65,7 +65,13 @@
     "copied": "BBCode 已复制到剪贴板。",
     "copyPrompt": "复制以下 BBCode",
     "pastePrompt": "粘贴要导入的 BBCode",
-    "invalidFormat": "BBCode 内容无法识别，请检查格式后再试。"
+    "invalidFormat": "BBCode 内容无法识别，请检查格式后再试。",
+    "importModeTitle": "选择导入方式",
+    "importModeMessage": "编辑器已有内容，请选择导入方式。",
+    "appendImport": "增量导入（追加到末尾）",
+    "overwriteImport": "覆盖导入",
+    "overwriteConfirm": "确认覆盖当前编辑器中的所有内容？此操作不可撤销。",
+    "noDraft": "请先创建或选择一个草稿。"
   },
   "upload": {
     "cancel": "取消上传",

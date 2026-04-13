@@ -65,7 +65,13 @@
     "copied": "BBCode copied to clipboard.",
     "copyPrompt": "Copy the following BBCode",
     "pastePrompt": "Paste the BBCode to import",
-    "invalidFormat": "BBCode content could not be recognized. Please check the format and try again."
+    "invalidFormat": "BBCode content could not be recognized. Please check the format and try again.",
+    "importModeTitle": "Choose Import Mode",
+    "importModeMessage": "The editor already has content. Choose how to import.",
+    "appendImport": "Append (add to end)",
+    "overwriteImport": "Overwrite",
+    "overwriteConfirm": "Replace all content in the editor? This cannot be undone.",
+    "noDraft": "Please create or select a draft first."
   },
   "upload": {
     "cancel": "Cancel Upload",
