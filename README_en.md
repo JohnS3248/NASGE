@@ -70,6 +70,7 @@ Write and edit Steam reviews with the same WYSIWYG experience, persistent drafts
 - [Why NASGE?](#why-nasge)
 - [Features](#features)
 - [Installation](#installation)
+- [Browser Compatibility](#browser-compatibility)
 - [Usage](#usage)
 - [Tech Stack](#tech-stack)
 - [Development](#development)
@@ -120,6 +121,15 @@ Steam's built-in guide editor is a plain-text BBCode editor — no preview, no i
    - Open `chrome://extensions`
    - Enable **Developer mode** (top right)
    - Click **Load unpacked** → select the `dist/` folder
+
+## Browser Compatibility
+
+| Browser | Status | Notes |
+|---------|--------|-------|
+| Google Chrome | Full support | Manifest V3, requires Chrome 88+ |
+| Microsoft Edge | Works | Chromium-based, same load-unpacked method |
+| Firefox | Not supported | MV3 differences, planned for future (see Roadmap) |
+| Other Chromium browsers | Untested | Brave, Opera, Vivaldi should work in theory |
 
 ## Usage
 
@@ -196,7 +206,7 @@ Communication flow: **Editor tab** ↔ `chrome.runtime` ↔ **Background SW** �
 
 Bug reports and feature requests are welcome on [GitHub Issues](https://github.com/JohnS3248/NASGE/issues).
 
-<!-- See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines. -->
+See [CONTRIBUTING_en.md](CONTRIBUTING_en.md) for detailed guidelines.
 
 ## Roadmap
 
@@ -215,6 +225,8 @@ Bug reports and feature requests are welcome on [GitHub Issues](https://github.c
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
+
+For our privacy statement, see [PRIVACY_en.md](PRIVACY_en.md).
 
 ---
 

@@ -79,6 +79,7 @@
 - [为什么需要 NASGE？](#为什么需要-nasge)
 - [功能特性](#功能特性)
 - [安装](#安装)
+- [浏览器兼容性](#浏览器兼容性)
 - [使用方法](#使用方法)
 - [技术栈](#技术栈)
 - [开发](#开发)
@@ -130,6 +131,15 @@ Steam 自带的指南编辑器是一个纯文本 BBCode 编辑器——没有预
    - 打开 `chrome://extensions`
    - 启用右上角的 **开发者模式**
    - 点击 **加载已解压的扩展程序** → 选择 `dist/` 文件夹
+
+## 浏览器兼容性
+
+| 浏览器 | 状态 | 说明 |
+|--------|------|------|
+| Google Chrome | 完全支持 | Manifest V3，需要 Chrome 88+ |
+| Microsoft Edge | 可用 | 基于 Chromium，同样的加载方式 |
+| Firefox | 不支持 | MV3 差异，计划未来支持（见路线图） |
+| 其他 Chromium 浏览器 | 未测试 | Brave、Opera、Vivaldi 等理论可用，但未经验证 |
 
 ## 使用方法
 
@@ -206,7 +216,7 @@ src/
 
 欢迎在 [GitHub Issues](https://github.com/JohnS3248/NASGE/issues) 提交 Bug 报告和功能建议。
 
-<!-- 详细指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。 -->
+详细指南请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 路线图
 
@@ -225,6 +235,8 @@ src/
 ## 许可证
 
 MIT License — 详见 [LICENSE](LICENSE)。
+
+隐私说明请参阅 [PRIVACY.md](PRIVACY.md)。
 
 ---
 
