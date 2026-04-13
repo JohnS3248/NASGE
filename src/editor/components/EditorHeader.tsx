@@ -6,7 +6,10 @@ import { useDraftStore } from '../stores/useDraftStore';
 import { useReviewStore } from '../stores/useReviewStore';
 import { SettingsModal } from './SettingsModal';
 import { ArchiveManageModal } from './ArchiveManageModal';
+import { ChangelogModal } from './ChangelogModal';
 import { useMountTransition } from '../hooks/useMountTransition';
+import { useEditorConfigStore } from '../stores/useEditorConfigStore';
+import { VERSION } from '../../../version';
 
 // ============================================================================
 // 模式配置
@@ -49,6 +52,8 @@ const EditorHeader: React.FC = () => {
   const drafts = useDraftStore((s) => s.drafts);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [changelogVisible, setChangelogVisible] = useState(false);
+  const markChangelogSeen = useEditorConfigStore((s) => s.markChangelogSeen);
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [gameOpen, setGameOpen] = useState(false);
   const shouldRenderArchive = useMountTransition(archiveOpen, 100);
@@ -73,6 +78,18 @@ const EditorHeader: React.FC = () => {
       .forEach(d => games.set(d.linkedAppId!, d.linkedAppName || `App ${d.linkedAppId}`));
     return Array.from(games, ([appId, name]) => ({ appId, name }));
   }, [drafts]);
+
+  // 更新日志自动弹出（不依赖 tour 状态，changelog 优先于 tour）
+  useEffect(() => {
+    const { changelogSeenVersion } = useEditorConfigStore.getState();
+    if (changelogSeenVersion === VERSION) return;
+    setChangelogVisible(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleChangelogClose = useCallback(() => {
+    setChangelogVisible(false);
+    markChangelogSeen();
+  }, [markChangelogSeen]);
 
   // 下拉外部点击关闭
   const handleClickOutside = useCallback((e: MouseEvent) => {
@@ -258,8 +275,13 @@ const EditorHeader: React.FC = () => {
         </div>
       </header>
 
-      <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
+      <SettingsModal
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        onOpenChangelog={() => setChangelogVisible(true)}
+      />
       <ArchiveManageModal visible={manageModalVisible} onClose={() => setManageModalVisible(false)} />
+      <ChangelogModal visible={changelogVisible} onClose={handleChangelogClose} />
     </>
   );
 };

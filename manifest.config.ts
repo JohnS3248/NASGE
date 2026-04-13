@@ -5,7 +5,7 @@ export default defineManifest({
   manifest_version: 3,
   name: "NASGE",
   version: VERSION,
-  description: "创建者友好的 Steam 指南编辑浏览器扩展",
+  description: "指南创作者友好的 Steam 社区指南所见即所得编辑器浏览器扩展",
   icons: {
     "16": "icon/icon-16.png",
     "48": "icon/icon-48.png",

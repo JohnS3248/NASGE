@@ -110,5 +110,9 @@
     "replayBasic": "▶ 重播基础引导",
     "replayAdvanced": "▶ 重播高级引导",
     "replayNote": "重播不会修改任何状态，纯演示"
+  },
+  "changelog": {
+    "title": "更新日志",
+    "viewButton": "查看更新日志"
   }
 }

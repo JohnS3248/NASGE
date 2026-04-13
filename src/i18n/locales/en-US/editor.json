@@ -300,6 +300,7 @@
     "prev": "Back",
     "done": "Done",
     "skip": "Skip tour",
+    "skipHint": "You can replay the tour anytime from Settings → Help",
     "start": "Start tour →",
     "gotIt": "Got it",
     "seeMore": "See more →",

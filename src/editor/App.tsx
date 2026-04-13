@@ -13,6 +13,7 @@ import UploadStatusHUD from "./components/UploadStatusHUD";
 import { useEditorMode } from "./hooks/useEditorMode";
 import { useChapterSync } from "./hooks/useChapterSync";
 import EditorHeader from "./components/EditorHeader";
+import { VERSION } from "../../version";
 import ChapterNav from "./components/ChapterNav";
 import DraftPanel from "./components/DraftPanel";
 import TitleEditor from "./components/TitleEditor";
@@ -88,15 +89,15 @@ const App: React.FC = () => {
     return JSON.stringify(activeDraft.content) === JSON.stringify(createEmptyDoc());
   }, [activeDraft]);
 
-  // 新手引导 Tour — 等 mode 初始化完成后再启动
+  // 新手引导 Tour — 等 mode 初始化 + changelog 关闭后再启动
   const { startBasicTour } = useTour();
   const tourBasicCompleted = useEditorConfigStore((s) => s.tour.basicCompleted);
+  const changelogSeenVersion = useEditorConfigStore((s) => s.changelogSeenVersion);
   const tourStartedRef = useRef(false);
   useEffect(() => {
     if (tourBasicCompleted || tourStartedRef.current) return;
-    // useEditorMode 的 useEffect 在 mount 后同步 setMode(URL 参数值)
-    // 此处 mode 已经是正确值（guide/review/offline-*）
-    // 用 requestIdleCallback 确保 DOM 布局完成
+    // changelog 优先：如果 changelog 还没看过，等它关闭后再启动 tour
+    if (changelogSeenVersion !== VERSION) return;
     const id = requestIdleCallback(() => {
       if (!tourStartedRef.current) {
         tourStartedRef.current = true;
@@ -104,7 +105,7 @@ const App: React.FC = () => {
       }
     });
     return () => cancelIdleCallback(id);
-  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps -- mode 变化后重新检查
+  }, [mode, changelogSeenVersion]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 为预览面板准备的 BBCode（按需计算：预览开启或上传确认模式时）
   const currentBBCode = useMemo(() => {

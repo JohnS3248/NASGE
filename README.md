@@ -6,7 +6,7 @@
 
 **指南创作者友好的 Steam 社区指南所见即所得编辑器浏览器扩展**
 
-[![Version](https://img.shields.io/badge/version-0.9.7-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/JohnS3248/NASGE/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 <!-- [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/EXTENSION_ID?label=Chrome%20Web%20Store&logo=googlechrome&logoColor=white)](https://chromewebstore.google.com/detail/EXTENSION_ID) -->

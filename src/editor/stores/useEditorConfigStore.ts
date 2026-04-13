@@ -327,6 +327,8 @@ export type EditorConfig = {
   imagePoolMenuConfig: ContextMenuConfig;   // 图片池菜单
   // 新手引导
   tour: TourState;
+  // 更新日志
+  changelogSeenVersion: string;
 };
 
 type EditorConfigState = EditorConfig & {
@@ -362,6 +364,8 @@ type EditorConfigState = EditorConfig & {
   completeTour: (tier: "basic" | "advanced") => void;
   skipTour: (tier: "basic" | "advanced") => void;
   resetTour: () => void;
+  // 更新日志
+  markChangelogSeen: () => void;
   reset: () => void;
 };
 
@@ -394,6 +398,8 @@ const DEFAULT_CONFIG: EditorConfig = {
   imagePoolMenuConfig: DEFAULT_IMAGE_POOL_MENU_CONFIG,
   // 新手引导默认值
   tour: DEFAULT_TOUR,
+  // 更新日志
+  changelogSeenVersion: "",
 };
 
 export const useEditorConfigStore = create<EditorConfigState>()(
@@ -596,6 +602,8 @@ export const useEditorConfigStore = create<EditorConfigState>()(
           },
         })),
       resetTour: () => set({ tour: DEFAULT_TOUR }),
+      // 更新日志
+      markChangelogSeen: () => set({ changelogSeenVersion: VERSION }),
       reset: () => {
         loggers.config.info("重置配置");
         set(DEFAULT_CONFIG);
@@ -642,6 +650,8 @@ export const useEditorConfigStore = create<EditorConfigState>()(
             ...DEFAULT_TOUR,
             ...(persisted?.tour || {}),
           },
+          // 更新日志
+          changelogSeenVersion: persisted?.changelogSeenVersion ?? "",
         };
       },
       onRehydrateStorage: () => {

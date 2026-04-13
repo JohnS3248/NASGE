@@ -5,6 +5,7 @@ import "../tour/tour.css";
 import { useTranslation } from "react-i18next";
 import { useEditorConfigStore } from "../stores/useEditorConfigStore";
 import { useGuideStore, type EditorMode } from "../stores/useGuideStore";
+import { dialog } from "../stores/useDialogStore";
 import { BASIC_STEPS, ADVANCED_STEPS } from "../tour/steps";
 import type { TourStepDef } from "../tour/types";
 
@@ -85,6 +86,19 @@ export function useTour() {
     driverRef.current = null;
   }, []);
 
+  /** 跳过/关闭 tour 时弹提示（非 replay 模式） */
+  const showSkipHint = useCallback(() => {
+    // 短暂延迟，等 driver.js overlay 完全清除后再弹
+    setTimeout(() => {
+      dialog.confirm({
+        title: t("tour.skip"),
+        message: t("tour.skipHint"),
+        confirmText: t("tour.gotIt"),
+        cancelText: "",
+      });
+    }, 200);
+  }, [t]);
+
   const startAdvancedTour = useCallback(
     (options?: { replay?: boolean }) => {
       const replay = options?.replay ?? false;
@@ -131,6 +145,7 @@ export function useTour() {
           onCloseClick: () => {
             if (!replay) {
               useEditorConfigStore.getState().skipTour("advanced");
+              showSkipHint();
             }
             destroy();
           },
@@ -199,6 +214,7 @@ export function useTour() {
                 onClick: () => {
                   if (!replay) {
                     useEditorConfigStore.getState().skipTour("basic");
+                    showSkipHint();
                   }
                   destroy();
                 },
@@ -245,6 +261,7 @@ export function useTour() {
         onCloseClick: () => {
           if (!replay) {
             useEditorConfigStore.getState().skipTour("basic");
+            showSkipHint();
           }
           destroy();
         },

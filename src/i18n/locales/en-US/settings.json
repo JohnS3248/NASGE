@@ -110,5 +110,9 @@
     "replayBasic": "▶ Replay basic tour",
     "replayAdvanced": "▶ Replay advanced tour",
     "replayNote": "Replay is purely demonstrative and won't change any settings"
+  },
+  "changelog": {
+    "title": "What's New",
+    "viewButton": "View Changelog"
   }
 }

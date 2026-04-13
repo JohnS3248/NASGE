@@ -126,11 +126,13 @@ const TAB_IDS: TabId[] = ["general", "images", "menus", "shortcuts", "help"];
 type SettingsModalProps = {
   visible: boolean;
   onClose: () => void;
+  onOpenChangelog?: () => void;
 };
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   visible,
-  onClose
+  onClose,
+  onOpenChangelog,
 }) => {
   const { t } = useTranslation("settings");
   const shouldRender = useMountTransition(visible, 150);
@@ -489,6 +491,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </button>
                 </div>
                 <p className="text-xs text-text-muted mt-1.5">{t("settings:tour.replayNote")}</p>
+
+                <div className={divider} />
+                <div className={sectionTitle}>{t("changelog.title")}</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    if (onOpenChangelog) {
+                      setTimeout(() => onOpenChangelog(), 200);
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded text-sm text-text-secondary border border-border-default hover:text-text-primary hover:border-border-accent nasge-transition-quick cursor-pointer bg-transparent"
+                >
+                  {t("changelog.viewButton")}
+                </button>
               </div>
             )}
           </div>
