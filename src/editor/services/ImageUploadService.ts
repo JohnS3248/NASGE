@@ -16,6 +16,8 @@ import { loggers } from "../../shared/logger";
 import { toast } from "../stores/useToastStore";
 import { STEAM_IMAGE_SIZE_LIMIT } from "../constants/limits";
 import i18n from "i18next";
+import { NasgeError } from "../utils/errorClassifier";
+import { SteamEResult } from "../../shared/steamErrors";
 
 /**
  * 格式化文件大小为可读字符串（MB，保留1位小数）
@@ -111,7 +113,7 @@ function formatUploadErrorMessage(error: unknown): string {
   }
 
   if (/错误码\s*29/.test(rawMessage)) {
-    return "Steam 返回错误 29：Steam 会话可能已失效或账号当前不可上传，请刷新 Steam 页面后重试。";
+    return "steam报错发现重复上传，检查一下图片池是不是已经上传了相关图片。";
   }
 
   if (rawMessage) {
@@ -126,6 +128,13 @@ function formatUploadErrorMessage(error: unknown): string {
  */
 function isDuplicateRequestError(error: unknown): boolean {
   if (!error) return false;
+
+  // 优先：结构化检查
+  if (error instanceof NasgeError && error.eresult === SteamEResult.DuplicateRequest) {
+    return true;
+  }
+
+  // Fallback：消息文本匹配（兼容未经分类器的旧路径）
   const errorMessage = error instanceof Error ? error.message : String(error);
   const lowerMessage = errorMessage.toLowerCase();
   return (

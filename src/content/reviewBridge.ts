@@ -1,4 +1,5 @@
 import type { ReviewFormData } from "../shared/messages";
+import { SteamBridgeError } from "../shared/steamErrors";
 
 /**
  * 检测是否已有评测，并提取 recommendationID
@@ -199,13 +200,14 @@ async function createReview(
   );
 
   if (!response.ok) {
-    throw new Error(`创建评测失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`创建评测失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const result = await response.json();
   if (!result.success) {
-    throw new Error(
-      `Steam 创建评测失败：${result.strError ?? JSON.stringify(result)}`
+    throw new SteamBridgeError(
+      `Steam 创建评测失败：${result.strError ?? JSON.stringify(result)}`,
+      { eresult: typeof result.success === "number" ? result.success : undefined }
     );
   }
 
@@ -254,13 +256,14 @@ async function updateReview(
   );
 
   if (!response.ok) {
-    throw new Error(`更新评测失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`更新评测失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const result = await response.json();
   if (result.success !== 1) {
-    throw new Error(
-      `Steam 更新评测失败：${JSON.stringify(result)}`
+    throw new SteamBridgeError(
+      `Steam 更新评测失败：${JSON.stringify(result)}`,
+      { eresult: result.success }
     );
   }
 

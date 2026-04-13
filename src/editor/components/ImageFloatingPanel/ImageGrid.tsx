@@ -18,6 +18,7 @@ import { ImageIcon, ChevronLeftIcon, ChevronRightIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 import { toast } from "../../stores/useToastStore";
 import { dialog } from "../../stores/useDialogStore";
+import i18n from "i18next";
 import { SkeletonBlock } from "../Skeleton";
 
 interface ImageGridProps {
@@ -146,7 +147,7 @@ const ImageGrid: React.FC<ImageGridProps> = ({
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       loggers.image.error("Steam 图片删除失败", { previewId: image.previewId, error: errorMsg });
-      toast.error(`删除失败: ${errorMsg}`);
+      toast.error(i18n.t("image.deleteFail", { ns: "editor", error: errorMsg }));
     }
   }, [removeItem]);
 

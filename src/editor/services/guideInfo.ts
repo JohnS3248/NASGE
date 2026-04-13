@@ -5,6 +5,7 @@
 
 import type { GuideInfo } from "../stores/useGuideStore";
 import { loggers } from "../../shared/logger";
+import { classifyError } from "../utils/errorClassifier";
 
 /**
  * 从 Steam 拉取指南信息（封面、标题、章节列表）
@@ -19,7 +20,7 @@ export async function fetchGuideInfo(guideId: string): Promise<GuideInfo> {
   });
 
   if (!response.ok) {
-    throw new Error(response.error || "拉取指南信息失败");
+    throw classifyError(response);
   }
 
   loggers.editor.verbose('指南信息拉取成功', response.data);

@@ -3,6 +3,7 @@
  */
 
 import { loggers } from "../shared/logger";
+import { SteamBridgeError } from "../shared/steamErrors";
 
 export type GuideInfoResult = {
   id: string;
@@ -34,7 +35,7 @@ export async function fetchGuideInfo(guideId: string): Promise<GuideInfoResult> 
   });
 
   if (!response.ok) {
-    throw new Error(`拉取指南信息失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`拉取指南信息失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const html = await response.text();

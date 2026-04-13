@@ -150,6 +150,10 @@ export type SteamSuccessResponse<TData = unknown> = {
 export type SteamErrorResponse = {
   ok: false;
   error: string;
+  /** Steam EResult 错误码（当可从 API 响应中提取时） */
+  eresult?: number;
+  /** HTTP 状态码（当错误源自 HTTP 请求失败时） */
+  httpStatus?: number;
 };
 
 export type SteamBridgeResponse<TData = unknown> =

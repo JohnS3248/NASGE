@@ -113,6 +113,7 @@
     "selectTag": "Select Tag",
     "noTags": "No tags yet\nClick the tag icon in the header to create",
     "uploadFail": "Image upload failed: {{error}}",
+    "deleteFail": "Delete failed: {{error}}",
     "uploadTooLarge": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), cannot upload",
     "tooLargeBlocked": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB) and cannot be added to the image pool.",
     "tooLargeSkipped": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), skipped",
@@ -252,5 +253,45 @@
     "minutesAgo": "{{count}} min ago",
     "hoursAgo": "{{count}} hr ago",
     "daysAgo": "{{count}} days ago"
+  },
+  "steamError": {
+    "eresult": {
+      "2": "Steam server error. Please try again later. For uploads, try converting to a different image format.",
+      "3": "Cannot connect to Steam servers. Please check your network connection.",
+      "8": "Steam cannot process this image file. Try converting between PNG/JPG format, or re-save the image with a different editor. It may also be a duplicate image.",
+      "10": "Steam service is busy. Please try again later.",
+      "11": "Unexpected operation state. Please refresh the page and try again.",
+      "15": "You don't have permission to edit this content. Please confirm you are the guide author.",
+      "16": "Steam request timed out. Please try again later.",
+      "20": "Steam service is temporarily unavailable. Please try again later.",
+      "21": "Steam login has expired. Please refresh the Steam page to log in again.",
+      "24": "Your Steam account has insufficient privileges for this operation. You may need to own the corresponding game.",
+      "25": "File may exceed size limits or filename conflicts with an existing file. Try renaming the file.",
+      "29": "Steam detected a duplicate upload. Check if the image already exists in your image pool.",
+      "43": "Your Steam account has been disabled.",
+      "44": "Steam service is in maintenance mode and not accepting content changes.",
+      "73": "Your Steam account has been locked. Please contact Steam support.",
+      "79": "Steam reported an unexpected error. Try refreshing the page.",
+      "84": "Too many requests. Please wait about 120 seconds before trying again.",
+      "86": "This content has been deleted and cannot be accessed.",
+      "95": "Account resource limit has been reached.",
+      "96": "Too many changes on this account. Please try again later.",
+      "108": "Too many pending operations. Please wait for them to complete.",
+      "generic": "Steam returned error code {{code}}. Please try again or refresh the page."
+    },
+    "http": {
+      "429": "Too many requests. Please wait a moment before trying again.",
+      "500": "Steam server internal error (HTTP {{status}}). Please try again later.",
+      "503": "Steam service is temporarily unavailable. Please try again later.",
+      "generic": "Request failed (HTTP {{status}})."
+    },
+    "bridge": {
+      "noConnection": "Cannot connect to the Steam page. Please make sure the Steam guide editing page is open and refresh it.",
+      "disconnected": "Connection to the Steam page has been lost. Please refresh the Steam page.",
+      "portClosed": "No response from the Steam page. Please refresh the Steam page.",
+      "noPermission": "The extension does not have permission to access Steam pages. Please grant access in extension settings.",
+      "noSteamPage": "No open Steam page found. Please open the corresponding page in your browser first."
+    },
+    "unknown": "Operation failed. Please refresh the page and try again. If the issue persists, please report it to the developer."
   }
 }

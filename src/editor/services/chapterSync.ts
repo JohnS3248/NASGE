@@ -5,6 +5,7 @@
 
 import type { ChapterContent } from "../../content/chapterSync";
 import { loggers } from "../../shared/logger";
+import { classifyError } from "../utils/errorClassifier";
 
 /**
  * 从 Steam 拉取章节内容
@@ -23,7 +24,7 @@ export async function fetchChapterFromSteam(
   });
 
   if (!response.ok) {
-    throw new Error(response.error || "拉取章节失败");
+    throw classifyError(response);
   }
 
   loggers.sync.info('章节内容拉取成功', response.data);
@@ -93,7 +94,7 @@ export async function saveChapterToSteam(
   });
 
   if (!response.ok) {
-    throw new Error(response.error || "保存章节失败");
+    throw classifyError(response);
   }
 
   loggers.sync.info('章节内容保存成功', response.data);
@@ -118,7 +119,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
   });
 
   if (!response.ok) {
-    throw new Error(response.error || "拉取章节列表失败");
+    throw classifyError(response);
   }
 
   loggers.sync.info('章节列表拉取成功', response.data);
@@ -195,7 +196,11 @@ export async function createChapterOnSteam(guideId: string): Promise<string> {
   const response = results[0]?.result as { success?: number; sectionid?: string; timeSaved?: string } | undefined;
 
   if (!response || response.success !== 1) {
-    throw new Error('创建章节失败');
+    throw classifyError({
+      ok: false,
+      error: "创建章节失败",
+      eresult: response?.success,
+    });
   }
 
   loggers.sync.info('新章节创建成功', {
@@ -285,7 +290,11 @@ export async function reorderChaptersOnSteam(
   const response = results[0]?.result as { success?: number } | undefined;
 
   if (!response || response.success !== 1) {
-    throw new Error('章节排序保存失败');
+    throw classifyError({
+      ok: false,
+      error: "章节排序保存失败",
+      eresult: response?.success,
+    });
   }
 
   loggers.sync.info('章节排序保存成功');

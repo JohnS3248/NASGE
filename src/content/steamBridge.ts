@@ -7,6 +7,7 @@ import type {
   UploadScope
 } from "../shared/messages";
 import { loggers } from "../shared/logger";
+import { SteamBridgeError } from "../shared/steamErrors";
 
 declare global {
   interface Window {
@@ -184,8 +185,9 @@ function interpretUploadRedirect(url: string): { previewIds: string[] } {
   const errorCode = parsed.searchParams.get("error") ?? parsed.searchParams.get("warning");
 
   if (successCode !== "1") {
+    const code = parseInt(successCode, 10);
     const mappedMessage = mapSteamUploadError(successCode, errorCode);
-    throw new Error(mappedMessage);
+    throw new SteamBridgeError(mappedMessage, { eresult: isNaN(code) ? undefined : code });
   }
 
   if (!previewIds.length) {
@@ -339,7 +341,7 @@ export async function fetchGuideImagePool(scope: UploadScope): Promise<SteamGuid
     });
 
     if (!response.ok) {
-      throw new Error(`拉取 Steam 图片池失败：HTTP ${response.status}`);
+      throw new SteamBridgeError(`拉取 Steam 图片池失败：HTTP ${response.status}`, { httpStatus: response.status });
     }
 
     const html = await response.text();
@@ -742,14 +744,14 @@ export async function deleteGuideImage(scope: UploadScope, previewId: string): P
 
   if (!response.ok) {
     loggers.bridge.error("删除请求失败", { status: response.status, statusText: response.statusText });
-    throw new Error(`删除图片失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`删除图片失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const result = await response.json();
   loggers.bridge.info("删除请求响应", result);
 
   if (result.success !== 1) {
-    throw new Error("Steam 删除图片失败，请刷新页面后重试。");
+    throw new SteamBridgeError("Steam 删除图片失败，请刷新页面后重试。", { eresult: result.success });
   }
 
   loggers.bridge.info("成功删除图片，开始清理 DOM", previewId);
@@ -1054,7 +1056,7 @@ export async function fetchScreenshots(page?: number): Promise<SteamScreenshotIt
     });
 
     if (!response.ok) {
-      throw new Error(`拉取截图列表失败: HTTP ${response.status}`);
+      throw new SteamBridgeError(`拉取截图列表失败: HTTP ${response.status}`, { httpStatus: response.status });
     }
 
     const json = await response.json() as {
@@ -1073,7 +1075,7 @@ export async function fetchScreenshots(page?: number): Promise<SteamScreenshotIt
     };
 
     if (json.success !== 1) {
-      throw new Error(`Steam API 返回失败: success=${json.success}`);
+      throw new SteamBridgeError(`Steam API 返回失败: success=${json.success}`, { eresult: json.success });
     }
 
     const details = json.publishedfiledetails;

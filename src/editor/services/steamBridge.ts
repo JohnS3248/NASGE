@@ -13,6 +13,7 @@ import type {
 } from "../../shared/messages";
 import { loggers } from "../../shared/logger";
 import { simulateSteamUrlTruncation, type SteamUrlAnalysis } from "../utils/steamUrlTruncation";
+import { classifyError } from "../utils/errorClassifier";
 
 const RUNTIME = chrome?.runtime;
 
@@ -75,7 +76,7 @@ export async function uploadSteamImage(
   const response = await sendSteamRequest(request);
 
   if (!response.ok) {
-    throw new Error(response.error);
+    throw classifyError(response);
   }
 
   return response.data as UploadResult;
@@ -88,7 +89,7 @@ export async function pingSteamBridge(): Promise<void> {
   });
 
   if (!response.ok) {
-    throw new Error(response.error);
+    throw classifyError(response);
   }
 }
 
@@ -101,7 +102,7 @@ export async function fetchSteamGuideImages(scope: UploadScope = "chapter-previe
 
   const response = await sendSteamRequest(request);
   if (!response.ok) {
-    throw new Error(response.error);
+    throw classifyError(response);
   }
 
   return (response.data as SteamGuideImage[]) ?? [];
@@ -116,7 +117,7 @@ export async function fetchSteamScreenshots(page?: number): Promise<SteamScreens
 
   const response = await sendSteamRequest(request);
   if (!response.ok) {
-    throw new Error(response.error);
+    throw classifyError(response);
   }
 
   return (response.data as SteamScreenshotItem[]) ?? [];
@@ -161,6 +162,6 @@ export async function deleteSteamImage(previewId: string, scope: UploadScope = "
 
   const response = await sendSteamRequest(request);
   if (!response.ok) {
-    throw new Error(response.error);
+    throw classifyError(response);
   }
 }

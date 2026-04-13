@@ -56,7 +56,9 @@ async function handleSteamBridgeMessage(
     loggers.background.error("Steam bridge error:", error);
     sendResponse({
       ok: false,
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      eresult: (error as Record<string, unknown>)?.eresult as number | undefined,
+      httpStatus: (error as Record<string, unknown>)?.httpStatus as number | undefined,
     });
   }
 }

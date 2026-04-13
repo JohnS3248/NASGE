@@ -3,6 +3,7 @@
  */
 
 import { loggers } from "../shared/logger";
+import { SteamBridgeError } from "../shared/steamErrors";
 
 declare global {
   interface Window {
@@ -36,7 +37,7 @@ export async function fetchChapterFromSteam(
   });
 
   if (!response.ok) {
-    throw new Error(`拉取章节失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`拉取章节失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const html = await response.text();
@@ -106,13 +107,13 @@ export async function saveChapterToSteam(
   });
 
   if (!response.ok) {
-    throw new Error(`保存章节失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`保存章节失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const result = await response.json();
 
   if (result.success !== 1) {
-    throw new Error(`Steam 保存章节失败，返回代码：${result.success}`);
+    throw new SteamBridgeError(`Steam 保存章节失败，返回代码：${result.success}`, { eresult: result.success });
   }
 
   const savedSectionId = sectionId || result.sectionid;
@@ -145,7 +146,7 @@ export async function fetchChapterList(guideId: string): Promise<Array<{
   });
 
   if (!response.ok) {
-    throw new Error(`拉取章节列表失败：HTTP ${response.status}`);
+    throw new SteamBridgeError(`拉取章节列表失败：HTTP ${response.status}`, { httpStatus: response.status });
   }
 
   const html = await response.text();
