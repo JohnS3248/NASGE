@@ -5,9 +5,12 @@ import { JSONContent } from '@tiptap/core';
 import { createEditorExtensions } from '../utils/editorExtensions';
 import { titleHasImage } from '../utils/titleHelpers';
 import { extractFilesFromPaste, extractFilesFromDrop } from '../utils/imageInput';
-import { processIncomingImages } from '../services/imageIntake';
+import { addFilesToPool } from '../services/imagePoolIntake';
+import { NASGE_IMAGE_MIME_TYPE, type ImageDragData } from './ImageFloatingPanel';
 import { ImageUploadService } from '../services/ImageUploadService';
 import { useImageStore } from '../stores/useImageStore';
+import { useImagePanelStore } from '../stores/useImagePanelStore';
+import { useGuideStore } from '../stores/useGuideStore';
 import { MenuItem, MenuSectionLabel, MenuDivider } from './ContextMenuParts';
 import type { ImageSizePreset, ImageAlignment } from '../types/image';
 import { checkCharacterLimit, getCharacterCountColor, getCharacterCountText } from '../utils/characterLimit';
@@ -228,25 +231,59 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     }
   }, [contextMenu.payload, t]);
 
-  // 处理拖拽/粘贴的图片
-  const handleIncomingFiles = useCallback(
-    async (files: File[], source: 'paste' | 'drop') => {
-      if (!editor || !files.length) return;
-      const cursorPosition = editor.state.selection.anchor;
+  // 处理从图片池拖入的 NASGE 内部图片（与 TipTapEditor 逻辑一致）
+  const { defaultInsertSize, defaultInsertAlignment, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
 
-      try {
-        await processIncomingImages(editor, files, {
-          source,
-          cursorPosition
+  const handleNasgeImageDrop = useCallback(
+    (dragData: ImageDragData, dropPosition?: number) => {
+      if (!editor) return;
+
+      if (dropPosition !== undefined) {
+        editor.chain().focus().setTextSelection(dropPosition).run();
+      } else {
+        editor.commands.focus();
+      }
+
+      const sizePresetMap: Record<string, ImageSizePreset> = {
+        original: "original",
+        medium: "half",
+        small: "thumb"
+      };
+      const sizePreset = sizePresetMap[defaultInsertSize] || "original";
+
+      const alignmentMap: Record<string, ImageAlignment> = {
+        floatLeft: "floatLeft",
+        floatRight: "floatRight",
+        center: "inline",
+        inline: "inline"
+      };
+      const alignment = alignmentMap[defaultInsertAlignment] || "inline";
+
+      const isScreenshot = dragData.type === "steam-screenshot";
+      for (const image of dragData.images) {
+        editor.commands.insertSteamImage({
+          previewId: image.previewId || null,
+          fileName: image.fileName,
+          previewDataUrl: image.localUrl || image.thumbnailUrl || null,
+          sizePreset,
+          alignment,
+          ...(isScreenshot && image.imageUrl ? {
+            source: "screenshot",
+            imageUrl: image.imageUrl
+          } : {})
         });
-      } catch (error) {
-        loggers.image.error('TitleEditor 处理图片失败:', error);
+      }
+
+      if (afterInsertAction === "close") {
+        closeImagePanel();
+      } else if (afterInsertAction === "minimize") {
+        minimizeImagePanel();
       }
     },
-    [editor]
+    [editor, defaultInsertSize, defaultInsertAlignment, afterInsertAction, closeImagePanel, minimizeImagePanel]
   );
 
-  // 添加粘贴和拖拽事件监听器
+  // 添加粘贴和拖拽事件监听器 — 统一走 addFilesToPool 管线（与 TipTapEditor 一致）
   useEffect(() => {
     if (!editor) return;
 
@@ -257,31 +294,50 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       if (!files.length) return;
       event.preventDefault();
       event.stopPropagation();
-      editor.commands.focus();
-      void handleIncomingFiles(files, 'paste');
+
+      const currentArchiveId = useGuideStore.getState().currentArchiveId;
+      void addFilesToPool(files, { source: "paste", currentArchiveId, openPanelOnAdd: true });
     };
 
     const onDrop = (event: DragEvent) => {
+      // 优先检查是否为 NASGE 图片池内部拖放
+      const nasgeData = event.dataTransfer?.getData(NASGE_IMAGE_MIME_TYPE);
+      if (nasgeData) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        try {
+          const dragData = JSON.parse(nasgeData) as ImageDragData;
+          if ((dragData.type === "steam-image" || dragData.type === "steam-screenshot") && dragData.images?.length > 0) {
+            const coords = editor.view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY
+            });
+            handleNasgeImageDrop(dragData, coords?.pos);
+            return;
+          }
+        } catch (e) {
+          loggers.image.warn("TitleEditor 解析 NASGE 拖放数据失败:", e);
+        }
+      }
+
+      // 处理普通文件拖放 → 走图片池流程
       const files = extractFilesFromDrop(event);
       if (!files.length) return;
       event.preventDefault();
       event.stopPropagation();
 
-      const coords = editor.view.posAtCoords({
-        left: event.clientX,
-        top: event.clientY
-      });
-
-      if (coords?.pos != null) {
-        editor.chain().focus().setTextSelection(coords.pos).run();
-      } else {
-        editor.commands.focus();
-      }
-
-      void handleIncomingFiles(files, 'drop');
+      const currentArchiveId = useGuideStore.getState().currentArchiveId;
+      void addFilesToPool(files, { source: "drop", currentArchiveId, openPanelOnAdd: true });
     };
 
     const onDragOver = (event: DragEvent) => {
+      // NASGE 内部拖放也需要 dragover 允许
+      if (event.dataTransfer?.types.includes(NASGE_IMAGE_MIME_TYPE)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        return;
+      }
       const files = extractFilesFromDrop(event);
       if (!files.length) return;
       event.preventDefault();
@@ -296,7 +352,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
       dom.removeEventListener('drop', onDrop as EventListener);
       dom.removeEventListener('dragover', onDragOver as EventListener);
     };
-  }, [editor, handleIncomingFiles]);
+  }, [editor, handleNasgeImageDrop]);
 
   // 点击外部关闭右键菜单
   useEffect(() => {
