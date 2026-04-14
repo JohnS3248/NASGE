@@ -671,7 +671,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       </style>
       <div
         ref={editorContainerRef}
-        className="nasge-editor-container flex-1 min-h-[260px] overflow-y-auto relative"
+        className="group nasge-editor-container flex-1 min-h-[260px] overflow-y-auto relative"
         onContextMenu={(event) => {
           if (!editor) {
             return;
@@ -779,9 +779,15 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       >
         <EditorContent editor={editor} />
 
-        {/* 字符数统计 - 固定在编辑器右下角 */}
+        {/* 字符数统计 - 固定在编辑器右下角，默认半透明，hover 编辑区或接近上限时完整显示 */}
         <div
-          className={`absolute bottom-3 right-3 text-[0.8rem] font-medium bg-[rgba(9,15,25,0.85)] px-2.5 py-1.5 rounded-lg backdrop-blur-sm pointer-events-none border ${characterInfo.exceeded ? 'border-danger/30' : 'border-accent/20'}`}
+          className={`absolute bottom-3 right-3 text-[0.75rem] font-medium px-2 py-1 rounded-md backdrop-blur-sm pointer-events-none border transition-opacity duration-300 ${
+            characterInfo.exceeded
+              ? 'bg-danger/15 border-danger/30 opacity-100'
+              : characterInfo.warning
+                ? 'bg-[rgba(9,15,25,0.85)] border-accent/20 opacity-100'
+                : 'bg-[rgba(9,15,25,0.7)] border-transparent opacity-0 group-hover:opacity-60'
+          }`}
           style={{ color: getCharacterCountColor(characterInfo) }}
         >
           {getCharacterCountText(characterInfo)}
