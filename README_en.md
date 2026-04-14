@@ -106,7 +106,18 @@ Steam's built-in guide editor is a plain-text BBCode editor — no preview, no i
 <!-- TODO: Chrome Web Store 上架后替换链接 -->
 > Coming soon — the extension is preparing for its first public release.
 
-### Manual Install (Developer)
+### Download from Releases
+
+1. Go to the [Releases page](https://github.com/JohnS3248/NASGE/releases/latest) and download the latest `nasge-vX.X.X.zip`
+2. Unzip to any folder
+3. Load in Chrome
+   - Open `chrome://extensions`
+   - Enable **Developer mode** (top right)
+   - Click **Load unpacked** → select the unzipped folder
+
+> **Tip**: To update, download the new zip, extract it over the same folder, then click the reload button on the NASGE card in `chrome://extensions`.
+
+### Build from Source (Developer)
 
 1. Clone the repository
    ```bash

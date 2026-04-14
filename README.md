@@ -116,7 +116,18 @@ Steam 自带的指南编辑器是一个纯文本 BBCode 编辑器——没有预
 
 > 即将发布——扩展正在准备首次公开发布。
 
-### 手动安装（开发者）
+### Release 下载安装
+
+1. 前往 [Releases 页面](https://github.com/JohnS3248/NASGE/releases/latest)，下载最新版 `nasge-vX.X.X.zip`
+2. 解压 zip 到任意文件夹
+3. 在 Chrome 中加载
+   - 打开 `chrome://extensions`
+   - 启用右上角的 **开发者模式**
+   - 点击 **加载已解压的扩展程序** → 选择解压后的文件夹
+
+> **提示**：更新时下载新版 zip，解压覆盖同一文件夹，然后在 `chrome://extensions` 点击 NASGE 卡片上的刷新按钮即可。
+
+### 手动构建（开发者）
 
 1. 克隆仓库
    ```bash
