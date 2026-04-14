@@ -10,7 +10,6 @@ import { useImagePanelStore } from "../../stores/useImagePanelStore";
 import { useGuideStore, type ImageTag } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
 import { useEditorConfigStore } from "../../stores/useEditorConfigStore";
-import { ImageUploadService } from "../../services/ImageUploadService";
 import { XIcon, CheckIcon } from "./icons";
 import { loggers } from "../../../shared/logger";
 
@@ -62,11 +61,9 @@ const ImageCard: React.FC<ImageCardProps> = ({
   const {
     showFileName,
     showStatusIndicator,
-    getThumbnailSizePixels,
-    isPendingUploadAfterRename,
-    removePendingUploadAfterRename
+    getThumbnailSizePixels
   } = useImagePanelStore();
-  const { renameImage, getImageById } = useSteamGuideImageStore();
+  const { renameImage } = useSteamGuideImageStore();
   const currentArchiveId = useGuideStore((s) => s.currentArchiveId);
   const {
     getTagsForImage,
@@ -143,22 +140,8 @@ const ImageCard: React.FC<ImageCardProps> = ({
       }
     }
 
-    if (isPendingUploadAfterRename(oldFileName)) {
-      removePendingUploadAfterRename(oldFileName);
-      setTimeout(() => {
-        const updatedImage = getImageById(newFileName);
-        if (updatedImage && updatedImage.state === "pending") {
-          loggers.image.info("改名完成，触发自动上传", { fileName: newFileName });
-          ImageUploadService.queuePoolUpload(updatedImage);
-        } else {
-          loggers.image.warn("改名后无法找到图片或图片已不是待上传状态", {
-            newFileName, found: !!updatedImage, state: updatedImage?.state
-          });
-        }
-      }, 50);
-    }
     onEditingChange?.(null);
-  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange, sanitizeBaseName, isPendingUploadAfterRename, removePendingUploadAfterRename, getImageById]);
+  }, [editValue, baseName, extension, image.fileName, image.previewId, renameImage, onEditingChange, sanitizeBaseName]);
 
   const handleRenameCancel = useCallback(() => {
     setEditValue(baseName);

@@ -40,8 +40,7 @@ function getDefaultFileName(mimeType: string): string {
  * 6. 重复图片 toast 通知
  *
  * 上传集成规则：
- * - 单图 + 内联重命名 → addPendingUploadAfterRename — 延迟到 ImageCard 确认后再上传
- * - 多图批量重命名后 / 不重命名 → queuePoolBatchUpload — 名字已确定，立即上传
+ * - 重命名弹窗确认后 / 不重命名 → queuePoolBatchUpload — 名字已确定，立即上传
  */
 export async function addFilesToPool(
   files: File[],
@@ -98,8 +97,8 @@ export async function addFilesToPool(
     return;
   }
 
-  // ---- 多图 + 重命名 → 批量重命名弹窗（超限灰色）----
-  if (fileInfos.length > 1 && shouldRename) {
+  // ---- 重命名 → 批量重命名弹窗（单图/多图统一）----
+  if (shouldRename) {
     const batchImages = fileInfos.map(f => ({
       id: f.fileName,
       currentName: f.fileName,
@@ -183,20 +182,9 @@ export async function addFilesToPool(
   if (addedImages.length > 0) {
     if (options.openPanelOnAdd) imagePanelStore.open();
 
-    // 单图 + 内联重命名 → 延迟到 ImageCard 确认重命名后再上传
-    if (shouldRename && addedImages.length === 1) {
-      const imageId = addedImages[0].previewId || addedImages[0].fileName;
-      setTimeout(() => {
-        useImagePanelStore.getState().setEditingImageId(imageId);
-      }, 100);
-      if (shouldAutoUpload) {
-        useImagePanelStore.getState().addPendingUploadAfterRename(imageId);
-      }
-    } else {
-      // 多图 / 不重命名 → 名字已确定，立即上传
-      if (shouldAutoUpload) {
-        ImageUploadService.queuePoolBatchUpload(addedImages);
-      }
+    // 不重命名 → 名字已确定，立即上传
+    if (shouldAutoUpload) {
+      ImageUploadService.queuePoolBatchUpload(addedImages);
     }
   }
 

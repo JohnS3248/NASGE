@@ -240,15 +240,25 @@ function autoBatchRenameDialog(
 // 单图合规入池
 // ============================================================================
 describe("单图合规入池", () => {
-  it("正常 PNG → 入池 + 基本元数据正确（默认 autoUpload=false）", async () => {
+  it("正常 PNG → 弹窗确认入池 + 基本元数据正确（默认 autoUpload=false）", async () => {
     const ctx = await loadFresh();
     const file = makeFile("hello.png", 1024);
+
+    // 默认 promptRenameOnPaste=true → 单图也走弹窗
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      for (const img of images) {
+        m.set(img.id, img.id.replace(/\.[^.]+$/, ""));
+      }
+      return m;
+    });
 
     await ctx.addFilesToPool([file], {
       source: "paste",
       currentArchiveId: "G1",
       openPanelOnAdd: true
     });
+    unsub();
 
     const items = ctx.steamImageStore.getState().items;
     expect(items).toHaveLength(1);
@@ -256,49 +266,68 @@ describe("单图合规入池", () => {
     expect(items[0].state).toBe("pending");
     expect(items[0].linkedGuideId).toBe("G1");
 
-    // 默认 autoUploadInPanel=false → 既不立即上传也不进 pending 队列
+    // 默认 autoUploadInPanel=false → 不上传
     expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
-    expect(ctx.imagePanelStore.getState().pendingUploadAfterRename).toEqual([]);
   });
 
-  it("autoUpload=true + promptRename=true → 走 addPendingUploadAfterRename", async () => {
+  it("autoUpload=true + promptRename=true → 走批量重命名弹窗 → 确认后立即上传", async () => {
     const ctx = await loadFresh();
     ctx.configStore.getState().setAutoUploadInPanel(true);
     const file = makeFile("hello.png", 1024);
+
+    // 单图也走弹窗，自动确认保持原名
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      for (const img of images) {
+        m.set(img.id, img.id.replace(/\.[^.]+$/, ""));
+      }
+      return m;
+    });
 
     await ctx.addFilesToPool([file], {
       source: "paste",
       currentArchiveId: "G1",
       openPanelOnAdd: false
     });
+    unsub();
 
     const items = ctx.steamImageStore.getState().items;
     expect(items).toHaveLength(1);
-    // 单图 + promptRename=true → 不立即上传
-    expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
-    // 进 pending 队列等待 ImageCard 改名后再上传
-    const pending = ctx.imagePanelStore.getState().pendingUploadAfterRename;
-    expect(pending).toContain(items[0].fileName);
+    expect(items[0].fileName).toBe("hello.png");
+    // 弹窗确认后名字已确定 → 立即上传
+    expect(ctx.ImageUploadService.queuePoolBatchUpload).toHaveBeenCalledTimes(1);
   });
 
   it("openPanelOnAdd=true → 面板打开", async () => {
     const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "")));
+      return m;
+    });
     expect(ctx.imagePanelStore.getState().isOpen).toBe(false);
     await ctx.addFilesToPool([makeFile("a.png", 100)], {
       source: "paste",
       currentArchiveId: null,
       openPanelOnAdd: true
     });
+    unsub();
     expect(ctx.imagePanelStore.getState().isOpen).toBe(true);
   });
 
   it("openPanelOnAdd=false → 面板保持关闭", async () => {
     const ctx = await loadFresh();
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "")));
+      return m;
+    });
     await ctx.addFilesToPool([makeFile("a.png", 100)], {
       source: "paste",
       currentArchiveId: null,
       openPanelOnAdd: false
     });
+    unsub();
     expect(ctx.imagePanelStore.getState().isOpen).toBe(false);
   });
 
@@ -312,22 +341,24 @@ describe("单图合规入池", () => {
       openPanelOnAdd: false
     });
     expect(ctx.ImageUploadService.queuePoolBatchUpload).toHaveBeenCalledTimes(1);
-    // 不会进 addPendingUploadAfterRename 队列
-    expect(ctx.imagePanelStore.getState().pendingUploadAfterRename).toEqual([]);
   });
 
-  it("autoUploadInPanel=false → 既不 addPending 也不 queuePoolBatch", async () => {
+  it("autoUploadInPanel=false → 弹窗确认入池但不上传", async () => {
     const ctx = await loadFresh();
-    // 默认就是 false，显式 set 一次表达意图
     ctx.configStore.getState().setAutoUploadInPanel(false);
+    const unsub = autoBatchRenameDialog(ctx.dialogStore, (images) => {
+      const m = new Map<string, string>();
+      images.forEach(img => m.set(img.id, img.id.replace(/\.[^.]+$/, "")));
+      return m;
+    });
     await ctx.addFilesToPool([makeFile("a.png", 100)], {
       source: "paste",
       currentArchiveId: null,
       openPanelOnAdd: false
     });
+    unsub();
     expect(ctx.ImageUploadService.queuePoolBatchUpload).not.toHaveBeenCalled();
-    expect(ctx.imagePanelStore.getState().pendingUploadAfterRename).toEqual([]);
-    // 但图片已入池
+    // 图片已入池
     expect(ctx.steamImageStore.getState().items).toHaveLength(1);
   });
 
@@ -341,8 +372,8 @@ describe("单图合规入池", () => {
       currentArchiveId: null,
       openPanelOnAdd: false
     });
+    // promptRenameOnDrop=false → 不走弹窗 → 直接入池 + 立即上传
     expect(ctx.ImageUploadService.queuePoolBatchUpload).toHaveBeenCalledTimes(1);
-    expect(ctx.imagePanelStore.getState().pendingUploadAfterRename).toEqual([]);
   });
 });
 
@@ -372,6 +403,8 @@ describe("单图超限阻止", () => {
 
   it("正好等于 2MB → 视为合规，正常入池", async () => {
     const ctx = await loadFresh();
+    // 关闭重命名弹窗以隔离测试超限逻辑
+    ctx.configStore.getState().setPromptRenameOnPaste(false);
     const exact = makeFile("ok.png", 2 * 1024 * 1024);
     await ctx.addFilesToPool([exact], {
       source: "paste",
@@ -386,9 +419,15 @@ describe("单图超限阻止", () => {
 // 无名剪贴板图片补全
 // ============================================================================
 describe("无名剪贴板图片补全", () => {
-  it("空文件名 + image/jpeg → image.jpg", async () => {
+  // 关闭重命名弹窗以隔离测试文件名补全逻辑
+  async function setupNoRenameForClipboard() {
     const ctx = await loadFresh();
-    // File 构造器要求 name 字段，传 "" 模拟剪贴板未命名图片
+    ctx.configStore.getState().setPromptRenameOnPaste(false);
+    return ctx;
+  }
+
+  it("空文件名 + image/jpeg → image.jpg", async () => {
+    const ctx = await setupNoRenameForClipboard();
     const file = new File([new Uint8Array(100)], "", { type: "image/jpeg" });
     await ctx.addFilesToPool([file], {
       source: "paste",
@@ -401,7 +440,7 @@ describe("无名剪贴板图片补全", () => {
   });
 
   it("默认 image.png 文件名 + image/gif → image.gif", async () => {
-    const ctx = await loadFresh();
+    const ctx = await setupNoRenameForClipboard();
     const file = new File([new Uint8Array(100)], "image.png", { type: "image/gif" });
     await ctx.addFilesToPool([file], {
       source: "paste",
@@ -412,7 +451,7 @@ describe("无名剪贴板图片补全", () => {
   });
 
   it("默认 image.png 文件名 + image/webp → image.webp", async () => {
-    const ctx = await loadFresh();
+    const ctx = await setupNoRenameForClipboard();
     const file = new File([new Uint8Array(100)], "image.png", { type: "image/webp" });
     await ctx.addFilesToPool([file], {
       source: "paste",
@@ -423,7 +462,7 @@ describe("无名剪贴板图片补全", () => {
   });
 
   it("默认 image.png 文件名 + 未知 MIME → 保留 image.png", async () => {
-    const ctx = await loadFresh();
+    const ctx = await setupNoRenameForClipboard();
     const file = new File([new Uint8Array(100)], "image.png", { type: "application/octet-stream" });
     await ctx.addFilesToPool([file], {
       source: "paste",
@@ -434,7 +473,7 @@ describe("无名剪贴板图片补全", () => {
   });
 
   it("已有有意义文件名 → 不被覆盖", async () => {
-    const ctx = await loadFresh();
+    const ctx = await setupNoRenameForClipboard();
     const file = makeFile("screenshot-2025.png", 100, "image/jpeg");
     await ctx.addFilesToPool([file], {
       source: "paste",
@@ -702,6 +741,8 @@ describe("离线模式拦截", () => {
 
   it("guide 模式 → 正常入池", async () => {
     const ctx = await loadFresh();
+    // 关闭重命名弹窗以隔离测试离线拦截逻辑
+    ctx.configStore.getState().setPromptRenameOnPaste(false);
     // loadFresh 默认已设为 guide
     await ctx.addFilesToPool(
       [makeFile("a.png", 100)],

@@ -94,9 +94,6 @@ export interface ImagePanelRuntimeState {
   // 编辑状态
   editingImageId: string | null; // 正在编辑文件名的图片 ID
 
-  // 待改名后上传的图片列表
-  pendingUploadAfterRename: string[];
-
   // 来源 Tab
   sourceTab: ImageSourceTab;
 }
@@ -147,11 +144,6 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
 
   // ============ 编辑 Actions ============
   setEditingImageId: (id: string | null) => void;
-
-  // ============ 待改名后上传 Actions ============
-  addPendingUploadAfterRename: (imageId: string) => void;
-  removePendingUploadAfterRename: (imageId: string) => void;
-  isPendingUploadAfterRename: (imageId: string) => boolean;
 
   // ============ 插入设置 Actions ============
   setDefaultInsertSize: (size: "original" | "medium" | "small") => void;
@@ -205,7 +197,6 @@ const DEFAULT_RUNTIME_STATE: ImagePanelRuntimeState = {
   focusedId: null,
   lastSelectedId: null,
   editingImageId: null,
-  pendingUploadAfterRename: [],
   sourceTab: "pool"
 };
 
@@ -479,29 +470,6 @@ export const useImagePanelStore = create<ImagePanelState>()(
       setEditingImageId: (id) => {
         loggers.image.verbose("设置编辑中的图片", id);
         set({ editingImageId: id });
-      },
-
-      // ============ 待改名后上传 Actions ============
-      addPendingUploadAfterRename: (imageId) => {
-        set((state) => {
-          if (state.pendingUploadAfterRename.includes(imageId)) {
-            return state;
-          }
-          loggers.image.verbose("添加待改名后上传", imageId);
-          return {
-            pendingUploadAfterRename: [...state.pendingUploadAfterRename, imageId]
-          };
-        });
-      },
-
-      removePendingUploadAfterRename: (imageId) => {
-        set((state) => ({
-          pendingUploadAfterRename: state.pendingUploadAfterRename.filter(id => id !== imageId)
-        }));
-      },
-
-      isPendingUploadAfterRename: (imageId) => {
-        return get().pendingUploadAfterRename.includes(imageId);
       },
 
       // ============ 插入设置 Actions ============
