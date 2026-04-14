@@ -27,6 +27,7 @@ import DialogContainer from "./components/ConfirmDialog";
 import { toast } from "./stores/useToastStore";
 import { dialog } from "./stores/useDialogStore";
 import ReviewSettingsPanel from "./components/ReviewSettingsPanel";
+import { useReviewStore } from "./stores/useReviewStore";
 import { useTour } from "./hooks/useTour";
 
 const MODE_LABEL_KEYS: Record<string, string> = {
@@ -42,6 +43,7 @@ const App: React.FC = () => {
   const { refreshGuideInfo, isRefreshing: isRefreshingGuide } = useEditorMode();
   const mode = useGuideStore((s) => s.mode);
   const guideTitle = useGuideStore((s) => s.guideInfo?.title);
+  const reviewGameName = useReviewStore((s) => s.gameName);
   const reviewMode = checkReviewMode(mode);
   const showPreview = useEditorConfigStore((s) => s.showPreview);
   const { pushDraft } = useChapterSync();
@@ -72,16 +74,12 @@ const App: React.FC = () => {
   // 动态更新标签页标题
   useEffect(() => {
     const modeLabel = t(MODE_LABEL_KEYS[mode] || mode);
-    // review 模式从 useReviewStore 取游戏名
     if (reviewMode) {
-      import('./stores/useReviewStore').then(({ useReviewStore }) => {
-        const gameName = useReviewStore.getState().gameName;
-        document.title = gameName ? `NASGE · ${modeLabel} · ${gameName}` : `NASGE · ${modeLabel}`;
-      });
+      document.title = reviewGameName ? `NASGE · ${modeLabel} · ${reviewGameName}` : `NASGE · ${modeLabel}`;
     } else {
       document.title = guideTitle ? `NASGE · ${modeLabel} · ${guideTitle}` : `NASGE · ${modeLabel}`;
     }
-  }, [mode, guideTitle, reviewMode, t]);
+  }, [mode, guideTitle, reviewGameName, reviewMode, t]);
 
   // 草稿是否为空
   const isDraftEmpty = useMemo(() => {
