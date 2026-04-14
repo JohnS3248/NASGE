@@ -23,6 +23,7 @@ export type Draft = {
   draftType?: 'guide' | 'review';
   linkedAppId?: string;     // 绑定 Steam 游戏 appId（review 专用）
   linkedAppName?: string;   // 游戏名（方便离线模式显示）
+  isPrimary?: boolean;      // 是否为与 Steam 评测绑定的主草稿（仅主草稿可提交）
 };
 
 // ============================================================================
@@ -50,7 +51,7 @@ type DraftState = {
 
   // 草稿 CRUD
   selectDraft: (id: string) => void;
-  addDraft: (options?: { title?: string; draftName?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string; linkedAppId?: string; linkedAppName?: string }) => Draft;
+  addDraft: (options?: { title?: string; draftName?: string; draftType?: 'guide' | 'review'; linkedGuideId?: string; linkedAppId?: string; linkedAppName?: string; isPrimary?: boolean }) => Draft;
   updateDraft: (id: string, patch: Partial<Draft>) => void;
   deleteDraft: (id: string) => void;
   duplicateDraft: (id: string) => Draft | null;
@@ -98,6 +99,7 @@ export const useDraftStore = create<DraftState>()(
           draftType,
           linkedAppId: options?.linkedAppId,
           linkedAppName: options?.linkedAppName,
+          isPrimary: options?.isPrimary,
         };
 
         set((s) => ({
@@ -152,6 +154,7 @@ export const useDraftStore = create<DraftState>()(
           updatedAt: Date.now(),
           linkedChapterId: undefined,
           lastSyncedAt: undefined,
+          isPrimary: undefined,
         };
 
         set((s) => ({

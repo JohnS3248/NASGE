@@ -51,6 +51,8 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const online = isOnlineMode(mode);
+  const activeDraft = useDraftStore((s) => s.drafts.find(d => d.id === s.activeDraftId));
+  const isPrimary = activeDraft?.isPrimary === true;
 
   const handleSubmit = useCallback(async () => {
     // 跨游戏提交安全检查
@@ -213,18 +215,24 @@ const ReviewSettingsPanel: React.FC<ReviewSettingsPanelProps> = ({ currentHtml }
       {online && (
         <>
           <div className="h-px bg-border-subtle" />
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={`w-full py-2 rounded-md text-sm font-semibold nasge-transition-quick
-              ${isSubmitting
-                ? "opacity-50 cursor-not-allowed bg-accent/60 text-bg-app"
-                : "cursor-pointer bg-accent text-bg-app hover:bg-accent-hover"
-              }`}
-          >
-            {isSubmitting ? t('review.submitting') : hasExistingReview ? t('review.update') : t('review.submit')}
-          </button>
+          {isPrimary ? (
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={`w-full py-2 rounded-md text-sm font-semibold nasge-transition-quick
+                ${isSubmitting
+                  ? "opacity-50 cursor-not-allowed bg-accent/60 text-bg-app"
+                  : "cursor-pointer bg-accent text-bg-app hover:bg-accent-hover"
+                }`}
+            >
+              {isSubmitting ? t('review.submitting') : hasExistingReview ? t('review.update') : t('review.submit')}
+            </button>
+          ) : (
+            <div className="text-[11px] text-text-muted text-center leading-relaxed">
+              {t('review.draftOnly')}
+            </div>
+          )}
         </>
       )}
     </div>

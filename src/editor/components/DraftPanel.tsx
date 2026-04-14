@@ -194,11 +194,11 @@ const DraftPanel: React.FC = () => {
 
     if (inReview) {
       const reviewDrafts = drafts.filter((d) => d.draftType === 'review');
-      // 有 appId → 只显示该游戏的草稿（在线/离线均适用）
-      if (reviewAppId) {
-        return reviewDrafts.filter((d) => d.linkedAppId === reviewAppId);
-      }
-      return reviewDrafts;
+      const filtered = reviewAppId
+        ? reviewDrafts.filter((d) => d.linkedAppId === reviewAppId)
+        : reviewDrafts;
+      // 主草稿排最前
+      return [...filtered].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
     }
 
     // guide 模式：按存档过滤
@@ -385,6 +385,7 @@ const DraftPanel: React.FC = () => {
                     className={`
                       group flex items-center gap-2 px-3 py-2 rounded-md
                       nasge-transition-quick
+                      ${draft.isPrimary ? 'border-l-2 border-l-accent' : ''}
                       ${isActive && !batchMode
                         ? 'bg-accent-muted text-text-primary'
                         : 'bg-transparent text-text-secondary hover:bg-bg-hover hover:text-text-primary'
@@ -420,8 +421,13 @@ const DraftPanel: React.FC = () => {
 
                     {/* 草稿信息 */}
                     <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                      <span className="text-sm font-medium truncate">
+                      <span className="text-sm font-medium truncate flex items-center gap-1.5">
                         {getDraftDisplayTitle(draft)}
+                        {draft.isPrimary && (
+                          <span className="shrink-0 px-1 py-px text-[9px] font-semibold rounded bg-accent/20 text-accent border border-accent/30 leading-tight">
+                            {t('draft.primary')}
+                          </span>
+                        )}
                       </span>
                       <span className="text-[11px] text-text-muted">
                         {getDraftSubtitle(draft)}

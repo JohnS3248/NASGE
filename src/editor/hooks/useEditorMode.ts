@@ -56,50 +56,73 @@ export function useEditorMode() {
       return;
     }
 
-    // 如果是评测模式且有 appId，初始化评测信息
+    // 如果是评测模式且有 appId，初始化评测信息（带重试）
     if (resolved === 'review' && appId) {
-      import('../services/reviewBridge').then(({ fetchReviewForm }) => {
-        fetchReviewForm().then((data) => {
-          // 1. 保存评测设置
-          import('../stores/useReviewStore').then(({ useReviewStore }) => {
-            useReviewStore.getState().setReviewInfo(data);
+      const fetchReviewWithRetry = async (retries = 3, initialDelay = 300) => {
+        const { fetchReviewForm } = await import('../services/reviewBridge');
+        await new Promise(resolve => setTimeout(resolve, initialDelay));
+        let delay = 500;
+        for (let i = 0; i < retries; i++) {
+          try {
+            return await fetchReviewForm();
+          } catch (error) {
+            const isConnectionError = error instanceof Error &&
+              (error.message.includes('Could not establish connection') ||
+               error.message.includes('Receiving end does not exist'));
+            if (isConnectionError && i < retries - 1) {
+              loggers.editor.info(`连接 Steam 评测页中，${delay}ms 后重试 (${i + 1}/${retries})`);
+              await new Promise(resolve => setTimeout(resolve, delay));
+              delay *= 2;
+            } else {
+              throw error;
+            }
+          }
+        }
+      };
+
+      fetchReviewWithRetry().then((data) => {
+        if (!data) return;
+
+        // 1. 保存评测设置
+        import('../stores/useReviewStore').then(({ useReviewStore }) => {
+          useReviewStore.getState().setReviewInfo(data);
+        });
+
+        // 2. 按 linkedAppId 查找已有的主草稿
+        const draftStore = useDraftStore.getState();
+        const existingPrimary = draftStore.drafts.find(d =>
+          d.draftType === 'review' && d.linkedAppId === appId && d.isPrimary
+        );
+
+        if (existingPrimary) {
+          // 已有该游戏的主草稿 → 激活，不覆盖本地内容
+          useDraftStore.setState({ activeDraftId: existingPrimary.id });
+          loggers.editor.info('激活已有评测主草稿', { appId, draftId: existingPrimary.id });
+        } else {
+          // 没有主草稿 → 创建新主草稿，导入 Steam 内容
+          const extensions = createEditorExtensions({ reviewMode: true });
+          const contentJson = data.text
+            ? generateJSON(bbcodeToHtml(data.text), extensions)
+            : undefined;
+
+          const newDraft = draftStore.addDraft({
+            title: data.gameName || '评测',
+            draftName: data.gameName || '评测',
+            draftType: 'review',
+            linkedAppId: appId,
+            linkedAppName: data.gameName || undefined,
+            isPrimary: true,
           });
 
-          // 2. 按 linkedAppId 查找草稿
-          const draftStore = useDraftStore.getState();
-          const existingDraft = draftStore.drafts.find(d =>
-            d.draftType === 'review' && d.linkedAppId === appId
-          );
-
-          if (existingDraft) {
-            // 已有该游戏的草稿 → 激活，不覆盖本地内容
-            useDraftStore.setState({ activeDraftId: existingDraft.id });
-            loggers.editor.info('激活已有评测草稿', { appId, draftId: existingDraft.id });
-          } else {
-            // 没有该游戏草稿 → 创建新草稿，导入 Steam 内容
-            const extensions = createEditorExtensions({ reviewMode: true });
-            const contentJson = data.text
-              ? generateJSON(bbcodeToHtml(data.text), extensions)
-              : undefined;
-
-            const newDraft = draftStore.addDraft({
-              title: data.gameName || '评测',
-              draftName: data.gameName || '评测',
-              draftType: 'review',
-              linkedAppId: appId,
-              linkedAppName: data.gameName || undefined,
-            });
-
-            if (contentJson) {
-              draftStore.updateDraft(newDraft.id, { content: contentJson });
-            }
-            loggers.editor.info('创建新评测草稿', { appId, draftId: newDraft.id });
+          if (contentJson) {
+            draftStore.updateDraft(newDraft.id, { content: contentJson });
           }
+          loggers.editor.info('创建新评测主草稿', { appId, draftId: newDraft.id });
+        }
 
-          loggers.editor.info('评测信息导入成功', data);
-        }).catch((error) => {
-          loggers.editor.error('评测信息导入失败', error);
-        });
+        loggers.editor.info('评测信息导入成功', data);
+      }).catch((error) => {
+        loggers.editor.error('评测信息导入失败（已重试）', error);
       });
       hasInitialized.current = true;
       return;

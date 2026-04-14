@@ -88,10 +88,11 @@ export const useGuideStore = create<SessionState>()(
 
         // 委托 useDraftStore 选择最佳草稿
         const afterState = get();
-        const isReview = mode === 'review' || mode === 'offline-review';
-        if (isReview) {
-          const reviewAppId = useReviewStore.getState().appId;
-          useDraftStore.getState().selectBestDraft(null, true, reviewAppId);
+        if (mode === 'offline-review') {
+          // 离线评测：从所有 review 草稿中选最近的
+          useDraftStore.getState().selectBestDraft(null, true, null);
+        } else if (mode === 'review') {
+          // 在线评测：useEditorMode 异步 fetch 后处理草稿选择，此处不提前选
         } else {
           useDraftStore.getState().selectBestDraft(afterState.currentArchiveId, false);
         }

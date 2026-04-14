@@ -26,6 +26,7 @@
     "deleteConfirm": "确定要删除草稿\"{{name}}\"吗？",
     "batchDeleteConfirm": "确定要删除选中的 {{count}} 个草稿吗？",
     "noSelected": "未选择草稿",
+    "primary": "主",
     "count": "个草稿",
     "batchManage": "批量管理",
     "deleteSelected": "删除选中",
@@ -128,6 +129,7 @@
     "tooLargeBlocked": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），无法添加到图片池。",
     "tooLargeSkipped": "\"{{fileName}}\" 超出 Steam 2MB 限制（{{size}}MB），已跳过",
     "offlineBlocked": "离线模式下无法添加图片，请连接 Steam 指南后再操作",
+    "reviewBlocked": "评测模式下不支持粘贴图片，Steam 评测不支持上传图片",
     "dataUnavailable": "图片数据暂不可用。",
     "batchRename": {
       "title": "批量重命名（{{count}} 张图片）",
@@ -215,7 +217,8 @@
     "startInstruction": "在 Steam 游戏页面点击「编辑此评测」开始，或创建一个新草稿",
     "guideInstruction": "请先创建一个新草稿，或从章节导航中拉取现有章节",
     "collapse": "收起评测设置",
-    "expand": "展开评测设置"
+    "expand": "展开评测设置",
+    "draftOnly": "此草稿仅供写作参考，不可提交到 Steam。\n只有从 Steam 导入的主草稿可提交。"
   },
   "welcomeContent": "欢迎使用 NASGE 编辑器。",
   "titleEditor": {

@@ -26,6 +26,7 @@
     "deleteConfirm": "Are you sure you want to delete draft \"{{name}}\"?",
     "batchDeleteConfirm": "Are you sure you want to delete {{count}} selected drafts?",
     "noSelected": "No draft selected",
+    "primary": "Primary",
     "count": "drafts",
     "batchManage": "Batch Manage",
     "deleteSelected": "Delete Selected",
@@ -128,6 +129,7 @@
     "tooLargeBlocked": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB) and cannot be added to the image pool.",
     "tooLargeSkipped": "\"{{fileName}}\" exceeds Steam 2MB limit ({{size}}MB), skipped",
     "offlineBlocked": "Cannot add images in offline mode. Please connect to a Steam guide first.",
+    "reviewBlocked": "Image paste is not supported in review mode. Steam reviews do not support image uploads.",
     "dataUnavailable": "Image data is not available.",
     "batchRename": {
       "title": "Batch Rename ({{count}} images)",
@@ -215,7 +217,8 @@
     "startInstruction": "Click \"Edit This Review\" on a Steam game page to start, or create a new draft",
     "guideInstruction": "Please create a new draft first, or pull existing chapters from the chapter navigation",
     "collapse": "Collapse review settings",
-    "expand": "Expand review settings"
+    "expand": "Expand review settings",
+    "draftOnly": "This draft is for reference only and cannot be submitted to Steam.\nOnly the primary draft imported from Steam can be submitted."
   },
   "welcomeContent": "Welcome to the NASGE Editor.",
   "titleEditor": {
