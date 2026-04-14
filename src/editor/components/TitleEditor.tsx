@@ -277,7 +277,23 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
 
       const isScreenshot = dragData.type === "steam-screenshot";
       for (const image of dragData.images) {
+        // 本地图片（未上传，previewId 为空）：主动在 useImageStore 注册，确保身份链完整
+        let resolvedImageNodeId: string | null = null;
+        if (!image.previewId) {
+          const entity = useImageStore.getState().addLocalImage({
+            fileName: image.fileName,
+            originalName: image.fileName,
+            fileSize: 0,
+            mimeType: "image/unknown",
+            source: "drop",
+            localPreviewUrl: image.localUrl || image.thumbnailUrl,
+            display: { preset: sizePreset, alignment }
+          });
+          resolvedImageNodeId = entity.id;
+        }
+
         editor.commands.insertSteamImage({
+          imageNodeId: resolvedImageNodeId,
           previewId: image.previewId || null,
           fileName: image.fileName,
           previewDataUrl: image.localUrl || image.thumbnailUrl || null,

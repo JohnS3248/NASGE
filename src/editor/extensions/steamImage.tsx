@@ -216,8 +216,14 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
   const steamPoolImage = useSteamGuideImageStore(
     (state) => {
       if (imageEntity) return undefined;
-      if (!attrPreviewId) return undefined;
-      return state.items.find((item) => item.previewId === attrPreviewId);
+      if (attrPreviewId) {
+        return state.items.find((item) => item.previewId === attrPreviewId);
+      }
+      // 防御兜底：本地未上传图片 previewId 为空，通过 fileName 查找
+      if (attrFileName) {
+        return state.items.find((item) => item.fileName === attrFileName && !item.previewId);
+      }
+      return undefined;
     }
   );
 
@@ -229,7 +235,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       return;
     }
     if (hasSyncedRef.current) return;
-    if (!steamPoolImage && !attrPreviewId) return;
+    if (!steamPoolImage && !attrPreviewId && !attrFileName) return;
 
     hasSyncedRef.current = true;
     ensureInStore(steamPoolImage, attrPreviewId, {
@@ -464,7 +470,7 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
       className="nasge-image-node-wrapper"
       data-preview-id={attrPreviewId ?? undefined}
       data-upload-id={undefined}
-      data-image-node-id={imageNodeId ?? attrPreviewId ?? undefined}
+      data-image-node-id={imageNodeId ?? attrPreviewId ?? attrFileName ?? undefined}
       data-size-preset={attrSizePreset || "original"}
       data-alignment={attrAlignment || "inline"}
     >
