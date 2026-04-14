@@ -121,20 +121,23 @@ export const useDraftStore = create<DraftState>()(
 
       deleteDraft: (id) => {
         set((s) => {
+          const deleted = s.drafts.find((d) => d.id === id);
           const remaining = s.drafts.filter((d) => d.id !== id);
-          const removed = s.drafts.find((d) => d.id === id) ?? null;
-          deletedCache = removed;
+          deletedCache = deleted ?? null;
 
-          return {
-            drafts: remaining,
-            activeDraftId:
-              remaining.length === 0
-                ? null
-                : s.activeDraftId === id
-                  ? remaining[remaining.length - 1].id
-                  : s.activeDraftId,
-            isDirty: false,
-          };
+          let nextId: string | null;
+          if (remaining.length === 0) {
+            nextId = null;
+          } else if (s.activeDraftId !== id) {
+            nextId = s.activeDraftId;
+          } else {
+            // 只从同类型草稿中选下一个，防止 guide→review 跨类型泄漏
+            const deletedType = deleted?.draftType ?? 'guide';
+            const sameType = remaining.filter(d => (d.draftType ?? 'guide') === deletedType);
+            nextId = sameType.length > 0 ? sameType[sameType.length - 1].id : null;
+          }
+
+          return { drafts: remaining, activeDraftId: nextId, isDirty: false };
         });
       },
 
@@ -275,15 +278,29 @@ export const useDraftStore = create<DraftState>()(
           const savedId = sessionStorage.getItem(TAB_ACTIVE_DRAFT_KEY);
           const drafts = useDraftStore.getState().drafts;
 
-          // 1) 优先：从 sessionStorage 恢复标签页级的 activeDraftId（多窗口隔离）
-          if (savedId && drafts.some(d => d.id === savedId)) {
-            useDraftStore.setState({ activeDraftId: savedId });
-            return;
+          // 读取 URL mode，判断期望的草稿类型（防止跨模式恢复）
+          const urlMode = new URLSearchParams(window.location.search).get('mode') || '';
+          const urlExpectsReview = urlMode === 'review' || urlMode === 'offline-review';
+
+          // 1) 优先：从 sessionStorage 恢复，但必须校验草稿类型与 URL 模式匹配
+          if (savedId) {
+            const savedDraft = drafts.find(d => d.id === savedId);
+            if (savedDraft) {
+              const isReviewDraft = savedDraft.draftType === 'review';
+              if (isReviewDraft === urlExpectsReview) {
+                useDraftStore.setState({ activeDraftId: savedId });
+                return;
+              }
+              // 类型不匹配 → 不恢复，落到兜底逻辑
+            }
           }
 
-          // 2) 兜底：sessionStorage 无效或没保存过 → 选择第一个草稿
-          if (drafts.length > 0) {
-            useDraftStore.setState({ activeDraftId: drafts[0].id });
+          // 2) 兜底：从同类型草稿中选第一个
+          const matching = drafts.find(d =>
+            urlExpectsReview ? d.draftType === 'review' : (d.draftType ?? 'guide') !== 'review'
+          );
+          if (matching) {
+            useDraftStore.setState({ activeDraftId: matching.id });
           }
         });
       },
