@@ -1,6 +1,6 @@
 {
   "name": "nasge",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A creator-friendly WYSIWYG browser extension for editing Steam community guides",
   "type": "module",
   "scripts": {
