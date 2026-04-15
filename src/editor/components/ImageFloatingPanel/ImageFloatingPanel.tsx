@@ -126,6 +126,10 @@ const ImageFloatingPanel: React.FC = () => {
       let comparison = 0;
       switch (sortBy) {
         case "uploadTime": {
+          // 未上传图片始终排在已上传前面，不受排序方向影响
+          const aUploaded = a.state === "success" ? 1 : 0;
+          const bUploaded = b.state === "success" ? 1 : 0;
+          if (aUploaded !== bUploaded) return aUploaded - bUploaded;
           const idA = parseInt(a.previewId || "0", 10);
           const idB = parseInt(b.previewId || "0", 10);
           comparison = idA - idB;
