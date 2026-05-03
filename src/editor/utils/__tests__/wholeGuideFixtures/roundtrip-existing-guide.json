@@ -1,0 +1,39 @@
+{
+  "type": "doc",
+  "content": [
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "前言" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "本指南介绍 NASGE 的核心使用方法。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "安装" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "前往 chrome://extensions 加载已解压扩展。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "基础使用" }] },
+    { "type": "heading", "attrs": { "level": 1 }, "content": [{ "type": "text", "text": "打开编辑器" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "在 popup 选择编辑模式。" }] },
+    { "type": "heading", "attrs": { "level": 2 }, "content": [{ "type": "text", "text": "编辑章节" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "WYSIWYG 编辑章节标题与正文。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "图片" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "支持拖拽与粘贴图片到编辑器。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "BBCode" }] },
+    { "type": "paragraph", "content": [
+      { "type": "text", "marks": [{ "type": "bold" }], "text": "粗体" },
+      { "type": "text", "text": "、" },
+      { "type": "text", "marks": [{ "type": "italic" }], "text": "斜体" },
+      { "type": "text", "text": "、" },
+      { "type": "text", "marks": [{ "type": "underline" }], "text": "下划线" },
+      { "type": "text", "text": " 等格式均支持双向往返。" }
+    ]},
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "草稿" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "草稿自动保存于本地存储。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "存档" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "每个 Steam 指南对应一个本地存档。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "上传" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "两阶段确认上传到 Steam，避免误操作。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "评测模式" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "支持编辑游戏评测内容。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "快捷键" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "可在设置中自定义 12 个快捷键。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "故障排查" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "如遇上传失败，请检查 Steam 登录状态与指南管理页是否打开。" }] },
+    { "type": "chapterTitle", "content": [{ "type": "text", "text": "结语" }] },
+    { "type": "paragraph", "content": [{ "type": "text", "text": "感谢使用 NASGE。" }] }
+  ]
+}

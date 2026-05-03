@@ -34,8 +34,10 @@ export async function fetchChapterFromSteam(
 
 /**
  * 获取 Steam sessionId（通过注入脚本到指南页面）
+ *
+ * 公开导出供 useWholeGuideSync 在 push 阶段缓存复用（R7 解法）
  */
-async function getSessionId(): Promise<string> {
+export async function getSessionId(): Promise<string> {
   // 查询指南管理页面的标签页
   const tabs = await chrome.tabs.query({
     url: "https://steamcommunity.com/sharedfiles/manageguide/*"
@@ -71,17 +73,20 @@ async function getSessionId(): Promise<string> {
 
 /**
  * 保存章节内容到 Steam
+ *
+ * @param cachedSessionId 可选：调用方已缓存的 sessionId，避免重复调用 getSessionId（R7 解法）
  */
 export async function saveChapterToSteam(
   guideId: string,
   sectionId: string | undefined,
   title: string,
-  description: string
+  description: string,
+  cachedSessionId?: string
 ): Promise<string> {
   loggers.sync.info('请求保存章节内容', { guideId, sectionId, title });
 
-  // 先获取 sessionId
-  const sessionId = await getSessionId();
+  // R7：复用调用方传入的 sessionId，否则就地获取
+  const sessionId = cachedSessionId ?? await getSessionId();
 
   const response = await chrome.runtime.sendMessage({
     channel: 'nasge:steam',

@@ -13,12 +13,17 @@ import KeyboardShortcuts from "../extensions/keyboardShortcuts";
 import SteamBlockquote from "../extensions/steamBlockquote";
 import SteamImage from "../extensions/steamImage";
 import SteamImageInline from "../extensions/steamImageInline";
+import ChapterTitle from "../extensions/chapterTitle";
 import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { TableHeader } from "@tiptap/extension-table-header";
 
-export const createEditorExtensions = (options?: { reviewMode?: boolean }): Extensions => {
+export const createEditorExtensions = (options?: {
+  reviewMode?: boolean;
+  /** A4 全篇模式：追加 chapterTitle 节点扩展（章节边界标记） */
+  wholeMode?: boolean;
+}): Extensions => {
   const base: Extensions = [
     StarterKit.configure({
       heading: false,
@@ -75,6 +80,11 @@ export const createEditorExtensions = (options?: { reviewMode?: boolean }): Exte
       SteamImage,
       SteamImageInline
     );
+  }
+
+  // A4 全篇模式：追加 chapterTitle 节点（章节边界标记）
+  if (options?.wholeMode) {
+    base.push(ChapterTitle);
   }
 
   return base;

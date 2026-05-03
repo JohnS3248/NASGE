@@ -6,6 +6,7 @@
     <title>NASGE Editor</title>
     <link rel="stylesheet" href="./styles/tokens.css" />
     <link rel="stylesheet" href="./styles/themes.css" />
+    <link rel="stylesheet" href="./styles/wholeGuide.css" />
     <style>
       :root {
         color-scheme: only dark;
@@ -131,6 +132,35 @@
         line-height: 19px;
         font-weight: 300;
         clear: both;
+      }
+
+      /* chapterTitle: 1:1 对齐 Steam .subSection.detailBox + .subSectionTitle
+         参考 work/102/m1/steam_dom_reference.md §2 / 实际 DOM 采集 2026-05-04
+         视觉装饰（顶部光晕 + 横线）由 styles/wholeGuide.css 注入（base64 内嵌） */
+      .nasge-editor-container .ProseMirror h1.nasge-chapter-title {
+        font-size: 18px;
+        line-height: normal;
+        font-weight: 400;
+        color: #66c0f4;
+        margin: 0 0 10px;
+        /* padding-top 20px = Steam subSection padding-top 10 + subSectionTitle padding-top 10
+           让两层 background-image 装饰完整显示（topbg 在 8px 处开始） */
+        padding: 20px 0 0;
+        clear: both;
+      }
+
+      /* chapterTitle 内 inline marks 与 Steam <b>/<i>/<u>/<s> 渲染一致 */
+      .nasge-editor-container .ProseMirror h1.nasge-chapter-title strong {
+        font-weight: bold;
+      }
+      .nasge-editor-container .ProseMirror h1.nasge-chapter-title em {
+        font-style: italic;
+      }
+      .nasge-editor-container .ProseMirror h1.nasge-chapter-title u {
+        text-decoration: underline;
+      }
+      .nasge-editor-container .ProseMirror h1.nasge-chapter-title s {
+        text-decoration: line-through;
       }
 
       /* 代码块: Steam div.bb_code */

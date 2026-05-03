@@ -1,0 +1,13 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "唯一章节" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "Hello world" }]
+    }
+  ]
+}

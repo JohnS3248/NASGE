@@ -1,0 +1,21 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "重名章节" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "First instance" }]
+    },
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "重名章节" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "Second instance" }]
+    }
+  ]
+}

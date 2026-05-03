@@ -5,7 +5,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src")
-    }
+    },
+    // jsdom 环境下 window 存在，让 @tiptap/html 等条件式 export 选 browser 入口
+    conditions: ["browser"]
   },
   test: {
     environment: "jsdom",

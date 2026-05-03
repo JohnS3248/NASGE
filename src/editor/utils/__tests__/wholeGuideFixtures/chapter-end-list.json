@@ -1,0 +1,30 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "List End Chapter" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "Some text" }]
+    },
+    {
+      "type": "bulletList",
+      "content": [
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Item 1" }] }
+          ]
+        },
+        {
+          "type": "listItem",
+          "content": [
+            { "type": "paragraph", "content": [{ "type": "text", "text": "Item 2" }] }
+          ]
+        }
+      ]
+    }
+  ]
+}

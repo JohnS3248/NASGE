@@ -1,6 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
+import WholeGuideEditor from "./components/WholeGuideEditor";
 import "./styles/tailwind.css";
 
 // === DEBUG: Window 全局扩展类型声明 ===
@@ -20,7 +22,27 @@ declare global {
     __bbcodeToHtml?: unknown;
     __htmlToBBCode?: unknown;
     __editor?: unknown;
+    // A4 全篇模式（M1 起）
+    __wholeGuideStore?: unknown;
+    __wholeGuideEditor?: unknown;
+    __useWholeGuideSync?: unknown;
   }
+}
+
+/**
+ * 旧模式入口 wrapper —— 保留 useEditorMode 读 search params 的零破坏行为。
+ * 路径 `/`（默认 hash）渲染此组件，旧模式 URL 仍是 `index.html?mode=guide&guideId=...`。
+ */
+function LegacyEditorView() {
+  return <App />;
+}
+
+/**
+ * A4 全篇模式 layout —— M1 简化版，仅渲染 WholeGuideEditor。
+ * M3 起会拆出 Outlet 管理 review 子路由（保持编辑器 mount 不卸载，R10 解法）。
+ */
+function WholeGuideEditorLayout() {
+  return <WholeGuideEditor />;
 }
 
 // 初始化主题 + i18n，等待完成后再 render（避免 key 闪现）
@@ -71,6 +93,15 @@ async function bootstrap() {
       window.__bbcodeToHtml = bbcodeToHtml;
       window.__htmlToBBCode = htmlToBBCode;
     });
+    // A4 全篇模式 debug 暴露（SPEC §4.2.4）
+    import("./stores/useWholeGuideStore").then(({ useWholeGuideStore }) => {
+      window.__wholeGuideStore = useWholeGuideStore;
+    });
+    import("./hooks/useWholeGuideSync").then(({ pullEntireGuide, pushEntireGuide }) => {
+      window.__useWholeGuideSync = { pullEntireGuide, pushEntireGuide };
+    });
+    // __wholeGuideEditor 由 WholeGuideEditor 在 mount 时设置 / unmount 时清空
+    window.__wholeGuideEditor = null;
   }
   // === END DEBUG ===
 
@@ -79,7 +110,18 @@ async function bootstrap() {
 
   createRoot(container).render(
     <React.StrictMode>
-      <App />
+      <HashRouter>
+        <Routes>
+          {/* 旧模式默认入口：路径 `/` 渲染 LegacyEditorView，沿用 useEditorMode 读 search params */}
+          <Route path="/" element={<LegacyEditorView />} />
+          {/* A4 全篇模式 */}
+          <Route path="/whole/:guideId" element={<WholeGuideEditorLayout />}>
+            <Route index element={null} />
+            {/* M3 占位：审阅页路由，M3 实施时替换为 ReviewView 组件 */}
+            <Route path="review" element={<div style={{ padding: "2rem", color: "#8aa4c7" }}>Review (M3 placeholder)</div>} />
+          </Route>
+        </Routes>
+      </HashRouter>
     </React.StrictMode>
   );
 }

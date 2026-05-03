@@ -42,6 +42,16 @@ const App: React.FC = () => {
     }
   }, [pageInfo, openEditor]);
 
+  const handleEditWholeGuide = useCallback(() => {
+    if (!pageInfo?.guideId || !editorUrl) return;
+    const url = `${editorUrl}#/whole/${encodeURIComponent(pageInfo.guideId)}`;
+    if (chrome?.tabs) {
+      chrome.tabs.create({ url });
+    } else {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }, [pageInfo, editorUrl]);
+
   const handleEditReview = useCallback(() => {
     if (pageInfo?.appId) {
       openEditor('review', undefined, pageInfo.appId);
@@ -151,6 +161,25 @@ const App: React.FC = () => {
             }}
           >
             {t('editGuide')}
+          </button>
+        )}
+
+        {/* 编辑全篇指南按钮（A4 模式入口）- 仅在指南管理页显示 */}
+        {pageInfo?.type === 'guide' && pageInfo.guideId && (
+          <button
+            onClick={handleEditWholeGuide}
+            style={{
+              height: "2.5rem",
+              borderRadius: "0.75rem",
+              border: "1px solid rgba(102, 192, 244, 0.4)",
+              background: "rgba(21, 34, 52, 0.85)",
+              color: "#c7dff7",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              cursor: "pointer"
+            }}
+          >
+            {t('wholeGuide.popup.editWholeGuide', { ns: 'editor' })}
           </button>
         )}
 

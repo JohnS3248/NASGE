@@ -1,0 +1,17 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "Chapter A" }]
+    },
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "Chapter B" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "Chapter B body" }]
+    }
+  ]
+}

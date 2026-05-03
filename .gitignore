@@ -16,6 +16,10 @@ notes/
 docs/
 学习指导/
 htmls/
+.omm
+.understand-anything
+graphify-out/
+work/
 
 # 打包输出
 zips/
@@ -29,3 +33,4 @@ zips/
 others/
 .mcp.json
 nasge-*.zip
+.graphifyignore

@@ -309,6 +309,49 @@
     },
     "unknown": "Operation failed. Please refresh the page and try again. If the issue persists, please report it to the developer."
   },
+  "wholeGuide": {
+    "modeName": "Whole Guide Edit",
+    "exitToOldMode": "Switch to Per-Chapter Mode",
+    "review": "Review & Upload",
+    "chapterTitle": {
+      "placeholder": "New chapter title",
+      "charLimit": "{{count}}/96"
+    },
+    "deleteChapterTitle": {
+      "title": "Delete this chapter?",
+      "message": "Content of \"{{title}}\" will be merged into the previous chapter. This is undoable but changes chapter structure.",
+      "confirm": "Merge into previous chapter"
+    },
+    "pasteChapterTitle": {
+      "title": "Pasted content contains chapter titles",
+      "message": "Pasting will add {{count}} new chapters.",
+      "confirm": "Keep chapter titles",
+      "cancelStrip": "Strip chapter titles (merge as body)"
+    },
+    "pulling": {
+      "images": "Loading image assets…",
+      "list": "Fetching chapter list…",
+      "chapters": "Fetching chapter content ({{loaded}}/{{total}})",
+      "building": "Building editor…"
+    },
+    "pushing": {
+      "session": "Acquiring upload session…",
+      "slicing": "Slicing chapters…",
+      "uploading": "Uploading chapter \"{{title}}\" ({{loaded}}/{{total}})",
+      "archive": "Syncing local archive…",
+      "snapshot": "Saving remote snapshot…"
+    },
+    "pullFailed": "Pull failed: {{err}}",
+    "pushFailed": "Push failed: {{err}}",
+    "partialFail": "Partial failure: {{failed}}/{{total}} chapters failed to upload. Check review page.",
+    "error": {
+      "emptyGuide": "Guide has no chapters; cannot enter whole-guide mode.",
+      "bodyOverflow": "These chapters exceed the 8000-character limit: {{chapters}}"
+    },
+    "popup": {
+      "editWholeGuide": "Edit Whole Guide"
+    }
+  },
   "tour": {
     "next": "Next",
     "prev": "Back",

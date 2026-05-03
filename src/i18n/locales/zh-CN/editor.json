@@ -309,6 +309,49 @@
     },
     "unknown": "操作失败，请刷新页面后重试。如问题持续，请联系开发者反馈。"
   },
+  "wholeGuide": {
+    "modeName": "全篇编辑",
+    "exitToOldMode": "切换回章节模式",
+    "review": "审阅并上传",
+    "chapterTitle": {
+      "placeholder": "新章节标题",
+      "charLimit": "{{count}}/96"
+    },
+    "deleteChapterTitle": {
+      "title": "确定删除这一章吗？",
+      "message": "「{{title}}」的内容将合并到上一章。本操作可撤销，但会让章节结构变化。",
+      "confirm": "合并到上一章"
+    },
+    "pasteChapterTitle": {
+      "title": "粘贴内容包含章节标题",
+      "message": "粘贴内容会新增 {{count}} 个章节。",
+      "confirm": "保留章节标题",
+      "cancelStrip": "去掉章节标题（合并为正文）"
+    },
+    "pulling": {
+      "images": "加载图片资源…",
+      "list": "拉取章节列表…",
+      "chapters": "拉取章节内容（{{loaded}}/{{total}}）",
+      "building": "组装编辑器…"
+    },
+    "pushing": {
+      "session": "获取上传会话…",
+      "slicing": "切分章节…",
+      "uploading": "上传章节「{{title}}」（{{loaded}}/{{total}}）",
+      "archive": "同步本地存档…",
+      "snapshot": "保留远程版本快照…"
+    },
+    "pullFailed": "拉取失败：{{err}}",
+    "pushFailed": "上传失败：{{err}}",
+    "partialFail": "部分失败：{{failed}}/{{total}} 章未上传成功，请进审阅页查看。",
+    "error": {
+      "emptyGuide": "指南没有任何章节，无法进入全篇模式。",
+      "bodyOverflow": "以下章节正文超过 8000 字符上限：{{chapters}}"
+    },
+    "popup": {
+      "editWholeGuide": "编辑全篇指南"
+    }
+  },
   "tour": {
     "next": "下一步",
     "prev": "上一步",

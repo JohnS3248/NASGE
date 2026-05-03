@@ -50,6 +50,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-i18next": "^17.0.2",
+    "react-router-dom": "^6.30.3",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

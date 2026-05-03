@@ -1,0 +1,24 @@
+{
+  "type": "doc",
+  "content": [
+    {
+      "type": "chapterTitle",
+      "content": [{ "type": "text", "text": "Image Chapter" }]
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "Before image" }]
+    },
+    {
+      "type": "image",
+      "attrs": {
+        "src": "https://example.com/test.png",
+        "alt": ""
+      }
+    },
+    {
+      "type": "paragraph",
+      "content": [{ "type": "text", "text": "After image" }]
+    }
+  ]
+}
