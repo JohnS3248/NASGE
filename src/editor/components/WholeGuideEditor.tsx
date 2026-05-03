@@ -16,6 +16,7 @@ import { createEditorExtensions } from "../utils/editorExtensions";
 import { useWholeGuideStore } from "../stores/useWholeGuideStore";
 import { useWholeGuideSync, type PullProgress, type PushProgress } from "../hooks/useWholeGuideSync";
 import { useWholeGuideSessionLock } from "../hooks/useWholeGuideSessionLock";
+import { useWholeGuideAutoBackup } from "../hooks/useWholeGuideAutoBackup";
 import { toast } from "../stores/useToastStore";
 import { loggers } from "../../shared/logger";
 import WholeGuideHeader from "./WholeGuideHeader";
@@ -24,6 +25,18 @@ import WholeGuideContextMenu, {
   type WholeGuideContextMode,
   INITIAL_CONTEXT_MENU,
 } from "./WholeGuideContextMenu";
+import WholeGuideTOC from "./WholeGuideTOC";
+import {
+  ImageFloatingPanel,
+  NASGE_IMAGE_MIME_TYPE,
+  type ImageDragData,
+} from "./ImageFloatingPanel";
+import { extractFilesFromPaste, extractFilesFromDrop } from "../utils/imageInput";
+import { addFilesToPool } from "../services/imagePoolIntake";
+import { useImageStore } from "../stores/useImageStore";
+import { useImagePanelStore } from "../stores/useImagePanelStore";
+import { useGuideStore } from "../stores/useGuideStore";
+import type { ImageSizePreset, ImageAlignment } from "../types/image";
 
 // =============================================================================
 // 子组件：拉取进度
@@ -176,6 +189,7 @@ const WholeGuideEditor: React.FC = () => {
   const { pullEntireGuide, pushEntireGuide } = useWholeGuideSync();
 
   const guideId = useWholeGuideStore((s) => s.guideId);
+  const guideTitle = useWholeGuideStore((s) => s.guideTitle);
   const doc = useWholeGuideStore((s) => s.doc);
   const status = useWholeGuideStore((s) => s.status);
   const error = useWholeGuideStore((s) => s.error);
@@ -257,6 +271,170 @@ const WholeGuideEditor: React.FC = () => {
       window.location.search = `?mode=guide`;
     }
   });
+
+  // 自动备份：每 60s 节流，FIFO 滚动 3 份
+  useWholeGuideAutoBackup();
+
+  // 同步 tab 标题：NASGE · 全篇编辑 · {guideTitle}
+  useEffect(() => {
+    const modeLabel = t("wholeGuide.modeName");
+    document.title = guideTitle
+      ? `NASGE · ${modeLabel} · ${guideTitle}`
+      : `NASGE · ${modeLabel}`;
+  }, [guideTitle, t]);
+
+  // 让图片池系统识别当前 guide 作为 archiveId（用于图片过滤 + 缓存）
+  useEffect(() => {
+    if (paramGuideId) {
+      useGuideStore.setState({ currentArchiveId: paramGuideId });
+    }
+  }, [paramGuideId]);
+
+  // ---------------------------------------------------------------------------
+  // paste / drop / NASGE 内部图片拖入
+  // ---------------------------------------------------------------------------
+
+  const {
+    defaultInsertSize,
+    defaultInsertAlignment,
+    afterInsertAction,
+    close: closeImagePanel,
+    minimize: minimizeImagePanel,
+  } = useImagePanelStore();
+
+  const handleNasgeImageDrop = (
+    dragData: ImageDragData,
+    dropPosition?: number
+  ) => {
+    if (!editor) return;
+
+    if (dropPosition !== undefined) {
+      editor.chain().focus().setTextSelection(dropPosition).run();
+    } else {
+      editor.commands.focus();
+    }
+
+    const sizePresetMap: Record<string, ImageSizePreset> = {
+      original: "original",
+      medium: "half",
+      small: "thumb",
+    };
+    const sizePreset = sizePresetMap[defaultInsertSize] || "original";
+
+    const alignmentMap: Record<string, ImageAlignment> = {
+      floatLeft: "floatLeft",
+      floatRight: "floatRight",
+      center: "inline",
+      inline: "inline",
+    };
+    const alignment = alignmentMap[defaultInsertAlignment] || "inline";
+
+    const isScreenshot = dragData.type === "steam-screenshot";
+    for (const image of dragData.images) {
+      let resolvedImageNodeId: string | null = null;
+      if (!image.previewId) {
+        const entity = useImageStore.getState().addLocalImage({
+          fileName: image.fileName,
+          originalName: image.fileName,
+          fileSize: 0,
+          mimeType: "image/unknown",
+          source: "drop",
+          localPreviewUrl: image.localUrl || image.thumbnailUrl,
+          display: { preset: sizePreset, alignment },
+        });
+        resolvedImageNodeId = entity.id;
+      }
+
+      editor.commands.insertSteamImage({
+        imageNodeId: resolvedImageNodeId,
+        previewId: image.previewId || null,
+        fileName: image.fileName,
+        previewDataUrl: image.localUrl || image.thumbnailUrl || null,
+        sizePreset,
+        alignment,
+        ...(isScreenshot && image.imageUrl
+          ? { source: "screenshot", imageUrl: image.imageUrl }
+          : {}),
+      });
+    }
+
+    if (afterInsertAction === "close") closeImagePanel();
+    else if (afterInsertAction === "minimize") minimizeImagePanel();
+  };
+
+  useEffect(() => {
+    if (!editor) return;
+    const dom = editor.view.dom;
+
+    const onPaste = (event: ClipboardEvent) => {
+      const files = extractFilesFromPaste(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void addFilesToPool(files, {
+        source: "paste",
+        currentArchiveId: paramGuideId ?? null,
+        openPanelOnAdd: true,
+      });
+    };
+
+    const onDrop = (event: DragEvent) => {
+      const nasgeData = event.dataTransfer?.getData(NASGE_IMAGE_MIME_TYPE);
+      if (nasgeData) {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          const dragData = JSON.parse(nasgeData) as ImageDragData;
+          if (
+            (dragData.type === "steam-image" ||
+              dragData.type === "steam-screenshot") &&
+            dragData.images?.length > 0
+          ) {
+            const coords = editor.view.posAtCoords({
+              left: event.clientX,
+              top: event.clientY,
+            });
+            handleNasgeImageDrop(dragData, coords?.pos);
+            return;
+          }
+        } catch (err) {
+          loggers.editor.warn("解析 NASGE 拖放数据失败", err);
+        }
+      }
+
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void addFilesToPool(files, {
+        source: "drop",
+        currentArchiveId: paramGuideId ?? null,
+        openPanelOnAdd: true,
+      });
+    };
+
+    const onDragOver = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes(NASGE_IMAGE_MIME_TYPE)) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+        return;
+      }
+      const files = extractFilesFromDrop(event);
+      if (!files.length) return;
+      event.preventDefault();
+    };
+
+    dom.addEventListener("paste", onPaste as EventListener);
+    dom.addEventListener("drop", onDrop as EventListener);
+    dom.addEventListener("dragover", onDragOver as EventListener);
+
+    return () => {
+      dom.removeEventListener("paste", onPaste as EventListener);
+      dom.removeEventListener("drop", onDrop as EventListener);
+      dom.removeEventListener("dragover", onDragOver as EventListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, paramGuideId, defaultInsertSize, defaultInsertAlignment, afterInsertAction]);
 
   // ---------------------------------------------------------------------------
   // 顶栏按钮 handler
@@ -413,6 +591,12 @@ const WholeGuideEditor: React.FC = () => {
         state={contextMenu}
         onClose={closeContextMenu}
       />
+
+      {/* 右侧 TOC（折叠态 56px / 展开态 272px / hover 触发） */}
+      <WholeGuideTOC editor={editor} />
+
+      {/* 图片池悬浮窗 */}
+      <ImageFloatingPanel />
 
       {/* spinner keyframes */}
       <style>{`

@@ -12,6 +12,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWholeGuideStore } from "../stores/useWholeGuideStore";
 import { SettingsModal } from "./SettingsModal";
+import WholeBackupModal from "./WholeBackupModal";
 
 const BreadcrumbSep: React.FC = () => (
   <span className="text-text-muted text-xs select-none mx-1.5">/</span>
@@ -58,6 +59,7 @@ const WholeGuideHeader: React.FC<WholeGuideHeaderProps> = ({
   const status = useWholeGuideStore((s) => s.status);
 
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [backupVisible, setBackupVisible] = useState(false);
 
   const effectiveGuideId = guideId ?? paramGuideId ?? "";
   const subtitle = effectiveGuideId
@@ -176,6 +178,23 @@ const WholeGuideHeader: React.FC<WholeGuideHeaderProps> = ({
             {t("upload.toSteam")}
           </button>
 
+          {/* 备份与存档 */}
+          <button
+            type="button"
+            onClick={() => setBackupVisible(true)}
+            className="
+              flex items-center px-2.5 py-1.5
+              rounded-md border border-border-default
+              bg-transparent
+              text-xs text-text-secondary
+              hover:text-text-primary hover:border-border-accent hover:bg-accent-subtle
+              nasge-transition-quick cursor-pointer
+            "
+            title={t("wholeGuide.backup.title")}
+          >
+            {t("wholeGuide.backup.openButton")}
+          </button>
+
           {/* 设置按钮（全局） */}
           <button
             type="button"
@@ -198,6 +217,10 @@ const WholeGuideHeader: React.FC<WholeGuideHeaderProps> = ({
       <SettingsModal
         visible={settingsVisible}
         onClose={() => setSettingsVisible(false)}
+      />
+      <WholeBackupModal
+        visible={backupVisible}
+        onClose={() => setBackupVisible(false)}
       />
     </>
   );

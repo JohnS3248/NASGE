@@ -351,6 +351,37 @@
     "popup": {
       "editWholeGuide": "编辑全篇指南"
     },
+    "toc": {
+      "label": "目录"
+    },
+    "backup": {
+      "title": "备份与存档",
+      "autoSection": "自动备份（最近 3 份，编辑时自动滚动）",
+      "manualSection": "手动存档",
+      "createNew": "立即存档",
+      "labelPlaceholder": "为本次存档起个名字",
+      "namelessFallback": "未命名存档",
+      "restoreConfirm": "恢复将覆盖当前编辑内容。覆盖前会自动备份当前状态，可在自动备份列表恢复。是否继续？",
+      "deleteConfirm": "永久删除存档「{{label}}」？此操作不可撤销。",
+      "renamePrompt": "新名字",
+      "emptyAuto": "尚无自动备份",
+      "emptyManual": "尚无手动存档",
+      "quotaUsed": "已用 {{used}}%",
+      "quotaWarn": "本地存档空间已用 {{used}}%，建议清理旧存档",
+      "quotaFull": "本地存档空间已满，无法创建新存档",
+      "savedToast": "已存档：{{label}}",
+      "restoredToast": "已恢复",
+      "deletedToast": "已删除存档",
+      "renamedToast": "已重命名",
+      "saveFail": "存档失败：{{err}}",
+      "restoreFail": "恢复失败：{{err}}",
+      "chapterCount": "{{count}} 章",
+      "sizeKB": "{{kb}} KB",
+      "actionRestore": "恢复",
+      "actionRename": "重命名",
+      "actionDelete": "删除",
+      "openButton": "备份"
+    },
     "sessionConflict": {
       "title": "该指南已在其他标签页编辑",
       "message": "继续将抢占编辑权，其他标签页的未保存修改可能丢失。是否抢占？",

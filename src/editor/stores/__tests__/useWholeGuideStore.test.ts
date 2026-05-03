@@ -191,6 +191,96 @@ describe("useWholeGuideStore — Dirty 跟踪", () => {
   });
 });
 
+describe("useWholeGuideStore — autoBackups", () => {
+  it("初始 autoBackups 为空数组", () => {
+    expect(useWholeGuideStore.getState().autoBackups).toEqual([]);
+  });
+
+  it("createAutoBackup 在 doc=null 时不写入", () => {
+    useWholeGuideStore.getState().createAutoBackup();
+    expect(useWholeGuideStore.getState().autoBackups).toEqual([]);
+  });
+
+  it("createAutoBackup 写入 timestamp + doc + chapters", () => {
+    const s = useWholeGuideStore.getState();
+    s.setDoc(sampleDoc);
+    s.setChapters([sampleChapter("a", 0)]);
+    s.createAutoBackup();
+    const backups = useWholeGuideStore.getState().autoBackups;
+    expect(backups).toHaveLength(1);
+    expect(backups[0].doc).toEqual(sampleDoc);
+    expect(backups[0].chapters).toHaveLength(1);
+    expect(typeof backups[0].timestamp).toBe("number");
+  });
+
+  it("createAutoBackup FIFO 滚动到 3 份", () => {
+    const s = useWholeGuideStore.getState();
+    s.setDoc(sampleDoc);
+    for (let i = 0; i < 5; i++) {
+      s.createAutoBackup();
+    }
+    expect(useWholeGuideStore.getState().autoBackups).toHaveLength(3);
+  });
+
+  it("createAutoBackup 最新在前", async () => {
+    const s = useWholeGuideStore.getState();
+    s.setDoc(sampleDoc);
+    s.createAutoBackup();
+    const t1 = useWholeGuideStore.getState().autoBackups[0].timestamp;
+    await new Promise((r) => setTimeout(r, 5));
+    s.createAutoBackup();
+    const backups = useWholeGuideStore.getState().autoBackups;
+    expect(backups[0].timestamp).toBeGreaterThanOrEqual(t1);
+  });
+
+  it("restoreFromAutoBackup 把 doc / chapters 还原", () => {
+    const s = useWholeGuideStore.getState();
+    const docA: JSONContent = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "A" }] }],
+    };
+    const docB: JSONContent = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "B" }] }],
+    };
+    s.setDoc(docA);
+    s.setChapters([sampleChapter("a", 0)]);
+    s.createAutoBackup();
+    s.setDoc(docB);
+    s.setChapters([sampleChapter("b", 0)]);
+
+    const ok = s.restoreFromAutoBackup(0);
+    expect(ok).toBe(true);
+    expect(useWholeGuideStore.getState().doc).toEqual(docA);
+    expect(useWholeGuideStore.getState().chapters[0].sectionId).toBe("a");
+  });
+
+  it("restoreFromAutoBackup 越界 index 返回 false", () => {
+    const ok = useWholeGuideStore.getState().restoreFromAutoBackup(99);
+    expect(ok).toBe(false);
+  });
+
+  it("restoreFromAutoBackup 恢复前先把当前状态备份一份（防误覆盖）", () => {
+    const s = useWholeGuideStore.getState();
+    const docOrig: JSONContent = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "orig" }] }],
+    };
+    const docNew: JSONContent = {
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "new" }] }],
+    };
+    s.setDoc(docOrig);
+    s.createAutoBackup(); // backup 0 = orig
+    s.setDoc(docNew);
+    // 恢复 index 0（orig）
+    s.restoreFromAutoBackup(0);
+    // 此时 autoBackups 应包含 docNew（safety 备份）+ 原 docOrig
+    const backups = useWholeGuideStore.getState().autoBackups;
+    expect(backups.some((b) => JSON.stringify(b.doc) === JSON.stringify(docNew))).toBe(true);
+  });
+});
+
 describe("useWholeGuideStore — reset", () => {
   it("reset 把所有字段重置为初始值", () => {
     const s = useWholeGuideStore.getState();
@@ -299,6 +389,7 @@ describe("useWholeGuideStore — localStorage 持久化", () => {
     const persistedKeys = Object.keys(parsed.state).sort();
     expect(persistedKeys).toEqual(
       [
+        "autoBackups",
         "chapterDirtyTimestamps",
         "chapters",
         "doc",

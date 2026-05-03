@@ -332,6 +332,79 @@ export function buildDocFromChapters(
   };
 }
 
+// =============================================================================
+// TOC items（章节标题 + body H1/H2/H3，供右侧目录使用）
+// =============================================================================
+
+export type TOCItemKind = "chapterTitle" | "h1" | "h2" | "h3";
+
+export interface TOCItem {
+  kind: TOCItemKind;
+  /** 已 sanitize 的纯文本 */
+  text: string;
+  /** ProseMirror doc 中该节点的起始位置（可直接传给 view.coordsAtPos） */
+  pos: number;
+  /** 在结果数组中的 index */
+  index: number;
+  /** 章节序号（仅 kind='chapterTitle' 时存在；用于映射到 charCounts 数组） */
+  chapterIndex?: number;
+}
+
+/**
+ * 把 doc 顶层的 chapterTitle / heading（level 1-3）扁平化为 TOC 项目
+ * 用于右侧 TOC scroll-spy + 跳转
+ */
+export function buildTOCItems(doc: JSONContent): TOCItem[] {
+  if (!doc?.content || !Array.isArray(doc.content)) return [];
+  const items: TOCItem[] = [];
+  // 起点 = 1（PM 中 doc 第一个 child 的 starting pos）
+  let cursor = 1;
+  let chapterIndex = -1;
+
+  for (const node of doc.content) {
+    const size = estimateNodeSize(node);
+
+    if (node.type === "chapterTitle") {
+      chapterIndex++;
+      const text = readChapterTitlePlainText(node);
+      items.push({
+        kind: "chapterTitle",
+        text: sanitizeText(text),
+        pos: cursor,
+        index: items.length,
+        chapterIndex,
+      });
+    } else if (node.type === "heading") {
+      const level = node.attrs?.level;
+      if (level === 1 || level === 2 || level === 3) {
+        items.push({
+          kind: (`h${level}` as TOCItemKind),
+          text: sanitizeText(extractInlineText(node)),
+          pos: cursor,
+          index: items.length,
+        });
+      }
+    }
+
+    cursor += size;
+  }
+
+  return items;
+}
+
+function extractInlineText(node: JSONContent): string {
+  if (!Array.isArray(node.content)) return "";
+  let out = "";
+  for (const c of node.content) {
+    if (c.type === "text") {
+      out += c.text ?? "";
+    } else if (Array.isArray(c.content)) {
+      out += extractInlineText(c);
+    }
+  }
+  return out;
+}
+
 /** 计数 doc 顶层 chapterTitle 节点数 */
 export function countChapters(doc: JSONContent): number {
   if (!doc?.content || !Array.isArray(doc.content)) return 0;

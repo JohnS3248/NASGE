@@ -351,6 +351,37 @@
     "popup": {
       "editWholeGuide": "Edit Whole Guide"
     },
+    "toc": {
+      "label": "Table of Contents"
+    },
+    "backup": {
+      "title": "Backups & Archives",
+      "autoSection": "Auto Backups (latest 3, rolling on edit)",
+      "manualSection": "Manual Archives",
+      "createNew": "Save Now",
+      "labelPlaceholder": "Name this archive",
+      "namelessFallback": "Untitled Archive",
+      "restoreConfirm": "Restoring will overwrite current edits. The current state is auto-backed up first (recoverable from the auto backups list). Continue?",
+      "deleteConfirm": "Permanently delete archive \"{{label}}\"? This cannot be undone.",
+      "renamePrompt": "New name",
+      "emptyAuto": "No auto backups yet",
+      "emptyManual": "No manual archives yet",
+      "quotaUsed": "Used {{used}}%",
+      "quotaWarn": "Local archive storage at {{used}}%, consider deleting old archives",
+      "quotaFull": "Local archive storage is full, cannot create new archives",
+      "savedToast": "Saved: {{label}}",
+      "restoredToast": "Restored",
+      "deletedToast": "Archive deleted",
+      "renamedToast": "Renamed",
+      "saveFail": "Save failed: {{err}}",
+      "restoreFail": "Restore failed: {{err}}",
+      "chapterCount": "{{count}} chapters",
+      "sizeKB": "{{kb}} KB",
+      "actionRestore": "Restore",
+      "actionRename": "Rename",
+      "actionDelete": "Delete",
+      "openButton": "Backups"
+    },
     "sessionConflict": {
       "title": "This guide is being edited in another tab",
       "message": "Continuing will take over editing; unsaved changes in the other tab may be lost. Take over?",

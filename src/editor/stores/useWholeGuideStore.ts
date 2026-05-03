@@ -32,6 +32,15 @@ export interface WholeGuideChapterMeta {
   order: number;
 }
 
+export interface AutoBackupEntry {
+  timestamp: number;
+  doc: JSONContent;
+  chapters: WholeGuideChapterMeta[];
+}
+
+/** 自动备份滚动数 */
+export const AUTO_BACKUP_MAX = 3;
+
 interface WholeGuideState {
   guideId: string | null;
   guideTitle: string;
@@ -39,6 +48,8 @@ interface WholeGuideState {
   chapters: WholeGuideChapterMeta[];
   /** 每章节 dirty 时间戳 sectionId → updatedAt ms（用于 UI 高亮未保存章节） */
   chapterDirtyTimestamps: Record<string, number>;
+  /** 自动备份滚动数组（最新在前，最多保留 AUTO_BACKUP_MAX 份） */
+  autoBackups: AutoBackupEntry[];
   status: WholeGuideStatus;
   lastPulledAt: number | null;
   lastPushedAt: number | null;
@@ -58,6 +69,12 @@ interface WholeGuideState {
   markChapterDirty: (sectionId: string) => void;
   clearChapterDirty: (sectionId?: string) => void;
 
+  // === 自动备份 ===
+  /** 立即生成一份当前 doc + chapters 的备份（FIFO 滚动） */
+  createAutoBackup: () => void;
+  /** 从指定 index 的备份恢复（覆盖当前 doc/chapters；恢复前会先备份当前以防误覆盖） */
+  restoreFromAutoBackup: (index: number) => boolean;
+
   // === 整体 reset ===
   reset: () => void;
 }
@@ -68,6 +85,7 @@ const INITIAL_STATE = {
   doc: null,
   chapters: [],
   chapterDirtyTimestamps: {},
+  autoBackups: [] as AutoBackupEntry[],
   status: "idle" as WholeGuideStatus,
   lastPulledAt: null,
   lastPushedAt: null,
@@ -76,7 +94,7 @@ const INITIAL_STATE = {
 
 export const useWholeGuideStore = create<WholeGuideState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...INITIAL_STATE,
 
       setGuideId: (guideId) => set({ guideId }),
@@ -122,6 +140,49 @@ export const useWholeGuideStore = create<WholeGuideState>()(
         });
       },
 
+      createAutoBackup: () => {
+        const { doc, chapters } = get();
+        if (!doc) return;
+        const entry: AutoBackupEntry = {
+          timestamp: Date.now(),
+          doc,
+          chapters,
+        };
+        set((state) => ({
+          autoBackups: [entry, ...state.autoBackups].slice(0, AUTO_BACKUP_MAX),
+        }));
+        loggers.store.info("auto-backup created", {
+          chapterCount: chapters.length,
+        });
+      },
+
+      restoreFromAutoBackup: (index) => {
+        const { autoBackups, doc, chapters } = get();
+        const target = autoBackups[index];
+        if (!target) return false;
+        // 先把当前状态备份一份（防止误恢复后无法回滚）
+        if (doc) {
+          const safety: AutoBackupEntry = {
+            timestamp: Date.now(),
+            doc,
+            chapters,
+          };
+          set((state) => ({
+            autoBackups: [safety, ...state.autoBackups].slice(0, AUTO_BACKUP_MAX),
+          }));
+        }
+        set({
+          doc: target.doc,
+          chapters: target.chapters,
+          chapterDirtyTimestamps: {},
+        });
+        loggers.store.info("auto-backup restored", {
+          targetIndex: index,
+          targetTimestamp: target.timestamp,
+        });
+        return true;
+      },
+
       reset: () => {
         set({ ...INITIAL_STATE });
         loggers.store.info("useWholeGuideStore reset");
@@ -138,9 +199,9 @@ export const useWholeGuideStore = create<WholeGuideState>()(
         doc: state.doc,
         chapters: state.chapters,
         chapterDirtyTimestamps: state.chapterDirtyTimestamps,
+        autoBackups: state.autoBackups,
         lastPulledAt: state.lastPulledAt,
         // 不持久化：status / error / lastPushedAt（瞬时状态）
-        // 自动备份后续接入独立持久化通道
       }),
       merge: (persisted, current) => {
         const p = persisted as Partial<WholeGuideState> | null;
@@ -152,6 +213,7 @@ export const useWholeGuideStore = create<WholeGuideState>()(
           chapters: p?.chapters ?? current.chapters,
           chapterDirtyTimestamps:
             p?.chapterDirtyTimestamps ?? current.chapterDirtyTimestamps,
+          autoBackups: p?.autoBackups ?? current.autoBackups,
           lastPulledAt: p?.lastPulledAt ?? current.lastPulledAt,
         };
       },
