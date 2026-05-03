@@ -350,6 +350,13 @@
     },
     "popup": {
       "editWholeGuide": "Edit Whole Guide"
+    },
+    "sessionConflict": {
+      "title": "This guide is being edited in another tab",
+      "message": "Continuing will take over editing; unsaved changes in the other tab may be lost. Take over?",
+      "preempt": "Take over",
+      "cancel": "Cancel",
+      "preempted": "Editing access has been taken by another tab. Refresh this page to try again."
     }
   },
   "tour": {

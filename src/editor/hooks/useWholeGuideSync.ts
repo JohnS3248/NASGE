@@ -1,22 +1,20 @@
 /**
- * useWholeGuideSync — A4 全篇模式拉取/上传 hook
+ * useWholeGuideSync — 全篇模式拉取 / 上传 hook
  *
- * 编排 useWholeGuideStore 的 state 变化 + 调用 chapterSync 服务，落地 SPEC §2.1 (pull) / §2.2 (push)。
+ * 编排 useWholeGuideStore 的 state 变化 + 调用 chapterSync 服务。
  *
- * 复用现有服务（SPEC §1.10）：
+ * 复用现有服务：
  *   - fetchChapterList / fetchChapterFromSteam / saveChapterToSteam / createChapterOnSteam（chapterSync.ts）
  *   - fetchGuideInfo（guideInfo.ts）
- *   - useSteamGuideImageStore.refresh()（图片池预加载，R6 解法）
- *   - useArchiveStore.saveChaptersToArchive（章节列表同步，R11 解法）
+ *   - useSteamGuideImageStore.refresh()（图片池预加载）
+ *   - useArchiveStore.saveChaptersToArchive（章节列表同步）
  *
- * 关键风险解法：
- *   R6 — Phase 1 图片池预加载（await）后才反序列化 BBCode
- *   R7 — push Phase 1 缓存 sessionId 一次，后续 saveChapterToSteam 全部传同一个 sessionId
- *   R8 — chapterDirtyTimestamps 按 sectionId 跟踪，push 用 contentHash + title 双重比对决定是否上传
- *   R11 — push Phase 4 显式同步 useArchiveStore.chapters，避免远程章节列表与本地存档不一致
- *   R9 — sanitizeText 在切片器入口已实施（wholeGuideSlice.ts），此处不重复
- *
- * SPEC: 2_关键流程.md §2.1 / §2.2
+ * 关键设计：
+ *   - 拉取：图片池先 await 完成才反序列化 BBCode（避免 [previewimg] 找不到 URL）
+ *   - 上传：getSessionId 缓存一次，后续 saveChapterToSteam 全部传同一个 sessionId
+ *   - dirty 检测：用 contentHash + title 双重比对决定章节是否需要上传
+ *   - 上传后显式同步 useArchiveStore.chapters，避免远程章节列表与本地存档不一致
+ *   - sanitizeText（去 NUL 字节）在切片器入口已实施，本 hook 不重复
  */
 
 import { useMemo } from "react";
@@ -60,7 +58,7 @@ export interface PushProgress {
 
 export interface PushOptions {
   onProgress?: (p: PushProgress) => void;
-  /** 仅切片不上传（M3 审阅页 diff 计算专用） */
+  /** 仅切片不上传（审阅页 diff 计算专用） */
   dryRun?: boolean;
 }
 
@@ -84,7 +82,7 @@ export async function pullEntireGuide(
   store.getState().setError(null);
 
   try {
-    // ───── Phase 1：图片池预加载（R6 解法）─────
+    // ───── 图片池预加载（先 await 完成，BBCode 反序列化时才能查到 [previewimg] URL）─────
     onProgress?.({ phase: "images", loaded: 0, total: 1 });
     try {
       await useSteamGuideImageStore.getState().refresh();
@@ -94,7 +92,7 @@ export async function pullEntireGuide(
     }
     onProgress?.({ phase: "images", loaded: 1, total: 1 });
 
-    // ───── Phase 2：拉取指南元信息 + 章节列表 ─────
+    // ───── 拉取指南元信息 + 章节列表 ─────
     onProgress?.({ phase: "list", loaded: 0, total: 1 });
 
     let guideTitle = "";
@@ -117,7 +115,7 @@ export async function pullEntireGuide(
     }
     onProgress?.({ phase: "list", loaded: 1, total: 1 });
 
-    // ───── Phase 3：并行拉取所有章节内容 ─────
+    // ───── 并行拉取所有章节内容 ─────
     const total = chapterList.length;
     let loaded = 0;
     onProgress?.({ phase: "chapters", loaded, total });
@@ -131,7 +129,7 @@ export async function pullEntireGuide(
       })
     );
 
-    // ───── Phase 4：构造单 doc ─────
+    // ───── 构造单 doc ─────
     onProgress?.({ phase: "building", loaded: 0, total: 1 });
 
     const doc = buildDocFromChapters(
@@ -152,7 +150,7 @@ export async function pullEntireGuide(
 
     onProgress?.({ phase: "building", loaded: 1, total: 1 });
 
-    // ───── Phase 5：写入 store ─────
+    // ───── 写入 store ─────
     const s = store.getState();
     s.setGuideId(guideId);
     s.setGuideTitle(guideTitle);
@@ -205,12 +203,12 @@ export async function pushEntireGuide(
   store.getState().setError(null);
 
   try {
-    // ───── Phase 1：缓存 sessionId（R7 解法）─────
+    // ───── 缓存 sessionId（避免逐章重复 getSessionId）─────
     onProgress?.({ phase: "session", loaded: 0, total: 1 });
     const sessionId = dryRun ? "" : await getSessionId();
     onProgress?.({ phase: "session", loaded: 1, total: 1 });
 
-    // ───── Phase 2：切片当前 doc ─────
+    // ───── 切片当前 doc ─────
     onProgress?.({ phase: "slicing", loaded: 0, total: 1 });
     const sliceResult = sliceDocByChapterTitle(
       state.doc,
@@ -238,7 +236,7 @@ export async function pushEntireGuide(
       return { ...result, slices: sliceResult.chapters };
     }
 
-    // ───── Phase 3：找出 dirty 章节并串行上传 ─────
+    // ───── 找出 dirty 章节并串行上传 ─────
     const dirtySlices = sliceResult.chapters.filter((slice) => {
       const old = state.chapters.find((c) => c.sectionId === slice.sectionId);
       if (!old) return true; // 新增章节
@@ -270,7 +268,7 @@ export async function pushEntireGuide(
           finalSectionId,
           slice.title,
           slice.bbcode,
-          sessionId // R7：复用缓存
+          sessionId // 复用缓存
         );
         slice.sectionId = finalSectionId;
         result.uploadedSectionIds.push(finalSectionId);
@@ -297,7 +295,7 @@ export async function pushEntireGuide(
       );
     }
 
-    // ───── Phase 4：同步 useArchiveStore.chapters（R11）─────
+    // ───── 同步 useArchiveStore.chapters（保持远程章节列表与本地存档一致）─────
     onProgress?.({ phase: "archive", loaded: 0, total: 1 });
     const archiveChapters = sliceResult.chapters
       .filter((s) => !!s.sectionId)
@@ -313,7 +311,7 @@ export async function pushEntireGuide(
     }
     onProgress?.({ phase: "archive", loaded: 1, total: 1 });
 
-    // ───── Phase 5：更新 store baseline（contentHash + bbcode）─────
+    // ───── 更新 store baseline（contentHash + bbcode）─────
     onProgress?.({ phase: "snapshot", loaded: 0, total: 1 });
     const newChapters = sliceResult.chapters
       .filter((s) => !!s.sectionId)

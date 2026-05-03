@@ -1,9 +1,10 @@
 /**
- * wholeGuideSlice 测试 — A4 切片器单元测试
+ * wholeGuideSlice 切片器单元测试
  *
- * SPEC §3.2.3 / §4.1.1：15 个 fixture 覆盖 + sectionId 回填 + sanitize 边界 + 性能基线。
+ * 覆盖：15 个 fixture + sectionId 回填 + sanitize 边界 + 性能基线。
  * 13 个 fixture 落地为 wholeGuideFixtures/*.json；
- * multi-chapter-30 / body-overflow / with-nul-byte 三个程序化生成（避免 9000 字符 / 30 章 / NUL byte 进 JSON 文件）。
+ * multi-chapter-30 / body-overflow / with-nul-byte 程序化生成
+ * （9000 字符 / 30 章 / NUL byte 不适合放进 JSON 文件）。
  */
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
@@ -133,7 +134,7 @@ describe("sliceDocByChapterTitle — fixture roundtrip", () => {
   });
 
   it("F4 multi-chapter-30 — 30 章可正常切片，性能基线 < 800ms (jsdom)", () => {
-    // SPEC §4.1.1 perf 基线 200ms 在真浏览器；jsdom DOMSerializer 慢约 3-4×。
+    // perf 基线 200ms 在真浏览器；jsdom DOMSerializer 慢约 3-4 倍。
     // 此 case 验证结构性正确（30 章，标题顺序），保留宽松性能阈值防止退化。
     const docContent: JSONContent[] = [];
     for (let i = 0; i < 30; i++) {
@@ -175,7 +176,7 @@ describe("sliceDocByChapterTitle — fixture roundtrip", () => {
   it("F6 chapter-title-overflow — 触发 title-overflow warning（不强制截断）", () => {
     const doc = loadFixture("chapter-title-overflow.json");
     const result = sliceDocByChapterTitle(doc);
-    // SPEC v0.2.1 + 2026-05-04 调整：切片器仅发 warning，不强制截断（截断由 chapterTitle char-limit plugin 在编辑器内实施）
+    // 切片器仅发 warning，不强制截断（截断由 chapterTitle char-limit plugin 在编辑器内实施）
     // ChapterSlice.title 为原始 BBCode（无 marks 时即纯文本，长度 = 100）
     expect(result.chapters[0].title.length).toBeGreaterThan(CHAPTER_TITLE_MAX_CHARS);
     expect(result.warnings.some((w) => w.type === "title-overflow")).toBe(true);

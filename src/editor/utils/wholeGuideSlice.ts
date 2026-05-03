@@ -1,15 +1,14 @@
 /**
- * wholeGuideSlice — A4 全篇模式的核心序列化器
+ * wholeGuideSlice — 全篇模式核心序列化器
  *
  * 把单个 ProseMirror doc 按 chapterTitle 节点切分为 N 章 BBCode + 元数据；
  * 反向也支持把 N 章拼接成单个 doc（用于拉取阶段反序列化）。
  *
- * BBCode 边界（W-Q11）：调用 bbcode.ts 的 `htmlToBBCode` / `bbcodeToHtml`，
- * 不做任何 BBCode 规范化（保留作者意图）。
+ * BBCode 边界：调用 bbcode.ts 的 `htmlToBBCode` / `bbcodeToHtml`，不做任何 BBCode
+ * 规范化（保留作者意图）。
  *
- * R9：所有 chapterTitle 文本 + 序列化后的 BBCode 均经过 sanitizeText（去 NUL 字节）。
- *
- * SPEC: 1_架构与数据模型.md §1.3 / 2_关键流程.md §2.1 §2.2
+ * 所有 chapterTitle 文本 + 序列化后的 BBCode 均经过 sanitizeText（去 NUL 字节，
+ * 因为 bbcodeToHtml 内部用 \x00 作 [code] 占位符防误转）。
  */
 
 import { generateHTML, generateJSON } from "@tiptap/html";
@@ -41,7 +40,7 @@ export interface ChapterSlice {
   title: string;
   /** 章节正文 BBCode（已 sanitize） */
   bbcode: string;
-  /** 内容快速校验码（M1 用 sync FNV-1a，M3 如需字符级 diff 可升级） */
+  /** 内容快速校验码（sync FNV-1a，可升级到 SHA-256 如有字符级 diff 需求） */
   contentHash: string;
 }
 
@@ -56,7 +55,7 @@ export interface ExistingChapterRef {
 }
 
 /**
- * 去除 NUL 字节（R9 解法）。
+ * 去除 NUL 字节。
  * BBCode 转 HTML 时使用 \x00 占位符防止 [code] 块内部 BBCode 误转，
  * 因此用户原始输入若含 \x00 会与占位符碰撞 —— 在序列化前后均做 sanitize。
  */
@@ -67,9 +66,8 @@ export function sanitizeText(text: string): string {
 /**
  * 同步 32-bit FNV-1a 哈希。
  *
- * SPEC §1.3.1 备注 contentHash 用于 "字符级 diff"，但 diff-match-patch 直接对 bbcode
- * 字符串操作，hash 实际只用于 dirty / 变更快速比对。M1 选用 sync FNV-1a 以保持
- * sliceDocByChapterTitle 同步签名；M3 如确需 SHA-256 可在 push 阶段异步计算。
+ * 用于 dirty / 变更快速比对。字符级 diff（diff-match-patch）直接对 bbcode 字符串
+ * 操作，不依赖此 hash。如有 SHA-256 需求，可在 push 阶段异步计算并扩展字段。
  */
 function syncHash(s: string): string {
   let h = 0x811c9dc5;
@@ -101,7 +99,7 @@ function readChapterTitlePlainText(node: JSONContent): string {
 }
 
 /**
- * 把 chapterTitle 节点序列化为 BBCode（保留 marks，与 Steam 章节标题 1:1）
+ * 把 chapterTitle 节点序列化为 BBCode（保留 inline marks）
  *
  * 流程：把 content 包装成 paragraph → generateHTML → 提取 <p> innerHTML → htmlToBBCode
  * 容错：序列化失败时降级为纯文本
@@ -344,7 +342,7 @@ export function countChapters(doc: JSONContent): number {
  * 给定 PM 位置，返回该位置所在章节 index（0-based，第一个 chapterTitle 之前 → -1）
  *
  * 注：位置语义按 ProseMirror flat token 模型估算（block 节点开/闭各占 1 token）。
- * M1 调用方为单元测试 + future TOC scroll-spy（M2），精度足够。
+ * 调用方为单元测试与 TOC scroll-spy，精度足够。
  */
 export function findChapterIndexAtPos(doc: JSONContent, pos: number): number {
   if (!doc?.content || !Array.isArray(doc.content)) return -1;

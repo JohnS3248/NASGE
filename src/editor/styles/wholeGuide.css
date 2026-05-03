@@ -1,20 +1,19 @@
 /*
- * 全篇模式（A4 chapterTitle）专用样式
+ * 全篇模式 chapterTitle 专用样式
  *
- * 章节边界视觉装饰：CSS 自绘版（owner 决策 2026-05-04，方案 2）
+ * 章节边界视觉装饰：CSS 自绘
  *  - 顶部光晕：radial-gradient 大幅椭圆 + 全程平滑淡出（避免硬边"一刀切"感）
  *  - 顶部细线：linear-gradient 横线两端羽化区拉到 35%
  *
- * Tuning（基于 owner 反馈 2026-05-04）：
- *   - 中心 alpha 0.04（之前 0.08 偏亮）
- *   - 椭圆扩大到 90% × 140px（之前 60% × 80px 范围窄）
- *   - 淡出 0% → 25% → 50% → 75% → 100% 五段平滑（之前 0/35/65/80 末端硬切）
- *   - 横线 alpha 0.20（之前 0.28 偏亮），羽化区 0-35% / 65-100%（之前 15% 太窄）
+ * Tuning：
+ *   - 中心 alpha 0.04
+ *   - 椭圆 90% × 140px
+ *   - 淡出 0% → 25% → 50% → 75% → 100% 五段平滑
+ *   - 横线 alpha 0.20，羽化区 0-35% / 65-100%
  */
 
 .nasge-editor-container .ProseMirror h1.nasge-chapter-title {
   background-image:
-    /* 顶部光晕 — 大幅椭圆 + 五段平滑淡出，与暗背景无缝融合 */
     radial-gradient(
       ellipse 90% 140px at 50% 24px,
       rgba(102, 192, 244, 0.04) 0%,
@@ -23,7 +22,6 @@
       rgba(102, 192, 244, 0.004) 75%,
       transparent 100%
     ),
-    /* 顶部细线 — 两端羽化各 35%，与暗背景无缝融合 */
     linear-gradient(
       to right,
       transparent 0%,

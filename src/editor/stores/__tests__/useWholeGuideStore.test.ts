@@ -1,8 +1,8 @@
 /**
  * useWholeGuideStore 单元测试
  *
- * SPEC §4.1.1 范围：state/setters / dirty timestamps / localStorage persist + restore / partialize 字段集 / reset。
- * pullEntireGuide / pushEntireGuide 的端到端在 M4 集成测试覆盖（涉及 useWholeGuideSync hook）。
+ * 覆盖：state/setters / dirty timestamps / localStorage persist + restore / partialize 字段集 / reset。
+ * pullEntireGuide / pushEntireGuide 的端到端走 useWholeGuideSync hook，单独覆盖。
  */
 
 import { describe, expect, it, beforeEach, vi } from "vitest";
@@ -284,7 +284,7 @@ describe("useWholeGuideStore — localStorage 持久化", () => {
     expect(parsed.state.chapterDirtyTimestamps).toHaveProperty("sec-x");
   });
 
-  it("partialize 字段集包含 SPEC §1.4.2 列出的字段", () => {
+  it("partialize 字段集仅包含可持久化字段", () => {
     // 写入全部可持久化字段
     const s = useWholeGuideStore.getState();
     s.setGuideId("g");

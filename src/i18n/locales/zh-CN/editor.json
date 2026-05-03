@@ -350,6 +350,13 @@
     },
     "popup": {
       "editWholeGuide": "编辑全篇指南"
+    },
+    "sessionConflict": {
+      "title": "该指南已在其他标签页编辑",
+      "message": "继续将抢占编辑权，其他标签页的未保存修改可能丢失。是否抢占？",
+      "preempt": "抢占",
+      "cancel": "取消",
+      "preempted": "本标签页的编辑权已被其他标签页抢占，刷新页面可重新尝试。"
     }
   },
   "tour": {

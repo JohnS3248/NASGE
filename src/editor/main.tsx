@@ -22,7 +22,7 @@ declare global {
     __bbcodeToHtml?: unknown;
     __htmlToBBCode?: unknown;
     __editor?: unknown;
-    // A4 全篇模式（M1 起）
+    // 全篇模式 debug 接口
     __wholeGuideStore?: unknown;
     __wholeGuideEditor?: unknown;
     __useWholeGuideSync?: unknown;
@@ -38,8 +38,8 @@ function LegacyEditorView() {
 }
 
 /**
- * A4 全篇模式 layout —— M1 简化版，仅渲染 WholeGuideEditor。
- * M3 起会拆出 Outlet 管理 review 子路由（保持编辑器 mount 不卸载，R10 解法）。
+ * 全篇模式 layout（基础版，仅渲染 WholeGuideEditor）。
+ * 审阅页接入后会改为 Outlet 模式，让编辑器持续 mount 防止状态丢失。
  */
 function WholeGuideEditorLayout() {
   return <WholeGuideEditor />;
@@ -93,7 +93,7 @@ async function bootstrap() {
       window.__bbcodeToHtml = bbcodeToHtml;
       window.__htmlToBBCode = htmlToBBCode;
     });
-    // A4 全篇模式 debug 暴露（SPEC §4.2.4）
+    // 全篇模式 debug 暴露
     import("./stores/useWholeGuideStore").then(({ useWholeGuideStore }) => {
       window.__wholeGuideStore = useWholeGuideStore;
     });
@@ -117,8 +117,8 @@ async function bootstrap() {
           {/* A4 全篇模式 */}
           <Route path="/whole/:guideId" element={<WholeGuideEditorLayout />}>
             <Route index element={null} />
-            {/* M3 占位：审阅页路由，M3 实施时替换为 ReviewView 组件 */}
-            <Route path="review" element={<div style={{ padding: "2rem", color: "#8aa4c7" }}>Review (M3 placeholder)</div>} />
+            {/* 审阅页占位路由（待实现） */}
+            <Route path="review" element={<div style={{ padding: "2rem", color: "#8aa4c7" }}>Review (placeholder)</div>} />
           </Route>
         </Routes>
       </HashRouter>

@@ -1,13 +1,9 @@
 /**
- * WholeGuideEditor — A4 全篇模式编辑器主组件（M1 雏形）
+ * WholeGuideEditor — 全篇模式编辑器主组件
  *
  * 单 ProseMirror 实例承载整篇指南，章节边界由 chapterTitle 节点定义。
- * M1 范围：拉取 + 编辑 + 简化 push（无审阅页 / 无 TOC / 无字符计数 / 无框 UI 隐显 / 无自动备份）。
- *
- * M2 起追加：TOC 折叠/展开 / 字符计数 / 框 UI hover 隐显 / 自动备份 / IDB archive。
- * M3 起追加：审阅页路由 + diff + Steam preview。
- *
- * SPEC: 1_架构与数据模型.md §1.1 / §1.7 / 3_里程碑_M1_M4.md §3.2.5
+ * 包含：拉取 / 编辑 / 直传 push。
+ * 待实现：审阅页 / TOC / 字符计数 / 框 UI 隐显 / 自动备份 / 手动 archive。
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -19,8 +15,15 @@ import type { JSONContent } from "@tiptap/core";
 import { createEditorExtensions } from "../utils/editorExtensions";
 import { useWholeGuideStore } from "../stores/useWholeGuideStore";
 import { useWholeGuideSync, type PullProgress, type PushProgress } from "../hooks/useWholeGuideSync";
+import { useWholeGuideSessionLock } from "../hooks/useWholeGuideSessionLock";
 import { toast } from "../stores/useToastStore";
 import { loggers } from "../../shared/logger";
+import WholeGuideHeader from "./WholeGuideHeader";
+import WholeGuideContextMenu, {
+  type WholeGuideContextMenuState,
+  type WholeGuideContextMode,
+  INITIAL_CONTEXT_MENU,
+} from "./WholeGuideContextMenu";
 
 // =============================================================================
 // 子组件：拉取进度
@@ -173,13 +176,14 @@ const WholeGuideEditor: React.FC = () => {
   const { pullEntireGuide, pushEntireGuide } = useWholeGuideSync();
 
   const guideId = useWholeGuideStore((s) => s.guideId);
-  const guideTitle = useWholeGuideStore((s) => s.guideTitle);
   const doc = useWholeGuideStore((s) => s.doc);
   const status = useWholeGuideStore((s) => s.status);
   const error = useWholeGuideStore((s) => s.error);
 
   const [pullProgress, setPullProgress] = useState<PullProgress | null>(null);
   const [pushProgress, setPushProgress] = useState<PushProgress | null>(null);
+  const [contextMenu, setContextMenu] =
+    useState<WholeGuideContextMenuState>(INITIAL_CONTEXT_MENU);
   const lastAppliedDocRef = useRef<string | null>(null);
 
   // ---------------------------------------------------------------------------
@@ -200,7 +204,7 @@ const WholeGuideEditor: React.FC = () => {
     },
   });
 
-  // 暴露到 window 供 e2e 调试（SPEC §4.2.4）
+  // 暴露到 window 供 e2e / debug 控制台测试
   useEffect(() => {
     if (!editor) return;
     (window as unknown as { __wholeGuideEditor?: unknown }).__wholeGuideEditor = editor;
@@ -242,6 +246,19 @@ const WholeGuideEditor: React.FC = () => {
   }, [editor, doc]);
 
   // ---------------------------------------------------------------------------
+  // session tab 锁：同一指南只允许一个 tab 编辑
+  // ---------------------------------------------------------------------------
+
+  useWholeGuideSessionLock(paramGuideId, () => {
+    // 用户取消抢占 → 切回旧模式（保留 hash 之外的 search params）
+    if (paramGuideId) {
+      window.location.search = `?mode=guide&guideId=${encodeURIComponent(paramGuideId)}`;
+    } else {
+      window.location.search = `?mode=guide`;
+    }
+  });
+
+  // ---------------------------------------------------------------------------
   // 顶栏按钮 handler
   // ---------------------------------------------------------------------------
 
@@ -255,8 +272,7 @@ const WholeGuideEditor: React.FC = () => {
   };
 
   const handleReview = async () => {
-    // M1 简化：直接走 pushEntireGuide；M3 起改为 navigate 到 review 路由
-    // 当前点击按钮触发上传（占位行为，M3 替换为 navigate('/whole/:guideId/review')）
+    // 直传 push（不进审阅页，审阅页待实现）
     if (!paramGuideId) return;
 
     try {
@@ -279,6 +295,43 @@ const WholeGuideEditor: React.FC = () => {
   };
 
   // ---------------------------------------------------------------------------
+  // 右键菜单 handler
+  // ---------------------------------------------------------------------------
+
+  const handleEditorContextMenu = (e: React.MouseEvent) => {
+    if (!editor) return;
+    e.preventDefault();
+
+    const view = editor.view;
+    const coords = view.posAtCoords({ left: e.clientX, top: e.clientY });
+
+    let mode: WholeGuideContextMode = "empty";
+    if (coords) {
+      const $pos = view.state.doc.resolve(coords.pos);
+      let inChapterTitle = false;
+      let inTable = false;
+      for (let d = $pos.depth; d >= 0; d--) {
+        const n = $pos.node(d);
+        const name = n.type.name;
+        if (name === "chapterTitle") inChapterTitle = true;
+        if (name === "tableCell" || name === "tableHeader" || name === "table") {
+          inTable = true;
+        }
+      }
+      const hasSelection = !view.state.selection.empty;
+      if (inChapterTitle) mode = "chapterTitle";
+      else if (inTable) mode = "table";
+      else if (hasSelection) mode = "selection";
+      else mode = "empty";
+    }
+
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, mode });
+  };
+
+  const closeContextMenu = () =>
+    setContextMenu((prev) => ({ ...prev, visible: false }));
+
+  // ---------------------------------------------------------------------------
   // 渲染
   // ---------------------------------------------------------------------------
 
@@ -295,92 +348,13 @@ const WholeGuideEditor: React.FC = () => {
         gap: "1.5rem",
       }}
     >
-      {/* 顶栏 */}
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0.85rem 1.1rem",
-          background: "var(--bg-surface, #0d1724)",
-          border: "1px solid rgba(102, 192, 244, 0.18)",
-          borderRadius: "0.75rem",
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontSize: "0.85rem",
-              color: "var(--text-muted, #6b8094)",
-              marginBottom: 4,
-            }}
-          >
-            {t("wholeGuide.modeName", { defaultValue: "全篇编辑" })}
-          </div>
-          <div
-            style={{
-              fontSize: "1.1rem",
-              fontWeight: 600,
-              color: "var(--text-primary, #d7e8ff)",
-            }}
-          >
-            {guideTitle || `Guide ${paramGuideId ?? ""}`}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: "0.6rem" }}>
-          <button
-            type="button"
-            onClick={handleExitToOldMode}
-            style={{
-              padding: "0.5rem 0.95rem",
-              borderRadius: "0.5rem",
-              border: "1px solid rgba(102, 192, 244, 0.3)",
-              background: "transparent",
-              color: "var(--text-secondary, #c7dff7)",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-            }}
-          >
-            {t("wholeGuide.exitToOldMode", { defaultValue: "切换回章节模式" })}
-          </button>
-          <button
-            type="button"
-            onClick={handleNavigateReview}
-            style={{
-              padding: "0.5rem 1rem",
-              borderRadius: "0.5rem",
-              border: "none",
-              background:
-                "linear-gradient(135deg, rgba(102, 192, 244, 0.95), rgba(66, 139, 202, 0.95))",
-              color: "#06101e",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-              fontWeight: 600,
-            }}
-            disabled={status !== "editing"}
-          >
-            {t("wholeGuide.review", { defaultValue: "审阅并上传" })}
-          </button>
-          {/* M1 简化：把当前 push 行为也保留为内联快捷按钮，M3 起此按钮被审阅页 confirmUpload 取代 */}
-          <button
-            type="button"
-            onClick={handleReview}
-            style={{
-              padding: "0.5rem 0.95rem",
-              borderRadius: "0.5rem",
-              border: "1px solid rgba(102, 192, 244, 0.3)",
-              background: "rgba(21, 34, 52, 0.6)",
-              color: "var(--text-secondary, #c7dff7)",
-              cursor: "pointer",
-              fontSize: "0.85rem",
-            }}
-            disabled={status !== "editing"}
-            title={t("upload.toSteam", { defaultValue: "Upload to Steam" })}
-          >
-            {t("upload.toSteam", { defaultValue: "上传到 Steam" })}
-          </button>
-        </div>
-      </header>
+      {/* 顶栏 — 与旧模式 EditorHeader 视觉对齐，复用 SettingsModal */}
+      <WholeGuideHeader
+        paramGuideId={paramGuideId}
+        onExitToOldMode={handleExitToOldMode}
+        onReview={handleNavigateReview}
+        onPushDirect={handleReview}
+      />
 
       {/* 错误提示（可选） */}
       {error && (
@@ -421,6 +395,7 @@ const WholeGuideEditor: React.FC = () => {
               display: "flex",
               flexDirection: "column",
             }}
+            onContextMenu={handleEditorContextMenu}
           >
             <EditorContent
               editor={editor}
@@ -431,6 +406,13 @@ const WholeGuideEditor: React.FC = () => {
       </main>
 
       {status === "pushing" && <PushProgressView progress={pushProgress} />}
+
+      {/* 右键菜单 */}
+      <WholeGuideContextMenu
+        editor={editor}
+        state={contextMenu}
+        onClose={closeContextMenu}
+      />
 
       {/* spinner keyframes */}
       <style>{`

@@ -1,13 +1,13 @@
 /**
  * chapterTitle TipTap 节点扩展
  *
- * A4 全篇模式核心：把章节边界以非容器 block 的形式嵌入单个 ProseMirror doc，
+ * 全篇模式核心：把章节边界以非容器 block 的形式嵌入单个 ProseMirror doc，
  * 用户感知不到边界（光标 / 选区 / 复制粘贴可自由跨越），切片时按节点位置拆 N 章。
  *
  * 三个 PM Plugin：
- *   1. char-limit  — 章节标题超 96 字符自动截断（appendTransaction）
- *   2. delete-guard — 误删边缘 chapterTitle 时弹 confirm（R1 解法）
- *   3. paste-guard  — 粘贴外部内容含 chapterTitle 时弹 confirm 询问保留 / 剥离（R3 解法）
+ *   1. char-limit   — 章节标题超 96 字符自动截断（appendTransaction）
+ *   2. delete-guard — 误删边缘 chapterTitle 时弹 confirm
+ *   3. paste-guard  — 粘贴外部内容含 chapterTitle 时弹 confirm 询问保留 / 剥离
  */
 
 import { Node } from "@tiptap/core";
@@ -18,7 +18,7 @@ import i18n from "i18next";
 import { dialog } from "../stores/useDialogStore";
 import { loggers } from "../../shared/logger";
 
-/** 章节标题字符上限（与 SPEC §1.2.1 / §3.2.2 一致） */
+/** 章节标题字符上限 */
 export const CHAPTER_TITLE_MAX_CHARS = 96;
 
 declare module "@tiptap/core" {
@@ -35,7 +35,7 @@ declare module "@tiptap/core" {
   }
 }
 
-/** 去除 NUL 字节（R9 解法） + 截断到上限 */
+/** 去除 NUL 字节 + 截断到上限 */
 function sanitizeTitleText(text: string): string {
   return text.replace(/\x00/g, "").slice(0, CHAPTER_TITLE_MAX_CHARS);
 }
@@ -249,7 +249,7 @@ export const ChapterTitle = Node.create({
   name: "chapterTitle",
   group: "block",
   content: "text*",
-  // Steam 章节标题原生支持 [b]/[i]/[u]/[strike]/[spoiler]，与 subSectionTitle 1:1 对齐
+  // 章节标题允许的 inline marks（与 Steam 章节标题渲染一致）
   marks: "bold italic underline strike spoiler",
   defining: false,
   isolating: false,

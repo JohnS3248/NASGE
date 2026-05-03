@@ -1,15 +1,13 @@
 /**
- * useWholeGuideStore — A4 全篇模式核心状态
+ * useWholeGuideStore — 全篇模式核心状态
  *
- * M1 雏形：state + 基础 setter + reset。
- * M2 将追加 autoBackups（chrome.storage.local rolling 3）/ scheduleAutoBackup 节流逻辑。
+ * 当前包含：state + 基础 setter + reset。
+ * 待实现：autoBackups（chrome.storage.local rolling 3）/ scheduleAutoBackup 节流。
  *
  * pullEntireGuide / pushEntireGuide 的实际编排见 useWholeGuideSync hook —— 该 hook 调用本
  * store 的 setters 改写 state，store 本身只承载 state 与原子化 setter。
  *
- * 持久化（R12 解法）：用 localStorage 而非 sessionStorage，刷新页面 / 关闭浏览器后状态可恢复。
- *
- * SPEC: 1_架构与数据模型.md §1.4 / §1.6.R8 / §1.6.R12
+ * 持久化：用 localStorage 而非 sessionStorage，刷新页面 / 关闭浏览器后状态可恢复。
  */
 
 import { create } from "zustand";
@@ -27,7 +25,7 @@ export type WholeGuideStatus =
 export interface WholeGuideChapterMeta {
   sectionId: string;
   title: string;
-  /** 上次拉取（或上次成功上传后回填）的远程 BBCode；M3 字符级 diff baseline */
+  /** 上次拉取（或上次成功上传后回填）的远程 BBCode；用作字符级 diff baseline */
   bbcode: string;
   /** 内容快速校验码（与 wholeGuideSlice.contentHash 同来源） */
   contentHash: string;
@@ -39,7 +37,7 @@ interface WholeGuideState {
   guideTitle: string;
   doc: JSONContent | null;
   chapters: WholeGuideChapterMeta[];
-  /** R8 解法：每章节 dirty 时间戳 sectionId → updatedAt ms */
+  /** 每章节 dirty 时间戳 sectionId → updatedAt ms（用于 UI 高亮未保存章节） */
   chapterDirtyTimestamps: Record<string, number>;
   status: WholeGuideStatus;
   lastPulledAt: number | null;
@@ -87,7 +85,7 @@ export const useWholeGuideStore = create<WholeGuideState>()(
 
       setDoc: (doc) => {
         set({ doc });
-        // 注：自动备份触发将在 M2.1 接入这里（scheduleAutoBackup）
+        // 注：自动备份触发后续在此接入（scheduleAutoBackup）
       },
 
       setChapters: (chapters) => set({ chapters }),
@@ -132,7 +130,7 @@ export const useWholeGuideStore = create<WholeGuideState>()(
     {
       name: "nasge-whole-guide",
       version: 1,
-      // R12：localStorage 而非 sessionStorage，刷新后可恢复
+      // 用 localStorage 而非 sessionStorage，刷新 / 关闭浏览器后状态可恢复
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         guideId: state.guideId,
@@ -142,7 +140,7 @@ export const useWholeGuideStore = create<WholeGuideState>()(
         chapterDirtyTimestamps: state.chapterDirtyTimestamps,
         lastPulledAt: state.lastPulledAt,
         // 不持久化：status / error / lastPushedAt（瞬时状态）
-        // 不持久化：autoBackups（M2 加，独立持久化通道）
+        // 自动备份后续接入独立持久化通道
       }),
       merge: (persisted, current) => {
         const p = persisted as Partial<WholeGuideState> | null;
