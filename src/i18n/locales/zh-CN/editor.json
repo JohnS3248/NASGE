@@ -312,7 +312,6 @@
   "wholeGuide": {
     "modeName": "全篇编辑",
     "exitToOldMode": "切换回章节模式",
-    "review": "审阅并上传",
     "chapterTitle": {
       "placeholder": "新章节标题",
       "charLimit": "{{count}}/96"
@@ -350,6 +349,31 @@
     },
     "popup": {
       "editWholeGuide": "编辑全篇指南"
+    },
+    "review": {
+      "openButton": "审阅并上传",
+      "tabDiff": "差异审阅",
+      "tabPreview": "Steam 预览",
+      "cancel": "返回编辑",
+      "confirmUpload": "确认上传",
+      "uploading": "上传中…",
+      "uploadSuccess": "上传完成",
+      "settingsTitle": "Diff 设置",
+      "ignoreWhitespace": "忽略空白",
+      "contextLines": "上下文行数",
+      "semanticCleanup": "语义化清理",
+      "noChanges": "本章无变化",
+      "stats": "+{{add}} / −{{del}}",
+      "summary": "{{count}} 章变化 / +{{add}} / −{{del}}",
+      "noDirty": "所有章节均无变化",
+      "previewModePerChapter": "逐章节",
+      "previewModeWhole": "整篇",
+      "previewLoading": "调用 Steam 预览…",
+      "previewEmpty": "无可预览内容",
+      "previewError": "预览失败：{{err}}",
+      "chapterSwitcherHint": "← / → 切换章节",
+      "deletedChapter": "（已删除）",
+      "newChapter": "（新增）"
     },
     "toc": {
       "label": "目录"

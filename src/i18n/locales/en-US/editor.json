@@ -312,7 +312,6 @@
   "wholeGuide": {
     "modeName": "Whole Guide Edit",
     "exitToOldMode": "Switch to Per-Chapter Mode",
-    "review": "Review & Upload",
     "chapterTitle": {
       "placeholder": "New chapter title",
       "charLimit": "{{count}}/96"
@@ -350,6 +349,31 @@
     },
     "popup": {
       "editWholeGuide": "Edit Whole Guide"
+    },
+    "review": {
+      "openButton": "Review & Upload",
+      "tabDiff": "Diff Review",
+      "tabPreview": "Steam Preview",
+      "cancel": "Back to Editor",
+      "confirmUpload": "Confirm Upload",
+      "uploading": "Uploading…",
+      "uploadSuccess": "Upload complete",
+      "settingsTitle": "Diff Settings",
+      "ignoreWhitespace": "Ignore whitespace",
+      "contextLines": "Context lines",
+      "semanticCleanup": "Semantic cleanup",
+      "noChanges": "No changes in this chapter",
+      "stats": "+{{add}} / −{{del}}",
+      "summary": "{{count}} chapters changed / +{{add}} / −{{del}}",
+      "noDirty": "No chapters changed",
+      "previewModePerChapter": "Per chapter",
+      "previewModeWhole": "Full guide",
+      "previewLoading": "Loading Steam preview…",
+      "previewEmpty": "Nothing to preview",
+      "previewError": "Preview failed: {{err}}",
+      "chapterSwitcherHint": "← / → to switch chapters",
+      "deletedChapter": "(deleted)",
+      "newChapter": "(new)"
     },
     "toc": {
       "label": "Table of Contents"

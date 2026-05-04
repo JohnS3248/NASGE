@@ -45,6 +45,8 @@
     "@tiptap/html": "^3.9.1",
     "@tiptap/react": "^3.9.0",
     "@tiptap/starter-kit": "^3.9.0",
+    "@types/diff-match-patch": "^1.0.36",
+    "diff-match-patch": "^1.0.5",
     "driver.js": "^1.4.0",
     "fake-indexeddb": "^6.2.5",
     "i18next": "^26.0.3",

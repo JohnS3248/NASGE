@@ -40,17 +40,14 @@ export interface WholeGuideHeaderProps {
   paramGuideId: string | undefined;
   /** "切换回章节模式" 按钮回调 */
   onExitToOldMode: () => void;
-  /** "审阅并上传" 按钮回调（navigate 到 review 子路由，审阅页待实现） */
+  /** "审阅并上传" 按钮回调（navigate 到 review 子路由） */
   onReview: () => void;
-  /** "上传到 Steam" 直传按钮回调（不进审阅页，直接 push） */
-  onPushDirect: () => void;
 }
 
 const WholeGuideHeader: React.FC<WholeGuideHeaderProps> = ({
   paramGuideId,
   onExitToOldMode,
   onReview,
-  onPushDirect,
 }) => {
   const { t } = useTranslation("editor");
   const guideId = useWholeGuideStore((s) => s.guideId);
@@ -156,26 +153,7 @@ const WholeGuideHeader: React.FC<WholeGuideHeaderProps> = ({
               ${isBusy ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
             `}
           >
-            {t("wholeGuide.review")}
-          </button>
-
-          {/* 上传到 Steam 直传（不进审阅页） */}
-          <button
-            type="button"
-            onClick={onPushDirect}
-            disabled={isBusy}
-            className={`
-              flex items-center px-2.5 py-1.5
-              rounded-md border border-border-default
-              bg-transparent
-              text-xs text-text-secondary
-              hover:text-text-primary hover:border-border-accent hover:bg-accent-subtle
-              nasge-transition-quick
-              ${isBusy ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
-            `}
-            title={t("upload.toSteam")}
-          >
-            {t("upload.toSteam")}
+            {t("wholeGuide.review.openButton")}
           </button>
 
           {/* 备份与存档 */}

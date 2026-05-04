@@ -2,7 +2,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import App from "./App";
-import WholeGuideEditor from "./components/WholeGuideEditor";
+import WholeGuideEditorLayout from "./components/WholeGuideEditorLayout";
+import ReviewView from "./components/WholeGuideReview/ReviewView";
 import "./styles/tailwind.css";
 
 // === DEBUG: Window 全局扩展类型声明 ===
@@ -37,13 +38,6 @@ function LegacyEditorView() {
   return <App />;
 }
 
-/**
- * 全篇模式 layout（基础版，仅渲染 WholeGuideEditor）。
- * 审阅页接入后会改为 Outlet 模式，让编辑器持续 mount 防止状态丢失。
- */
-function WholeGuideEditorLayout() {
-  return <WholeGuideEditor />;
-}
 
 // 初始化主题 + i18n，等待完成后再 render（避免 key 闪现）
 async function bootstrap() {
@@ -114,11 +108,10 @@ async function bootstrap() {
         <Routes>
           {/* 旧模式默认入口：路径 `/` 渲染 LegacyEditorView，沿用 useEditorMode 读 search params */}
           <Route path="/" element={<LegacyEditorView />} />
-          {/* A4 全篇模式 */}
+          {/* 全篇模式 */}
           <Route path="/whole/:guideId" element={<WholeGuideEditorLayout />}>
             <Route index element={null} />
-            {/* 审阅页占位路由（待实现） */}
-            <Route path="review" element={<div style={{ padding: "2rem", color: "#8aa4c7" }}>Review (placeholder)</div>} />
+            <Route path="review" element={<ReviewView />} />
           </Route>
         </Routes>
       </HashRouter>

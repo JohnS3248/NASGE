@@ -14,7 +14,7 @@ import type { JSONContent } from "@tiptap/core";
 
 import { createEditorExtensions } from "../utils/editorExtensions";
 import { useWholeGuideStore } from "../stores/useWholeGuideStore";
-import { useWholeGuideSync, type PullProgress, type PushProgress } from "../hooks/useWholeGuideSync";
+import { useWholeGuideSync, type PullProgress } from "../hooks/useWholeGuideSync";
 import { useWholeGuideSessionLock } from "../hooks/useWholeGuideSessionLock";
 import { useWholeGuideAutoBackup } from "../hooks/useWholeGuideAutoBackup";
 import { toast } from "../stores/useToastStore";
@@ -114,71 +114,6 @@ const PullProgressView: React.FC<PullProgressViewProps> = ({ progress }) => {
 };
 
 // =============================================================================
-// 子组件：上传进度
-// =============================================================================
-
-interface PushProgressViewProps {
-  progress: PushProgress | null;
-}
-
-const PushProgressView: React.FC<PushProgressViewProps> = ({ progress }) => {
-  const { t } = useTranslation("editor");
-  const label = useMemo(() => {
-    if (!progress) return t("wholeGuide.pushing.session", { defaultValue: "准备上传…" });
-    switch (progress.phase) {
-      case "session":
-        return t("wholeGuide.pushing.session", { defaultValue: "获取上传会话…" });
-      case "slicing":
-        return t("wholeGuide.pushing.slicing", { defaultValue: "切分章节…" });
-      case "uploading":
-        return t("wholeGuide.pushing.uploading", {
-          title: progress.current?.title ?? "",
-          loaded: progress.loaded,
-          total: progress.total,
-          defaultValue: `上传章节「${progress.current?.title ?? ""}」（${progress.loaded}/${progress.total}）`,
-        });
-      case "archive":
-        return t("wholeGuide.pushing.archive", { defaultValue: "同步本地存档…" });
-      case "snapshot":
-        return t("wholeGuide.pushing.snapshot", { defaultValue: "保留远程版本快照…" });
-      default:
-        return "";
-    }
-  }, [progress, t]);
-
-  return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: "2rem",
-        left: "50%",
-        transform: "translateX(-50%)",
-        background: "rgba(13, 23, 36, 0.95)",
-        border: "1px solid rgba(102, 192, 244, 0.4)",
-        borderRadius: "0.75rem",
-        padding: "0.85rem 1.25rem",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
-        boxShadow: "0 12px 24px rgba(8, 14, 23, 0.5)",
-        color: "#d7e8ff",
-      }}
-    >
-      <div className="nasge-spinner" style={{
-        width: 18,
-        height: 18,
-        border: "2px solid rgba(102, 192, 244, 0.18)",
-        borderTopColor: "#66c0f4",
-        borderRadius: "50%",
-        animation: "nasge-spin 0.9s linear infinite",
-      }} />
-      <div style={{ fontSize: "0.9rem" }}>{label}</div>
-    </div>
-  );
-};
-
-// =============================================================================
 // 主组件
 // =============================================================================
 
@@ -186,7 +121,7 @@ const WholeGuideEditor: React.FC = () => {
   const { t } = useTranslation("editor");
   const { guideId: paramGuideId } = useParams<{ guideId: string }>();
   const navigate = useNavigate();
-  const { pullEntireGuide, pushEntireGuide } = useWholeGuideSync();
+  const { pullEntireGuide } = useWholeGuideSync();
 
   const guideId = useWholeGuideStore((s) => s.guideId);
   const guideTitle = useWholeGuideStore((s) => s.guideTitle);
@@ -195,7 +130,6 @@ const WholeGuideEditor: React.FC = () => {
   const error = useWholeGuideStore((s) => s.error);
 
   const [pullProgress, setPullProgress] = useState<PullProgress | null>(null);
-  const [pushProgress, setPushProgress] = useState<PushProgress | null>(null);
   const [contextMenu, setContextMenu] =
     useState<WholeGuideContextMenuState>(INITIAL_CONTEXT_MENU);
   const lastAppliedDocRef = useRef<string | null>(null);
@@ -449,24 +383,6 @@ const WholeGuideEditor: React.FC = () => {
     }
   };
 
-  const handleReview = async () => {
-    // 直传 push（不进审阅页，审阅页待实现）
-    if (!paramGuideId) return;
-
-    try {
-      await pushEntireGuide({
-        onProgress: (p) => setPushProgress(p),
-      });
-      toast.success(
-        t("upload.success", { ns: "editor", defaultValue: "上传完成" })
-      );
-    } catch (err) {
-      loggers.editor.error("WholeGuideEditor push 失败", err);
-    } finally {
-      setPushProgress(null);
-    }
-  };
-
   const handleNavigateReview = () => {
     if (!paramGuideId) return;
     navigate(`/whole/${paramGuideId}/review`);
@@ -531,7 +447,6 @@ const WholeGuideEditor: React.FC = () => {
         paramGuideId={paramGuideId}
         onExitToOldMode={handleExitToOldMode}
         onReview={handleNavigateReview}
-        onPushDirect={handleReview}
       />
 
       {/* 错误提示（可选） */}
@@ -582,8 +497,6 @@ const WholeGuideEditor: React.FC = () => {
           </div>
         )}
       </main>
-
-      {status === "pushing" && <PushProgressView progress={pushProgress} />}
 
       {/* 右键菜单 */}
       <WholeGuideContextMenu
