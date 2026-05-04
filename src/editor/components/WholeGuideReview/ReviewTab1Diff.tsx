@@ -1,41 +1,32 @@
 /**
- * ReviewTab1Diff — 字符级 diff 主视图
+ * ReviewTab1Diff — 富文本 diff 主视图
  *
- * 左侧：章节列表（每章 hasChanges 标记 + add/del 计数）
- * 右侧：当前章节 DiffViewer
- * 顶部：DiffSettings + 全局 summary
- * 键盘：← → 切换章节
+ * 左侧:章节列表(每章 hasChanges 标记 + add/del 字数)
+ * 右侧:当前章节 DiffViewer(渲染 ins/del HTML)
+ * 顶部:全局 summary
+ * 键盘:← → 切换章节
  */
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useWholeGuideStore } from "../../stores/useWholeGuideStore";
 import {
-  diffWholeGuide,
-  aggregateStats,
-  type ChapterDiffResult,
-  type DiffOptions,
-} from "../../utils/wholeGuideDiff";
+  richDiffWholeGuide,
+  aggregateRichStats,
+  type RichChapterDiffResult,
+} from "../../utils/wholeGuideRichDiff";
 import { sliceDocByChapterTitle } from "../../utils/wholeGuideSlice";
-import DiffSettings from "./DiffSettings";
 import DiffViewer from "./DiffViewer";
-
-const DEFAULT_DIFF_OPTIONS = {
-  ignoreWhitespace: false,
-  contextLines: 3,
-  semanticCleanup: true,
-};
 
 const ReviewTab1Diff: React.FC = () => {
   const { t } = useTranslation("editor");
   const doc = useWholeGuideStore((s) => s.doc);
   const chapters = useWholeGuideStore((s) => s.chapters);
 
-  const [options, setOptions] = useState(DEFAULT_DIFF_OPTIONS);
-  const [results, setResults] = useState<ChapterDiffResult[]>([]);
+  const [results, setResults] = useState<RichChapterDiffResult[]>([]);
   const [activeIdx, setActiveIdx] = useState(0);
 
-  // 切片 + diff（debounce 200ms 避免 settings 切换抖动）
+  // 切片 + diff(debounce 200ms 避免抖动)
   useEffect(() => {
     if (!doc) {
       setResults([]);
@@ -52,13 +43,11 @@ const ReviewTab1Diff: React.FC = () => {
           title: c.title,
           bbcode: c.bbcode,
         }));
-        const diffResults = diffWholeGuide(
+        const diffResults = richDiffWholeGuide(
           oldChapters,
-          sliceResult.chapters,
-          options as DiffOptions
+          sliceResult.chapters
         );
         setResults(diffResults);
-        // active 默认指向首个有变化的章节
         const firstChanged = diffResults.findIndex((r) => r.hasChanges);
         setActiveIdx(firstChanged >= 0 ? firstChanged : 0);
       } catch {
@@ -66,9 +55,9 @@ const ReviewTab1Diff: React.FC = () => {
       }
     }, 200);
     return () => clearTimeout(id);
-  }, [doc, chapters, options]);
+  }, [doc, chapters]);
 
-  const summary = useMemo(() => aggregateStats(results), [results]);
+  const summary = useMemo(() => aggregateRichStats(results), [results]);
   const active = results[activeIdx];
 
   // 键盘 ← / → 切章
@@ -97,8 +86,6 @@ const ReviewTab1Diff: React.FC = () => {
         boxSizing: "border-box",
       }}
     >
-      <DiffSettings value={options} onChange={setOptions} />
-
       <div
         style={{
           fontSize: 12,
@@ -116,14 +103,14 @@ const ReviewTab1Diff: React.FC = () => {
       </div>
 
       <div style={{ display: "flex", gap: 12, flex: 1, minHeight: 0 }}>
-        {/* 左侧：章节列表 */}
+        {/* 左侧:章节列表 */}
         <ChapterList
           results={results}
           activeIdx={activeIdx}
           onSelect={setActiveIdx}
         />
 
-        {/* 右侧：diff 内容 */}
+        {/* 右侧:diff 内容 */}
         <div
           style={{
             flex: 1,
@@ -146,7 +133,7 @@ const ReviewTab1Diff: React.FC = () => {
               )}
             </div>
           )}
-          <DiffViewer result={active} contextLines={options.contextLines} />
+          <DiffViewer result={active} />
         </div>
       </div>
 
@@ -162,7 +149,7 @@ const ReviewTab1Diff: React.FC = () => {
 // =============================================================================
 
 interface ChapterListProps {
-  results: ChapterDiffResult[];
+  results: RichChapterDiffResult[];
   activeIdx: number;
   onSelect: (i: number) => void;
 }

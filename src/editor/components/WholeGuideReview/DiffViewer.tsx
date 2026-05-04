@@ -1,34 +1,22 @@
 /**
- * DiffViewer — 单章 diff 内容区
+ * DiffViewer — 富文本 diff 渲染
  *
- * 把 segments 渲染为带颜色的内联 span：
- *   - equal: 普通灰
- *   - insert: 浅绿
- *   - delete: 浅红 + 删除线
- *
- * 可选 collapseEqualContext（依 contextLines 折叠中间长 equal 段）。
+ * 输入:RichChapterDiffResult.diffHtml(已含 <ins>/<del> 标记的合法 HTML)
+ * 渲染:dangerouslySetInnerHTML + .nasge-rich-diff scope 下的 ins/del 样式
+ * 视觉:整块 h1-h5 / p / blockquote / table 保留 Steam 渲染样式,
+ *   仅改动字符 / 标签上色(绿 ins / 红 del),粒度到字到格式
  */
 
-import React, { useMemo } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
-import {
-  type DiffSegment,
-  type ChapterDiffResult,
-  collapseEqualContext,
-} from "../../utils/wholeGuideDiff";
+import type { RichChapterDiffResult } from "../../utils/wholeGuideRichDiff";
 
 interface Props {
-  result: ChapterDiffResult | undefined;
-  contextLines: number;
+  result: RichChapterDiffResult | undefined;
 }
 
-const DiffViewer: React.FC<Props> = ({ result, contextLines }) => {
+const DiffViewer: React.FC<Props> = ({ result }) => {
   const { t } = useTranslation("editor");
-
-  const segments: DiffSegment[] = useMemo(() => {
-    if (!result) return [];
-    return collapseEqualContext(result.segments, contextLines);
-  }, [result, contextLines]);
 
   if (!result) {
     return (
@@ -60,59 +48,22 @@ const DiffViewer: React.FC<Props> = ({ result, contextLines }) => {
   }
 
   return (
-    <pre
+    <div
+      className="nasge-editor-container nasge-rich-diff"
       style={{
-        margin: 0,
-        padding: "12px 14px",
-        fontSize: 12,
-        lineHeight: 1.6,
-        fontFamily: 'Menlo, Consolas, "Courier New", monospace',
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-        background: "rgba(9, 15, 25, 0.4)",
+        padding: "14px 18px",
+        background: "rgba(9, 15, 25, 0.5)",
         border: "1px solid rgba(102, 192, 244, 0.10)",
         borderRadius: 8,
-        color: "rgba(215, 232, 255, 0.85)",
       }}
     >
-      {segments.map((seg, i) => (
-        <SegmentSpan key={i} seg={seg} />
-      ))}
-    </pre>
+      {/* 包一层 .ProseMirror 让现有编辑器样式选择器命中(标题字号、引用框、代码块、表格等 Steam 风格) */}
+      <div
+        className="ProseMirror"
+        dangerouslySetInnerHTML={{ __html: result.diffHtml }}
+      />
+    </div>
   );
-};
-
-const SegmentSpan: React.FC<{ seg: DiffSegment }> = ({ seg }) => {
-  if (seg.op === "insert") {
-    return (
-      <span
-        style={{
-          background: "rgba(80, 200, 120, 0.18)",
-          color: "rgb(160, 230, 170)",
-          padding: "0 1px",
-          borderRadius: 2,
-        }}
-      >
-        {seg.text}
-      </span>
-    );
-  }
-  if (seg.op === "delete") {
-    return (
-      <span
-        style={{
-          background: "rgba(255, 100, 100, 0.18)",
-          color: "rgb(255, 170, 170)",
-          textDecoration: "line-through",
-          padding: "0 1px",
-          borderRadius: 2,
-        }}
-      >
-        {seg.text}
-      </span>
-    );
-  }
-  return <span>{seg.text}</span>;
 };
 
 export default DiffViewer;

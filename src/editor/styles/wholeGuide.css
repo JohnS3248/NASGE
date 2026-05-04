@@ -33,3 +33,47 @@
   background-size: 100% auto, 100% 1px;
   background-repeat: no-repeat, no-repeat;
 }
+
+/*
+ * 富文本 diff 高亮（review 页 Tab1）
+ *
+ * <ins> / <del> 是 transparent content,内部可包 inline 或 block,样式不影响布局,
+ * 仅做颜色 / 删除线标记。
+ */
+.nasge-rich-diff ins.nasge-diff-ins {
+  background-color: rgba(80, 200, 120, 0.18);
+  color: rgb(160, 230, 170);
+  text-decoration: none;
+  border-radius: 2px;
+}
+
+.nasge-rich-diff del.nasge-diff-del {
+  background-color: rgba(255, 100, 100, 0.18);
+  color: rgb(255, 170, 170);
+  text-decoration: line-through;
+  border-radius: 2px;
+}
+
+/* ins/del 包整块 block(整章新增/删除)时,让背景延伸到 block 边界 */
+.nasge-rich-diff ins.nasge-diff-ins > h1,
+.nasge-rich-diff ins.nasge-diff-ins > h2,
+.nasge-rich-diff ins.nasge-diff-ins > h3,
+.nasge-rich-diff ins.nasge-diff-ins > p,
+.nasge-rich-diff ins.nasge-diff-ins > blockquote,
+.nasge-rich-diff ins.nasge-diff-ins > ul,
+.nasge-rich-diff ins.nasge-diff-ins > ol,
+.nasge-rich-diff ins.nasge-diff-ins > pre,
+.nasge-rich-diff ins.nasge-diff-ins > table,
+.nasge-rich-diff ins.nasge-diff-ins > figure,
+.nasge-rich-diff del.nasge-diff-del > h1,
+.nasge-rich-diff del.nasge-diff-del > h2,
+.nasge-rich-diff del.nasge-diff-del > h3,
+.nasge-rich-diff del.nasge-diff-del > p,
+.nasge-rich-diff del.nasge-diff-del > blockquote,
+.nasge-rich-diff del.nasge-diff-del > ul,
+.nasge-rich-diff del.nasge-diff-del > ol,
+.nasge-rich-diff del.nasge-diff-del > pre,
+.nasge-rich-diff del.nasge-diff-del > table,
+.nasge-rich-diff del.nasge-diff-del > figure {
+  background-color: inherit;
+}
