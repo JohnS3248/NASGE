@@ -1,0 +1,52 @@
+[h1]A组：对照组（Steam 官方行为）[/h1]
+
+A1 previewicon + sizeOriginal,inline（官方标准）
+[previewicon=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewicon]
+
+A2 previewicon + sizeThumb,inline（官方标准）
+[previewicon=44177484;sizeThumb,inline;测试指南图1024x687.jpg][/previewicon]
+
+A3 previewimg + sizeFull,inline（官方标准：inline+sizeFull 用 previewimg）
+[previewimg=44177484;sizeFull,inline;测试指南图1024x687.jpg][/previewimg]
+
+A4 previewimg + sizeOriginal,floatLeft（官方标准）
+[previewimg=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+A5 previewimg + sizeThumb,floatRight（官方标准）
+[previewimg=44177484;sizeThumb,floatRight;测试指南图1024x687.jpg][/previewimg]
+
+[h1]B组：NASGE 当前行为（可能有误）[/h1]
+
+B1 previewicon + sizeFull,inline（NASGE 当前输出，官方应为 previewimg）
+[previewicon=44177484;sizeFull,inline;测试指南图1024x687.jpg][/previewicon]
+
+B2 对照：previewimg + sizeFull,inline（官方正确写法，同 A3）
+[previewimg=44177484;sizeFull,inline;测试指南图1024x687.jpg][/previewimg]
+
+[h1]C组：跨界测试（标签名与对齐不匹配）[/h1]
+
+C1 previewicon + floatLeft（官方从不生成这种组合）
+[previewicon=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewicon]
+
+C2 previewicon + floatRight（官方从不生成这种组合）
+[previewicon=44177484;sizeThumb,floatRight;测试指南图1024x687.jpg][/previewicon]
+
+C3 previewimg + sizeOriginal,inline（官方从不生成这种组合）
+[previewimg=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewimg]
+
+C4 previewimg + sizeThumb,inline（官方从不生成这种组合）
+[previewimg=44177484;sizeThumb,inline;测试指南图1024x687.jpg][/previewimg]
+
+[h1]D组：用小图验证（排除图片尺寸影响）[/h1]
+
+D1 previewicon + sizeFull,inline（小图 100x100）
+[previewicon=44177489;sizeFull,inline;测试用图片100x100.jpg][/previewicon]
+
+D2 previewimg + sizeFull,inline（小图 100x100）
+[previewimg=44177489;sizeFull,inline;测试用图片100x100.jpg][/previewimg]
+
+D3 previewicon + floatLeft（小图 100x100）
+[previewicon=44177489;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewicon]
+
+D4 previewimg + inline（小图 100x100）
+[previewimg=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewimg]

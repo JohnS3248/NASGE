@@ -396,7 +396,7 @@ export function bbcodeTitleToHtml(bbcode: string): string {
   return bbcode;
 }
 
-export function bbcodeToHtml(bbcode: string): string {
+export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): string {
   let html = bbcode;
 
   // 关键：先把 [code]...[/code] 抠出来占位，防止内部 BBCode 被全局 replace 误解析。
@@ -415,14 +415,24 @@ export function bbcodeToHtml(bbcode: string): string {
     return `\x00CODE_PLACEHOLDER_${idx}\x00`;
   });
 
+  // 入口 escape：把 author 写在 BBCode 中的字面 < > & 转成 entity，
+  // 防止后续 DOM parse 阶段把 <html> 这种字面字符串当真 HTML 元素解析。
+  // 顶层调用执行；[quote] 递归调用传 skipEscape=true 避免 double-escape。
+  if (!skipEscape) {
+    html = html
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   // 先处理引用（递归转换）
   html = html.replace(/\[quote=([^\]]+)]([\s\S]*?)\[\/quote]/gi, (_, author, body) => {
-    const inner = bbcodeToHtml(body.trim());
+    const inner = bbcodeToHtml(body.trim(), true);
     return `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 ${author}：</p>${inner}</blockquote>`;
   });
 
   html = html.replace(/\[quote]([\s\S]*?)\[\/quote]/gi, (_, body) => {
-    const inner = bbcodeToHtml(body.trim());
+    const inner = bbcodeToHtml(body.trim(), true);
     return `<blockquote class="nasge-quote">${inner}</blockquote>`;
   });
 

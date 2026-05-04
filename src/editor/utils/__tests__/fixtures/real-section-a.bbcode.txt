@@ -1,0 +1,37 @@
+[h1]一级标题 H1[/h1]
+[h2]二级标题 H2[/h2]
+[h3]三级标题 H3[/h3]
+
+[b]粗体[/b] [i]斜体[/i] [u]下划线[/u] [strike]删除线[/strike]
+
+[spoiler]这是隐藏文本,点击展开[/spoiler]
+
+[quote]这是简单引用[/quote]
+
+[quote=Gabe Newell]这是带作者的引用[/quote]
+
+[code]
+function hello() {
+  console.log("代码块测试");
+}
+[/code]
+
+[list]
+[*]无序列表项 1
+[*]无序列表项 2
+[/list]
+
+[olist]
+[*]有序列表项 1
+[*]有序列表项 2
+[/olist]
+
+[url=https://store.steampowered.com]商店链接[/url]
+[url]https://store.steampowered.com[/url]
+
+[hr][/hr]
+
+[table]
+[tr][th]列1[/th][th]列2[/th][/tr]
+[tr][td]单元格A[/td][td]单元格B[/td][/tr]
+[/table]

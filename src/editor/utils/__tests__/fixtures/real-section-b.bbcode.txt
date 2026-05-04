@@ -1,0 +1,20 @@
+[h4]四级标题 H4(Steam 支持吗?)[/h4]
+[h5]五级标题 H5[/h5]
+
+[size=20]大字号文字[/size]
+[color=red]红色文字[/color]
+[color=#66c0f4]Steam 蓝色文字[/color]
+
+[font=Arial]Arial 字体[/font]
+
+[center]居中文字[/center]
+[left]左对齐文字[/left]
+[right]右对齐文字[/right]
+
+[indent]缩进文字[/indent]
+
+[sub]下标[/sub] 和 [sup]上标[/sup]
+
+[video]https://www.youtube.com/watch?v=k71IoNg-Tk4[/video]
+
+[steamlink]https://steamcommunity.com/stats/2628420/achievements[/steamlink]

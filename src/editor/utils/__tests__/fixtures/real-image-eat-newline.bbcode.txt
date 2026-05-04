@@ -1,0 +1,12 @@
+[h1]十三、图片尺寸测试[/h1]
+
+13.1 大图-原始尺寸sizeOriginal
+[previewimg=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+13.2 大图-全宽sizeFull
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+13.3 大图-缩略图sizeThumb
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+这是结尾，下面没有换行。

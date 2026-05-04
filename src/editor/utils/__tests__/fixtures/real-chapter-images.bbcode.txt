@@ -1,0 +1,230 @@
+[h1]十二、图片基础测试[/h1]
+
+12.1 previewicon内联小图（100x100）
+[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+
+12.2 previewicon内联中图（400x400）
+[previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]
+
+12.3 previewicon内联大图（1024x687）
+[previewicon=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewicon]
+
+12.4 previewimg浮动小图-左
+[previewimg=44177489;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+12.5 previewimg浮动小图-右
+[previewimg=44177489;sizeOriginal,floatRight;测试用图片100x100.jpg][/previewimg]
+
+12.6 previewimg浮动中图-左
+[previewimg=44177487;sizeOriginal,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+12.7 previewimg浮动大图-左
+[previewimg=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+[h1]十三、图片尺寸测试[/h1]
+
+13.1 大图-原始尺寸sizeOriginal
+[previewimg=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+13.2 大图-全宽sizeFull
+[previewimg=44177484;sizeFull,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+13.3 大图-缩略图sizeThumb
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+13.4 中图-原始尺寸
+[previewimg=44177487;sizeOriginal,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+13.5 中图-全宽
+[previewimg=44177487;sizeFull,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+13.6 中图-缩略图
+[previewimg=44177487;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+[h1]十四、图片与文字组合[/h1]
+
+14.1 内联图标在文字中间（同一行）
+这是文字前[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]这是文字后
+
+14.2 内联图标在文字中间（无空格）
+文字前[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]文字后
+
+14.3 多个内联图标在同一行
+图标1[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]图标2[previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]图标3[previewicon=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewicon]结束
+
+14.4 浮动图片后紧跟文字
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+这是紧跟浮动图片的文字，测试文字是否环绕图片显示。
+
+14.5 浮动图片后空一行再跟文字
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+这是空一行后的文字，测试布局效果。
+
+14.6 文字后紧跟浮动图片
+这是文字
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+14.7 文字后空一行再跟图片
+这是文字
+
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+14.8 右浮动图片与文字
+[previewimg=44177487;sizeThumb,floatRight;测试用图片400x400.jpg][/previewimg]
+这是左边的文字，图片在右边浮动。这段文字应该在图片左侧显示。
+
+[h1]十五、连续图片测试[/h1]
+
+15.1 连续三张浮动图片（无换行）
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg][previewimg=44177487;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg][previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+15.2 连续三张浮动图片（有换行）
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+[previewimg=44177487;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+15.3 连续三张内联图标（无换行）
+[previewicon=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewicon][previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+
+15.4 连续三张内联图标（有换行）
+[previewicon=44177484;sizeOriginal,inline;测试指南图1024x687.jpg][/previewicon]
+[previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]
+[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+
+15.5 混合浮动方向
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+[previewimg=44177487;sizeThumb,floatRight;测试用图片400x400.jpg][/previewimg]
+中间的文字
+
+[h1]十六、图片与块级元素组合[/h1]
+
+16.1 标题后紧跟图片
+[h2]标题A[/h2]
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+16.2 标题后空行再跟图片
+[h2]标题B[/h2]
+
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+16.3 图片后紧跟标题
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+[h2]标题C[/h2]
+
+16.4 图片后空行再跟标题
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+[h2]标题D[/h2]
+
+16.5 列表项中的内联图标
+[list]
+[*]列表项带图标[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+[*]普通列表项
+[*]另一个带图标[previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]项
+[/list]
+
+16.6 表格中的图片
+[table]
+[tr][th]图片列[/th][th]说明列[/th][/tr]
+[tr][td][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][/td][td]小图100x100[/td][/tr]
+[tr][td][previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon][/td][td]中图400x400[/td][/tr]
+[/table]
+
+16.7 引用中的图片
+[quote]这是引用，包含图片[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]图片后的文字[/quote]
+
+16.8 代码块前后图片
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+[code]代码内容[/code]
+
+16.9 分隔线前后图片
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+[hr]
+[previewimg=44177487;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+[h1]十七、图片格式组合测试[/h1]
+
+17.1 图片链接（如果支持）
+[url=https://store.steampowered.com][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][/url]
+
+17.2 粗体文字+图片+粗体文字
+[b]粗体前[/b][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][b]粗体后[/b]
+
+17.3 图片在格式标签内
+[b][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][/b]
+
+17.4 复杂混合
+[b]粗体[/b]然后[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]然后[i]斜体[/i]然后[url=https://google.com]链接[/url]
+
+[h1]十八、图片边界情况[/h1]
+
+18.1 章节开头就是图片
+（本测试需要新建章节验证）
+
+18.2 章节结尾是图片
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+18.3 只有图片没有文字
+[previewimg=44177484;sizeOriginal,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+18.4 图片之间只有空行
+[previewimg=44177489;sizeThumb,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+[previewimg=44177487;sizeThumb,floatLeft;测试用图片400x400.jpg][/previewimg]
+
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+[h1]十九、previewicon与previewimg对比[/h1]
+
+19.1 同一图片-previewicon inline
+[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+
+19.2 同一图片-previewimg floatLeft
+[previewimg=44177489;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewimg]
+
+19.3 previewicon用floatLeft会怎样
+[previewicon=44177489;sizeOriginal,floatLeft;测试用图片100x100.jpg][/previewicon]
+
+19.4 previewimg用inline会怎样
+[previewimg=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewimg]
+
+[h1]二十、综合场景模拟[/h1]
+
+20.1 模拟真实指南段落
+[h2]游戏入门指南[/h2]
+
+欢迎阅读本指南！下面是游戏的基本界面：
+
+[previewimg=44177484;sizeThumb,floatLeft;测试指南图1024x687.jpg][/previewimg]
+
+如图所示，左上角是生命值[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]，右上角是金币[previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon]。
+
+[h3]操作说明[/h3]
+
+[list]
+[*]W键前进
+[*]S键后退
+[*]空格跳跃[previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon]
+[/list]
+
+[quote=老玩家]多练习就会了！[/quote]
+
+[table]
+[tr][th]按键[/th][th]图标[/th][th]功能[/th][/tr]
+[tr][td]W[/td][td][previewicon=44177489;sizeOriginal,inline;测试用图片100x100.jpg][/previewicon][/td][td]前进[/td][/tr]
+[tr][td]Space[/td][td][previewicon=44177487;sizeOriginal,inline;测试用图片400x400.jpg][/previewicon][/td][td]跳跃[/td][/tr]
+[/table]
+
+祝游戏愉快！
+
+[h1]二十一、自动小部件测试[/h1]
+
+21.1 YouTube视频URL
+https://www.youtube.com/watch?v=tax4e4hBBZc
+
+21.2 Steam商店页面URL
+https://store.steampowered.com/app/323190/
+
+21.3 Steam创意工坊URL
+https://steamcommunity.com/sharedfiles/filedetails/?id=157328145
