@@ -9,6 +9,8 @@ import HorizontalRule from "@tiptap/extension-horizontal-rule";
 import Image from "@tiptap/extension-image";
 
 import Spoiler from "../extensions/spoiler";
+import Noparse from "../extensions/noparse";
+import SteamCode from "../extensions/steamCode";
 import KeyboardShortcuts from "../extensions/keyboardShortcuts";
 import SteamBlockquote from "../extensions/steamBlockquote";
 import SteamImage from "../extensions/steamImage";
@@ -31,7 +33,8 @@ export const createEditorExtensions = (options?: {
       horizontalRule: false,
       underline: false,
       link: false,
-      blockquote: false
+      blockquote: false,
+      codeBlock: false
     }),
     Underline,
     Strike,
@@ -55,6 +58,8 @@ export const createEditorExtensions = (options?: {
       autolink: true
     }),
     Spoiler,
+    Noparse,
+    SteamCode,
     KeyboardShortcuts,
     HorizontalRule,
     Table.configure({

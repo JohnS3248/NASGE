@@ -552,11 +552,13 @@ describe("Steam 兼容性回归", () => {
     testRoundtrip("[code]a & b && c[/code]");
   });
 
-  // Negative assertion：确保 [code] 内的 [b] 不会被解析成 <strong>
-  it("[code] 内 [b] 不应被解析为 <strong>", () => {
+  // 与 Steam 一致:[code] 仅是样式容器,内部 BBCode 仍解析
+  // (Steam 5.3 段渲染:<div class="bb_code"><b>X</b><div class="bb_h1">Y</div></div>)
+  it("[code] 内 [b] 应被解析为 <strong>(与 Steam 一致)", () => {
     const html = bbcodeToHtml("[code][b]X[/b][/code]");
-    expect(html).not.toContain("<strong>");
-    expect(html).toContain("[b]X[/b]");
+    expect(html).toContain("<strong>X</strong>");
+    expect(html).toContain('data-nasge-code="1"');
+    expect(html).not.toContain("[b]X[/b]");
   });
 
   // [url] 无等号形式：Steam 自动用 URL 做 label
@@ -587,17 +589,33 @@ describe("Steam 兼容性回归", () => {
     testRoundtrip(out);  // 规范化后幂等
   });
 
-  // Negative assertion 模式补强：[code] 内任意 inline 标签都不应被解析
-  it("[code] 内 [i] 不应被解析为 <em>", () => {
+  // 与 Steam 一致:[code] 内 inline / 链接 也应被解析
+  it("[code] 内 [i] 应被解析为 <em>(与 Steam 一致)", () => {
     const html = bbcodeToHtml("[code][i]X[/i][/code]");
-    expect(html).not.toContain("<em>");
-    expect(html).toContain("[i]X[/i]");
+    expect(html).toContain("<em>X</em>");
   });
 
-  it("[code] 内 [url=] 不应被解析为 <a>", () => {
+  it("[code] 内 [url=] 应被解析为 <a>(与 Steam 一致)", () => {
     const html = bbcodeToHtml("[code][url=https://x.com]X[/url][/code]");
-    expect(html).not.toContain("<a ");
-    expect(html).toContain("[url=https://x.com]");
+    expect(html).toContain('<a href="https://x.com">X</a>');
+  });
+
+  // [code] 内 BBCode 解析后 round-trip 必须保真
+  it("[code][b]X[/b][/code] round-trip 严格保真", () => {
+    testRoundtrip("[code][b]X[/b][/code]");
+  });
+
+  it("[code] 内嵌套 [h1] round-trip(与 Steam 一致)", () => {
+    testRoundtrip("[code][b]粗[/b]\n[i]斜[/i]\n[h1]标题[/h1][/code]");
+  });
+
+  // [noparse] 内仍字面保留(注意:noparse 占位机制在 [code] 之前生效)
+  it("[code] 内嵌 [noparse]:noparse 仍字面保留", () => {
+    const html = bbcodeToHtml("[code][noparse][b]字面[/b][/noparse][/code]");
+    // noparse 内字面保留,[b] 不解析为 strong
+    expect(html).toContain('data-nasge-noparse="1"');
+    expect(html).toContain("[b]字面[/b]");
+    expect(html).not.toContain("<strong>");
   });
 });
 

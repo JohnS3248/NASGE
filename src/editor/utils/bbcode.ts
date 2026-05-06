@@ -59,9 +59,22 @@ export function htmlToBBCode(html: string): string {
     .replace(/\s+$/, "");  // 只去除末尾空白，不压缩换行
 }
 
+const PREV_BLOCK_TAGS_RE = /^(blockquote|h[1-6]|ul|ol|table|hr|figure|pre|p|div)$/i;
+
 function serializeNode(node: HTMLElement | Text, context: SerializeContext): string {
   if (node.nodeType === Node.TEXT_NODE) {
-    return node.textContent ?? "";
+    const text = node.textContent ?? "";
+    // 当前 text node 紧跟 block 元素时,leading \n 是 HTML 美化 artifact
+    // (与 wrapTextInParagraphs 的 lastWasBlock 一致:block 后第一个 \n 是隐含的)
+    // 吸收掉这一个 \n 防止嵌套 quote round-trip 累积换行
+    const prev = node.previousSibling;
+    if (prev && prev.nodeType === Node.ELEMENT_NODE) {
+      const prevTag = (prev as HTMLElement).tagName.toLowerCase();
+      if (PREV_BLOCK_TAGS_RE.test(prevTag)) {
+        return text.replace(/^\n/, "");
+      }
+    }
+    return text;
   }
 
   if (!(node instanceof HTMLElement)) return "";
@@ -120,8 +133,10 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "pre") {
-    const code = node.textContent ?? "";
-    return block(`[code]${code.replace(/\n$/, "")}[/code]`, context);
+    // SteamCode 容器:内部允许嵌套 block 和 inline mark,递归 serialize children 还原 BBCode
+    // 末尾 \n 由 block trailing 提供,避免 [code]X\n[/code] 这种内层多余换行
+    const body = serializeChildren(node).replace(/\n+$/, "");
+    return block(`[code]${body}[/code]`, context);
   }
 
   if (tagName === "hr") {
@@ -171,6 +186,13 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
 
     // figure 等同容器块：添加尾部 \n（与 wrapTextInParagraphs 吸收的 \n 对应）
     return block(bbcode, context);
+  }
+
+  // 处理 Noparse 标签:<span data-nasge-noparse="1">
+  // 内部任何字符都视为字面,即使 author 在编辑器内混入 strong 等 mark,
+  // 也只取 textContent(纯文字),不递归 serialize children。
+  if (tagName === "span" && node.getAttribute("data-nasge-noparse") === "1") {
+    return `[noparse]${node.textContent ?? ""}[/noparse]`;
   }
 
   // 处理 SteamImageInline 节点：<span data-nasge-image="inline">
@@ -396,23 +418,115 @@ export function bbcodeTitleToHtml(bbcode: string): string {
   return bbcode;
 }
 
+/**
+ * 与 Steam 一致的 inline tag 自动闭合算法
+ *
+ * BBCode 没有 escape 机制,孤立 [b] (没匹配 [/b]) 在浏览器渲染时由 HTML5 parser 容错
+ * 在 block 边界自动闭合 inline。但 NASGE 用 DOMParser 直接解析时**不会**触发
+ * 这种容错(嵌 block 的 strong 会保留嵌套结构),导致后续 H1/H2/H3 等标题被错误
+ * 包入 strong,与 Steam 渲染不一致。
+ *
+ * 此算法在 BBCode 层模拟 Steam 行为:
+ *   1. 按 block 边界 token 切分(h1-h3 / hr / list / olist / [*] / table / tr / td / th / quote / code 占位)
+ *   2. 每段 inline 内容独立扫描 [b][/b][i][/i][u][/u][strike][/strike][spoiler][/spoiler] 配对
+ *   3. 段末追加未匹配开标签的对应闭标签
+ *   4. 不匹配的闭标签(孤立 [/b])保留原样,留给后续 replace 处理
+ */
+const BLOCK_BOUNDARY_RE =
+  /(\[\/?h[1-3]\]|\[hr\]|\[\/?list\]|\[\/?olist\]|\[\*\]|\[table[^\]]*\]|\[\/table\]|\[\/?tr\]|\[\/?td\]|\[\/?th\]|\[quote(?:=[^\]]*)?\]|\[\/quote\]|\[code\]|\[\/code\])/gi;
+
+const INLINE_TAG_RE = /\[(\/?)(b|i|u|strike|spoiler)\]/gi;
+
+function autoCloseInlineAtBlockBoundary(bbcode: string): string {
+  const parts = bbcode.split(BLOCK_BOUNDARY_RE);
+  return parts
+    .map((part, i) => {
+      // split 带 capture group 时,偶数 idx 是 inline 段,奇数 idx 是 boundary token
+      if (i % 2 === 1) return part;
+      return closeInlineSegment(part);
+    })
+    .join("");
+}
+
+function closeInlineSegment(text: string): string {
+  const stack: string[] = [];
+  let result = "";
+  let lastIdx = 0;
+  // 重置 lastIndex 避免 regex 状态跨调用泄漏
+  INLINE_TAG_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = INLINE_TAG_RE.exec(text)) !== null) {
+    result += text.slice(lastIdx, m.index);
+    const closing = m[1] === "/";
+    const tag = m[2].toLowerCase();
+    if (closing) {
+      const stackIdx = stack.lastIndexOf(tag);
+      if (stackIdx >= 0) {
+        stack.splice(stackIdx, 1);
+      }
+      // 即使不匹配也保留原 token(后续 replace 会处理)
+      result += m[0];
+    } else {
+      stack.push(tag);
+      result += m[0];
+    }
+    lastIdx = INLINE_TAG_RE.lastIndex;
+  }
+  result += text.slice(lastIdx);
+  // 段末按栈倒序补全未匹配开标签的闭合
+  while (stack.length > 0) {
+    const tag = stack.pop()!;
+    result += `[/${tag}]`;
+  }
+  return result;
+}
+
+/**
+ * 嵌套引用配对扫描(与 Steam 一致)
+ *
+ * Steam 行为:`[quote=A]外层[quote=B]内层[/quote]外层结尾[/quote]` 渲染为两层嵌套
+ * blockquote。每个 [/quote] 闭合最近开启的 [quote],类似栈式 parser。
+ *
+ * 实现:inside-out 迭代,每次匹配"最内层"quote(body 不含 [quote 标签]),替换为 HTML
+ * blockquote。外层 body 的内层引用已变 HTML,下轮不再被 BBCode regex 匹配,直到无
+ * [quote] 可替换为止。
+ */
+const INNERMOST_QUOTE_RE =
+  /\[quote(?:=([^\]]+))?\]((?:(?!\[\/?quote(?:=[^\]]*)?\])[\s\S])*?)\[\/quote\]/i;
+
+function processNestedQuotes(html: string): string {
+  let result = html;
+  // 防御:嵌套深度上限,避免极端输入死循环
+  for (let i = 0; i < 100; i++) {
+    const m = result.match(INNERMOST_QUOTE_RE);
+    if (!m || m.index === undefined) break;
+    const author = m[1];
+    const body = m[2].trim();
+    const replacement = author
+      ? `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 ${author}：</p>${body}</blockquote>`
+      : `<blockquote class="nasge-quote">${body}</blockquote>`;
+    result = result.slice(0, m.index) + replacement + result.slice(m.index + m[0].length);
+  }
+  return result;
+}
+
 export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): string {
   let html = bbcode;
 
-  // 关键：先把 [code]...[/code] 抠出来占位，防止内部 BBCode 被全局 replace 误解析。
-  // 没有这一步，[code][b]X[/b][/code] 会先被 [b]/[/b] 替换成 <strong>，
-  // 反向序列化时 <pre> 走 textContent 路径，[b] 标签永久丢失。
-  // 占位符使用 \x00 标记，普通文本不会包含此字符。
-  const codeBlocks: string[] = [];
-  html = html.replace(/\[code]([\s\S]*?)\[\/code]/gi, (_, content) => {
-    const idx = codeBlocks.length;
-    // HTML escape：防止 < > & 在 DOM parser 阶段被当成标签
+  // [noparse] 占位 — 必须在 [code] 之前。
+  // 因为 [noparse][code]X[/code][/noparse] 整体应作为字面字符串保留,
+  // 让 [code] 先占位会破坏 noparse 边界。
+  // noparse 内任何字符均字面,不被任何 BBCode 全局 replace 解析。
+  const noparseBlocks: string[] = [];
+  html = html.replace(/\[noparse]([\s\S]*?)\[\/noparse]/gi, (_, content) => {
+    const idx = noparseBlocks.length;
+    // HTML escape:防止字面 < > & 在 DOM parse 阶段被误识为真 HTML 元素
     const escaped = String(content)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    codeBlocks.push(escaped);
-    return `\x00CODE_PLACEHOLDER_${idx}\x00`;
+    noparseBlocks.push(escaped);
+    return `\x00NOPARSE_PLACEHOLDER_${idx}\x00`;
   });
 
   // 入口 escape：把 author 写在 BBCode 中的字面 < > & 转成 entity，
@@ -425,15 +539,22 @@ export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): strin
       .replace(/>/g, '&gt;');
   }
 
-  // 先处理引用（递归转换）
-  html = html.replace(/\[quote=([^\]]+)]([\s\S]*?)\[\/quote]/gi, (_, author, body) => {
-    const inner = bbcodeToHtml(body.trim(), true);
-    return `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 ${author}：</p>${inner}</blockquote>`;
-  });
+  // 与 Steam 一致的 inline 自动闭合:孤立 [b] (没匹配 [/b]) 在 block 边界处闭合,
+  // 不让 strong 跨段落延伸把后续标题包入。
+  // 必须在 quote 递归 / 其他 BBCode 替换之前做(算法看 BBCode token 不看 HTML)。
+  html = autoCloseInlineAtBlockBoundary(html);
 
-  html = html.replace(/\[quote]([\s\S]*?)\[\/quote]/gi, (_, body) => {
-    const inner = bbcodeToHtml(body.trim(), true);
-    return `<blockquote class="nasge-quote">${inner}</blockquote>`;
+  // 先处理引用 — 嵌套配对(与 Steam 一致:每个 [/quote] 闭合最近的 [quote])
+  // inside-out 迭代替换:每次只匹配 body 不含 [quote/[/quote] 的最内层 quote,
+  // 替换为 <blockquote>...</blockquote> 后,外层 body 内的内层引用已变 HTML 标签,
+  // 不会被下一轮 INNERMOST_QUOTE_RE 匹配 → 直到没有可匹配的 [quote] 为止
+  html = processNestedQuotes(html);
+
+  // [code] 容器(与 Steam 一致:仅样式外壳,内部 BBCode 仍由后续 replace 解析)
+  // 必须在 [h1] 替换之前,因为 [code][h1]X[/h1][/code] 中的 [h1] 由后续 replace 处理
+  // 非贪婪匹配防止嵌套 [code] 出错
+  html = html.replace(/\[code]([\s\S]*?)\[\/code]/gi, (_, content) => {
+    return `<pre data-nasge-code="1" class="nasge-code">${content}</pre>`;
   });
 
   // 处理标题（保留标题内的换行）
@@ -459,8 +580,6 @@ export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): strin
   html = html.replace(/\[list]/gi, "<ul>").replace(/\[\/list]/gi, "</ul>");
   html = html.replace(/\[olist]/gi, "<ol>").replace(/\[\/olist]/gi, "</ol>");
   html = html.replace(/\[\*]/gi, "<li>");
-
-  // [code] 已在函数顶部抠出占位，此处不再处理
 
   // 分隔线
   html = html.replace(/\[hr]/gi, "<hr />");
@@ -515,9 +634,10 @@ export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): strin
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
 
-  // 还原 [code] 占位符为 <pre><code>...</code></pre>（块级元素，wrapTextInParagraphs 会正确处理）
-  html = html.replace(/\x00CODE_PLACEHOLDER_(\d+)\x00/g, (_, idx) => {
-    return `<pre><code>${codeBlocks[parseInt(idx, 10)]}</code></pre>`;
+  // 还原 [noparse] 占位符为 <span data-nasge-noparse="1">字面字符串</span>(inline 元素)
+  // 内容已 HTML escape,DOM parse 时 entity 解码,textContent 拿到 author 原字面
+  html = html.replace(/\x00NOPARSE_PLACEHOLDER_(\d+)\x00/g, (_, idx) => {
+    return `<span data-nasge-noparse="1">${noparseBlocks[parseInt(idx, 10)]}</span>`;
   });
 
   // 检查是否有块级元素

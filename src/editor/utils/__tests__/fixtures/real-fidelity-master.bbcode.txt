@@ -1,0 +1,278 @@
+[h1]NASGE 往返保真测试·综合章节[/h1]
+本章覆盖 NASGE 编辑器支持的所有非图片 BBCode 标签,作 round-trip 保真金标准。任何 NASGE 改写 author 原文的 case 都视为 bug。
+
+[h1]一、标题[/h1]
+
+[h1]这是一级标题 H1[/h1]
+[h2]这是二级标题 H2[/h2]
+[h3]这是三级标题 H3[/h3]
+
+1.1 标题与 inline 混合
+[h1]带 [b]粗体[/b] 的一级[/h1]
+[h2]含 [i]斜体[/i] 的二级[/h2]
+[h3]附 [u]下划线[/u] 的三级[/h3]
+
+1.2 标题前后空白
+段落 A
+[h2]紧接二级[/h2]
+段落 B
+
+段落 C
+
+[h2]空行后二级[/h2]
+
+段落 D
+
+[h1]二、文字格式[/h1]
+
+2.1 基础 inline
+[b]粗体[/b] [i]斜体[/i] [u]下划线[/u] [strike]删除线[/strike] [spoiler]剧透文字[/spoiler]
+
+2.2 嵌套(同顺序)
+[b][i]粗斜[/i][/b]
+[b][i][u]粗斜下划[/u][/i][/b]
+[u][b]下划粗[/b][/u]
+[spoiler][b]剧透粗体[/b][/spoiler]
+
+2.3 嵌套(不同顺序,Steam 渲染等价但字符不同)
+[i][b]斜粗[/b][/i]
+[u][b]下划粗·顺序 2[/b][/u]
+[strike][b]删除线粗[/b][/strike]
+[u][i][b]下划斜粗[/b][/i][/u]
+
+2.4 行内格式与文字混合
+普通[b]粗体[/b]普通[i]斜体[/i]普通[u]下划[/u]结尾
+
+2.5 跨行 inline(格式跨多行)
+这一行有[b]粗体
+跨到下一行[/b]结束
+
+[h1]三、列表[/h1]
+
+3.1 无序列表
+[list]
+[*]项 1
+[*]项 2 含 [b]粗体[/b]
+[*]项 3 含 [i]斜体[/i]
+[/list]
+
+3.2 有序列表
+[olist]
+[*]第一项
+[*]第二项
+[*]第三项
+[/olist]
+
+3.3 列表项内多行
+[list]
+[*]这是第一项
+内容跨多行
+[*]这是第二项
+[/list]
+
+3.4 列表前后空白
+前置段落
+
+[list]
+[*]列表项 X
+[*]列表项 Y
+[/list]
+
+后置段落
+
+3.5 嵌套列表(Steam 已支持)
+[list]
+[*]外层项 1
+[list]
+[*]内层 a
+[*]内层 b
+[/list]
+[*]外层项 2
+[/list]
+
+[h1]四、引用[/h1]
+
+4.1 简单引用
+[quote]这是一段简单引用内容[/quote]
+
+4.2 带作者引用
+[quote=Gabe Newell]Steam 是 Valve 公司开发的数字分发平台[/quote]
+
+4.3 引用内 inline 格式
+[quote]含 [b]粗体[/b]、[i]斜体[/i] 与 [u]下划线[/u] 的引用[/quote]
+
+4.4 引用内列表
+[quote]
+引用开头
+[list]
+[*]要点 a
+[*]要点 b
+[/list]
+引用结尾
+[/quote]
+
+4.5 引用前后空白
+段落
+
+[quote]单独引用[/quote]
+
+段落
+
+[h1]五、代码块[/h1]
+
+5.1 单行
+[code]console.log("hello world");[/code]
+
+5.2 多行
+[code]function add(a, b) {
+  return a + b;
+}[/code]
+
+5.3 代码块内 BBCode 字面(应原样保留,不被解析)
+[code][b]这不会变粗体[/b]
+[i]这不会变斜体[/i]
+[h1]这不会变标题[/h1][/code]
+
+5.4 代码块内 HTML 特殊字符
+[code]<html>&amp;&lt;&gt;"'</html>[/code]
+
+5.5 代码块前后空白
+段落
+
+[code]var x = 1;[/code]
+
+段落
+
+[h1]六、分隔线[/h1]
+
+6.1 基础
+分隔前
+[hr]
+分隔后
+
+6.2 分隔线前后空行
+段落 A
+
+[hr]
+
+段落 B
+
+6.3 多分隔线连续
+[hr]
+[hr]
+[hr]
+
+[h1]七、链接[/h1]
+
+7.1 命名链接
+访问 [url=https://store.steampowered.com]Steam 商店[/url] 查看更多。
+
+7.2 裸链接(自动取 URL 做 label)
+[url]https://steamcommunity.com[/url]
+
+7.3 链接与文字混合
+查看 [url=https://partner.steamgames.com]Partner 文档[/url] 或访问 [url]https://store.steampowered.com[/url] 进入主站。
+
+[h1]八、表格[/h1]
+
+8.1 基础表格
+[table]
+[tr][th]列 1[/th][th]列 2[/th][/tr]
+[tr][td]A[/td][td]B[/td][/tr]
+[tr][td]C[/td][td]D[/td][/tr]
+[/table]
+
+8.2 表格 noborder 属性
+[table noborder=1]
+[tr][th]名称[/th][th]说明[/th][/tr]
+[tr][td]NASGE[/td][td]Steam 指南编辑器[/td][/tr]
+[/table]
+
+8.3 表格 equalcells 属性
+[table equalcells=1]
+[tr][td]X[/td][td]Y[/td][td]Z[/td][/tr]
+[/table]
+
+8.4 单元格内 inline 格式
+[table]
+[tr][th]名称[/th][th]描述[/th][/tr]
+[tr][td][b]NASGE[/b][/td][td]含 [i]斜体[/i] 的描述[/td][/tr]
+[/table]
+
+8.5 空单元格
+[table]
+[tr][td]满[/td][td][/td][/tr]
+[tr][td][/td][td]满[/td][/tr]
+[/table]
+
+[h1]九、noparse[/h1]
+
+9.1 不解析 BBCode
+[noparse][b]这个不应被解析为粗体[/b][/noparse]
+
+9.2 与正常 [b] 对照
+[noparse][b]字面[/b][/noparse] vs [b]粗体[/b]
+
+[h1]十、HTML 特殊字符[/h1]
+
+10.1 字面比较符号
+a < b 与 b > a 与 c & d
+
+10.2 字面 HTML 标签
+<div>这是字面字符串</div>
+<script>alert(1)</script>
+
+10.3 HTML entity 字面(不应被 DOM 解码)
+&amp; &lt; &gt; &quot; &#39;
+
+10.4 综合(实战 case)
+<html>&amp;&lt;&gt;"'</html>
+
+[h1]十一、空白边界[/h1]
+
+11.1 段落间单空行
+段落 A
+
+段落 B
+
+11.2 段落间双空行
+段落 C
+
+
+段落 D
+
+11.3 段落间三空行
+段落 E
+
+
+
+段落 F
+
+11.4 章节末尾紧贴 [hr]
+段落
+[hr]
+
+11.5 [hr] 紧贴下一段
+[hr]
+段落
+
+[h1]十二、综合嵌套[/h1]
+
+12.1 引用内嵌引用
+[quote=外层作者]外层引用[quote=内层作者]内层引用[/quote]外层结尾[/quote]
+
+12.2 列表内含引用
+[list]
+[*]普通项
+[*]含引用项: [quote]内嵌引用[/quote]
+[*]普通项
+[/list]
+
+12.3 表格内嵌列表(若 Steam 支持)
+[table]
+[tr][th]名称[/th][th]要点[/th][/tr]
+[tr][td]A[/td][td][list][*]a1[*]a2[/list][/td][/tr]
+[/table]
+
+[h1]结尾[/h1]
+本章结束。请把上述完整内容粘贴到 Steam 测试指南的一个章节,保存,再用 bb-browser 拉取真实 BBCode 落到 src/editor/utils/__tests__/fixtures/。
