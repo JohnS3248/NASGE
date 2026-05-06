@@ -11,6 +11,7 @@ import Image from "@tiptap/extension-image";
 import Spoiler from "../extensions/spoiler";
 import Noparse from "../extensions/noparse";
 import SteamCode from "../extensions/steamCode";
+import BlockDeleteShortcuts from "../extensions/blockDeleteShortcuts";
 import KeyboardShortcuts from "../extensions/keyboardShortcuts";
 import SteamBlockquote from "../extensions/steamBlockquote";
 import SteamImage from "../extensions/steamImage";
@@ -60,6 +61,7 @@ export const createEditorExtensions = (options?: {
     Spoiler,
     Noparse,
     SteamCode,
+    BlockDeleteShortcuts,
     KeyboardShortcuts,
     HorizontalRule,
     Table.configure({
