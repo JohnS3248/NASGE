@@ -503,7 +503,7 @@ function processNestedQuotes(html: string): string {
     const author = m[1];
     const body = m[2].trim();
     const replacement = author
-      ? `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 ${author}：</p>${body}</blockquote>`
+      ? `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 <strong>${author}</strong>：</p>${body}</blockquote>`
       : `<blockquote class="nasge-quote">${body}</blockquote>`;
     result = result.slice(0, m.index) + replacement + result.slice(m.index + m[0].length);
   }
