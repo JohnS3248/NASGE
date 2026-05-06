@@ -135,6 +135,57 @@ describe("[noparse] — 内部字面保留", () => {
 });
 
 // ============================================================
+// [table] 属性保留:noborder=1 / equalcells=1 等 author 显式写法必须 round-trip 保真
+// ============================================================
+describe("[table] 属性保留", () => {
+  it("noborder=1 单属性", () => {
+    assertStrictRoundtrip("[table noborder=1]\n[tr][td]A[/td][/tr]\n[/table]");
+  });
+
+  it("equalcells=1 单属性", () => {
+    assertStrictRoundtrip("[table equalcells=1]\n[tr][td]A[/td][/tr]\n[/table]");
+  });
+
+  it("noborder=1 equalcells=1 多属性", () => {
+    assertStrictRoundtrip("[table noborder=1 equalcells=1]\n[tr][td]A[/td][/tr]\n[/table]");
+  });
+
+  it("无属性 [table] 行为不变", () => {
+    assertStrictRoundtrip("[table]\n[tr][td]A[/td][/tr]\n[/table]");
+  });
+});
+
+// ============================================================
+// [url] 裸形式保真:author 原写法 [url]X[/url] 不被改写为命名 [url=X]X[/url]
+// ============================================================
+describe("[url] 裸形式保真", () => {
+  it("纯裸 url", () => {
+    assertStrictRoundtrip("[url]https://example.com[/url]");
+  });
+
+  it("裸 url 与文字混排", () => {
+    assertStrictRoundtrip("访问 [url]https://store.steampowered.com[/url] 查看");
+  });
+
+  it("命名形式不变", () => {
+    assertStrictRoundtrip("[url=https://example.com]label[/url]");
+  });
+});
+
+// ============================================================
+// [quote] 内首尾换行保真:不再被吞 ([quote]\nbody\n[/quote] 形式保留 author 原换行)
+// ============================================================
+describe("[quote] 首尾换行保真", () => {
+  it("[quote]\\nbody[/quote] 首部换行保留", () => {
+    assertStrictRoundtrip("[quote]\n引用内容[/quote]");
+  });
+
+  it("[quote=author]\\nbody[/quote] 带作者首部换行保留", () => {
+    assertStrictRoundtrip("[quote=Gabe]\n引用内容[/quote]");
+  });
+});
+
+// ============================================================
 // Fixture 04 含 11.1 段 HTML 特殊字符,整段 round-trip 后该段必须保留
 // (整 fixture 不要求严格相等,因为类别 1/3 在 BBCode 层不保真,
 // 这部分由 diff 层的 normalize 处理)

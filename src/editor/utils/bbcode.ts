@@ -93,6 +93,8 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
     // 作者标识行已改用 CSS ::before 伪元素渲染(.nasge-quote[data-author]::before),
     // DOM 中不再插入 <p>引用自 X：</p>,因此 serialize children 不需要过滤。
     // 作者从 data-author attr 读取,序列化为 [quote=author]。
+    // body 完全不 trim,首尾换行 author 怎么写就怎么保留(嵌套 quote / inner block trailing 都靠
+    // serializeNode 中的 prev block 吸收 leading \n 处理)。
     const author = node.getAttribute("data-author") ?? "";
     const childNodes = Array.from(node.childNodes) as (HTMLElement | Text)[];
     const body = childNodes
@@ -101,8 +103,7 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
           isLastSibling: index === childNodes.length - 1
         })
       )
-      .join("")
-      .trim();
+      .join("");
     const quote = author ? `[quote=${author}]${body}[/quote]` : `[quote]${body}[/quote]`;
     return block(quote, context);
   }
@@ -113,7 +114,13 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
 
   if (tagName === "a") {
     const href = node.getAttribute("href") ?? "#";
-    return `[url=${href}]${serializeChildren(node)}[/url]`;
+    const body = serializeChildren(node);
+    // 裸 [url]X[/url]:author 原写法 label === href 且打过 bare 标记。还原为裸形式保真。
+    const bare = node.getAttribute("data-bbcode-bare") === "1";
+    if (bare && body === href) {
+      return `[url]${href}[/url]`;
+    }
+    return `[url=${href}]${body}[/url]`;
   }
 
   if (tagName === "ul" || tagName === "ol") {
@@ -145,8 +152,11 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "table") {
+    // 还原 [table] 的 author 原始属性(noborder=1 / equalcells=1 等),从 data-bbcode-attrs 读
+    const bbcodeAttrs = node.getAttribute("data-bbcode-attrs") ?? "";
+    const openTag = bbcodeAttrs ? `[table ${bbcodeAttrs}]` : "[table]";
     const body = serializeChildren(node).replace(/^\n+/, "").replace(/\n{2,}/g, "\n").replace(/\n+$/, "\n");
-    return block(`[table]\n${body}[/table]`, context);
+    return block(`${openTag}\n${body}[/table]`, context);
   }
 
   if (tagName === "figure" && node.hasAttribute("data-nasge-image")) {
@@ -497,7 +507,8 @@ function processNestedQuotes(html: string): string {
     const m = result.match(INNERMOST_QUOTE_RE);
     if (!m || m.index === undefined) break;
     const author = m[1];
-    const body = m[2].trim();
+    // body 不 trim,保留 author 原首尾换行(避免 [quote]\nX[/quote] → [quote]X[/quote] 这种吞换行)
+    const body = m[2];
     const replacement = author
       ? `<blockquote class="nasge-quote" data-author="${author}">${body}</blockquote>`
       : `<blockquote class="nasge-quote">${body}</blockquote>`;
@@ -580,8 +591,13 @@ export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): strin
   // 分隔线
   html = html.replace(/\[hr]/gi, "<hr />");
 
-  // 表格（支持带属性的标签，如 [table noborder=1] [table equalcells=1]）
-  html = html.replace(/\[table(?:\s+[^\]]*)?]/gi, "<table>").replace(/\[\/table]/gi, "</table>");
+  // 表格(支持带属性的标签,如 [table noborder=1] [table equalcells=1])
+  // 把属性 stash 到 data-bbcode-attrs,htmlToBBCode 端从该 attr 还原 author 原写法
+  html = html.replace(/\[table(?:\s+([^\]]*))?]/gi, (_, attrs) => {
+    if (!attrs) return "<table>";
+    const escaped = attrs.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    return `<table data-bbcode-attrs="${escaped}">`;
+  }).replace(/\[\/table]/gi, "</table>");
   html = html.replace(/\[tr]/gi, "<tr>").replace(/\[\/tr]/gi, "</tr>");
   html = html.replace(/\[td]/gi, "<td>").replace(/\[\/td]/gi, "</td>");
   html = html.replace(/\[th]/gi, "<th>").replace(/\[\/th]/gi, "</th>");
@@ -622,11 +638,13 @@ export function bbcodeToHtml(bbcode: string, skipEscape: boolean = false): strin
     return figureTag;
   });
 
-  // 链接：Steam 支持两种形式
+  // 链接:Steam 支持两种形式
   // [url=https://example.com]label[/url] — 命名形式
-  // [url]https://example.com[/url] — 自动取 URL 做 label
-  // 注意：bare url 形式必须先于命名形式的 [/url] 替换处理
-  html = html.replace(/\[url]([^\[]+)\[\/url]/gi, (_, url) => `<a href="${url}">${url}</a>`);
+  // [url]https://example.com[/url] — 裸形式(自动取 URL 做 label)
+  // 裸形式打 data-bbcode-bare="1" 标记,htmlToBBCode 看到该标记还原裸形式而非改写为命名形式
+  html = html.replace(/\[url]([^\[]+)\[\/url]/gi, (_, url) =>
+    `<a href="${url}" data-bbcode-bare="1">${url}</a>`
+  );
   html = html.replace(/\[url=([^\]]+)]/gi, '<a href="$1">').replace(/\[\/url]/gi, "</a>");
   html = html.replace(/\[img]/gi, '<img src="').replace(/\[\/img]/gi, '" alt="" class="nasge-image" />');
 

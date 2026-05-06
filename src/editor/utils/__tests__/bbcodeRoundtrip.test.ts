@@ -561,32 +561,19 @@ describe("Steam 兼容性回归", () => {
     expect(html).not.toContain("[b]X[/b]");
   });
 
-  // [url] 无等号形式：Steam 自动用 URL 做 label
-  // 历史 bug：[url]https://x[/url] → 输出畸形 [url]https://x（缺闭合标签）
-  // 修复后：bare 形式被规范化为命名形式 [url=X]X[/url]，Steam 渲染等价。
-  // 这是合法规范化（类似 [/td]\n[/tr] → [/td][/tr]），需验证：
-  //   1. 不再产生畸形输出
-  //   2. 规范化后的形式幂等
-  it("[url] 无等号形式不再产生畸形输出", () => {
-    const input = "[url]https://example.com[/url]";
-    const html = bbcodeToHtml(input);
-    const out = htmlToBBCode(html);
-    // 必须含完整闭合标签
-    expect(out).toContain("[/url]");
-    // 必须能被解析为有效链接
-    expect(html).toContain('<a href="https://example.com">');
-    // 规范化为命名形式后必须幂等
-    testRoundtrip(out);
+  // [url] 裸形式:Steam 自动用 URL 做 label。author 写裸形式必须保真不被改写为命名形式。
+  // 历史 bug:[url]https://x[/url] → 输出畸形 [url]https://x(缺闭合标签),后规范化为命名形式 [url=X]X[/url]。
+  // 当前行为:裸形式 round-trip 严格保真(data-bbcode-bare 标记),不改写为命名形式。
+  it("[url] 裸形式严格 round-trip 保真", () => {
+    testRoundtrip("[url]https://example.com[/url]");
   });
 
-  it("[url] 无等号形式与文字混排", () => {
-    const input = "访问 [url]https://store.steampowered.com[/url] 查看详情";
-    const html = bbcodeToHtml(input);
-    const out = htmlToBBCode(html);
-    expect(out).toContain("访问 ");
-    expect(out).toContain(" 查看详情");
-    expect(out).toContain("[/url]");
-    testRoundtrip(out);  // 规范化后幂等
+  it("[url] 裸形式与文字混排严格 round-trip 保真", () => {
+    testRoundtrip("访问 [url]https://store.steampowered.com[/url] 查看详情");
+  });
+
+  it("[url=X]Y[/url] 命名形式严格 round-trip 保真", () => {
+    testRoundtrip("查看 [url=https://partner.steamgames.com]Partner 文档[/url] 详情");
   });
 
   // 与 Steam 一致:[code] 内 inline / 链接 也应被解析

@@ -44,6 +44,18 @@ export const createEditorExtensions = (options?: {
     }),
     Link.extend({
       // 扩展 renderHTML 以添加 title 属性，悬停时显示链接地址
+      addAttributes() {
+        const parent = this.parent?.() ?? {};
+        return {
+          ...parent,
+          bbcodeBare: {
+            default: false,
+            parseHTML: (el) => el.getAttribute("data-bbcode-bare") === "1",
+            renderHTML: (attrs: { bbcodeBare?: boolean }) =>
+              attrs.bbcodeBare ? { "data-bbcode-bare": "1" } : {}
+          }
+        };
+      },
       renderHTML({ HTMLAttributes }) {
         return [
           "a",
@@ -64,7 +76,20 @@ export const createEditorExtensions = (options?: {
     BlockDeleteShortcuts,
     KeyboardShortcuts,
     HorizontalRule,
-    Table.configure({
+    Table.extend({
+      addAttributes() {
+        const parent = this.parent?.() ?? {};
+        return {
+          ...parent,
+          bbcodeAttrs: {
+            default: "",
+            parseHTML: (el) => el.getAttribute("data-bbcode-attrs") || "",
+            renderHTML: (attrs: { bbcodeAttrs?: string }) =>
+              attrs.bbcodeAttrs ? { "data-bbcode-attrs": attrs.bbcodeAttrs } : {}
+          }
+        };
+      }
+    }).configure({
       resizable: false,
       HTMLAttributes: {
         class: "nasge-table"
