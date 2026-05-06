@@ -90,19 +90,15 @@ function serializeNode(node: HTMLElement | Text, context: SerializeContext): str
   }
 
   if (tagName === "blockquote") {
+    // 作者标识行已改用 CSS ::before 伪元素渲染(.nasge-quote[data-author]::before),
+    // DOM 中不再插入 <p>引用自 X：</p>,因此 serialize children 不需要过滤。
+    // 作者从 data-author attr 读取,序列化为 [quote=author]。
     const author = node.getAttribute("data-author") ?? "";
     const childNodes = Array.from(node.childNodes) as (HTMLElement | Text)[];
-    const filtered = childNodes.filter((child, index) => {
-      if (author && index === 0 && child instanceof HTMLElement && child.tagName.toLowerCase() === "p") {
-        const text = child.textContent?.trim() ?? "";
-        return !text.startsWith(`引用自 ${author}`);
-      }
-      return true;
-    });
-    const body = filtered
+    const body = childNodes
       .map((child, index) =>
         serializeNode(child, {
-          isLastSibling: index === filtered.length - 1
+          isLastSibling: index === childNodes.length - 1
         })
       )
       .join("")
@@ -503,7 +499,7 @@ function processNestedQuotes(html: string): string {
     const author = m[1];
     const body = m[2].trim();
     const replacement = author
-      ? `<blockquote class="nasge-quote" data-author="${author}"><p>引用自 <strong>${author}</strong>：</p>${body}</blockquote>`
+      ? `<blockquote class="nasge-quote" data-author="${author}">${body}</blockquote>`
       : `<blockquote class="nasge-quote">${body}</blockquote>`;
     result = result.slice(0, m.index) + replacement + result.slice(m.index + m[0].length);
   }

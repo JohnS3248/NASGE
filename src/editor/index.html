@@ -257,10 +257,16 @@
         margin: 0;
       }
 
-      .nasge-quote[data-author]:not([data-author=""]) p:first-child {
+      /* 作者标识行用 ::before 伪元素渲染,DOM 中无字面文本节点,光标无法进入,
+         物理上不可编辑(防止用户改了字 round-trip 被破坏) */
+      .nasge-quote[data-author]:not([data-author=""])::before {
+        content: "引用自 " attr(data-author) "：";
+        display: block;
         font-style: italic;
         color: #898989;
         font-size: 12px;
+        font-weight: bold;
+        margin-bottom: 4px;
       }
 
     </style>
