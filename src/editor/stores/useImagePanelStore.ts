@@ -60,7 +60,7 @@ export interface ImagePanelSettings {
   rememberPosition: boolean;
 
   // 插入设置
-  defaultInsertSize: "original" | "medium" | "small";
+  defaultInsertSize: "original" | "medium" | "small" | "full";
   defaultInsertAlignment: "floatLeft" | "floatRight" | "center" | "inline";
   doubleClickToInsert: boolean;
   afterInsertAction: "none" | "close" | "minimize";
@@ -146,7 +146,7 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
   setEditingImageId: (id: string | null) => void;
 
   // ============ 插入设置 Actions ============
-  setDefaultInsertSize: (size: "original" | "medium" | "small") => void;
+  setDefaultInsertSize: (size: "original" | "medium" | "small" | "full") => void;
   setDefaultInsertAlignment: (alignment: "floatLeft" | "floatRight" | "center" | "inline") => void;
   setDoubleClickToInsert: (enabled: boolean) => void;
   setAfterInsertAction: (action: "none" | "close" | "minimize") => void;

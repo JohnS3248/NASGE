@@ -252,6 +252,7 @@ const WholeGuideEditor: React.FC = () => {
       original: "original",
       medium: "half",
       small: "thumb",
+      full: "full",
     };
     const sizePreset = sizePresetMap[defaultInsertSize] || "original";
 

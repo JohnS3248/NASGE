@@ -145,6 +145,19 @@
     "tab": {
       "pool": "图片池",
       "screenshots": "游戏截图"
+    },
+    "insertSettings": {
+      "openTitle": "插入默认格式",
+      "title": "拖入编辑器时的默认格式",
+      "size": "尺寸",
+      "sizeMedium": "半宽",
+      "sizeFull": "全宽",
+      "sizeOriginal": "原尺寸",
+      "alignment": "对齐",
+      "alignFloatLeft": "向左",
+      "alignFloatRight": "向右",
+      "alignInline": "内嵌",
+      "hint": "改后下次拖入图片时生效"
     }
   },
   "search": {

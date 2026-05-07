@@ -145,6 +145,19 @@
     "tab": {
       "pool": "Image Pool",
       "screenshots": "Screenshots"
+    },
+    "insertSettings": {
+      "openTitle": "Insert defaults",
+      "title": "Default format when inserting into editor",
+      "size": "Size",
+      "sizeMedium": "Half width",
+      "sizeFull": "Full width",
+      "sizeOriginal": "Original",
+      "alignment": "Alignment",
+      "alignFloatLeft": "Left",
+      "alignFloatRight": "Right",
+      "alignInline": "Inline",
+      "hint": "Applies on next drag insert"
     }
   },
   "search": {

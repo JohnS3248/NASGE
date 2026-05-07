@@ -5,7 +5,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { SIZES } from "./styles";
-import { ImageIcon, TagIcon, MaximizeIcon, MinimizeIcon, MinusIcon } from "./icons";
+import { ImageIcon, TagIcon, MaximizeIcon, MinimizeIcon, MinusIcon, SettingsIcon } from "./icons";
 
 interface PanelHeaderProps {
   imageCount: number;
@@ -18,6 +18,7 @@ interface PanelHeaderProps {
   onClose: () => void;
   onOpenTagManager?: () => void;
   onToggleFullscreen?: () => void;
+  onOpenInsertSettings?: () => void;
 }
 
 const btnBase = "w-6 h-6 flex items-center justify-center border-none bg-transparent text-text-secondary rounded-sm cursor-pointer transition-all duration-150 ease-out";
@@ -34,7 +35,8 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
   onMinimize,
   onClose,
   onOpenTagManager,
-  onToggleFullscreen
+  onToggleFullscreen,
+  onOpenInsertSettings
 }) => {
   const { t } = useTranslation('editor');
 
@@ -62,6 +64,18 @@ const PanelHeader: React.FC<PanelHeaderProps> = ({
         className="flex items-center gap-1"
         onMouseDown={(e) => e.stopPropagation()}
       >
+        {/* 插入设置按钮 */}
+        {onOpenInsertSettings && (
+          <button
+            type="button"
+            title={t('imagePanel.insertSettings.openTitle')}
+            className={`${btnBase} ${btnHover}`}
+            onClick={onOpenInsertSettings}
+          >
+            <SettingsIcon size={14} />
+          </button>
+        )}
+
         {/* 管理标签按钮 */}
         {onOpenTagManager && (
           <button

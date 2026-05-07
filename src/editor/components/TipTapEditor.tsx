@@ -550,7 +550,8 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       const sizePresetMap: Record<string, ImageSizePreset> = {
         original: "original",
         medium: "half",
-        small: "thumb"
+        small: "thumb",
+        full: "full"
       };
       const sizePreset = sizePresetMap[defaultInsertSize] || "original";
 

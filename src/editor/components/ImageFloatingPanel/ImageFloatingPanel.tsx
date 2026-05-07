@@ -9,6 +9,7 @@ import { useGuideStore } from "../../stores/useGuideStore";
 import { useArchiveStore } from "../../stores/useArchiveStore";
 import { addFilesToPool } from "../../services/imagePoolIntake";
 import PanelHeader from "./PanelHeader";
+import PanelInsertSettings from "./PanelInsertSettings";
 import MinimizedPanel from "./MinimizedPanel";
 import ImageGrid from "./ImageGrid";
 import TagManager from "./TagManager";
@@ -83,6 +84,7 @@ const ImageFloatingPanel: React.FC = () => {
   const [isResizing, setIsResizing] = useState<string | null>(null);
   const [showTagManager, setShowTagManager] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showInsertSettings, setShowInsertSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // 根据 tab 选择数据源,然后搜索、状态筛选、排序
@@ -151,9 +153,9 @@ const ImageFloatingPanel: React.FC = () => {
     x: number; y: number; posX: number; posY: number; width: number; height: number;
   } | null>(null);
 
-  const handleImageDoubleClick = useCallback((image: ImageWithState) => {
-    loggers.image.info("双击图片", { fileName: image.fileName, previewId: image.previewId });
-    toast.info(`双击图片: ${image.fileName}\n(插入功能待实现)`);
+  // 双击已上传图片暂不触发插入(功能未实现);pending / error 状态由 ImageGrid 内部 handler 处理(加入上传队列 / 重试上传)
+  const handleImageDoubleClick = useCallback((_image: ImageWithState) => {
+    // noop
   }, []);
 
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -280,7 +282,11 @@ const ImageFloatingPanel: React.FC = () => {
           onClose={close}
           onOpenTagManager={() => setShowTagManager(true)}
           onToggleFullscreen={() => setIsFullscreen(true)}
+          onOpenInsertSettings={() => setShowInsertSettings((v) => !v)}
         />
+        {showInsertSettings && (
+          <PanelInsertSettings onClose={() => setShowInsertSettings(false)} />
+        )}
 
         {/* Tab 栏 */}
         <div className="flex border-b border-border-accent">
