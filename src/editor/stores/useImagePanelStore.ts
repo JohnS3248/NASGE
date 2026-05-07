@@ -62,6 +62,7 @@ export interface ImagePanelSettings {
   // 插入设置
   defaultInsertSize: "original" | "medium" | "small" | "full";
   defaultInsertAlignment: "floatLeft" | "floatRight" | "center" | "inline";
+  defaultInsertPlacement: "newLine" | "inline";
   doubleClickToInsert: boolean;
   afterInsertAction: "none" | "close" | "minimize";
 }
@@ -148,6 +149,7 @@ export interface ImagePanelState extends ImagePanelSettings, ImagePanelRuntimeSt
   // ============ 插入设置 Actions ============
   setDefaultInsertSize: (size: "original" | "medium" | "small" | "full") => void;
   setDefaultInsertAlignment: (alignment: "floatLeft" | "floatRight" | "center" | "inline") => void;
+  setDefaultInsertPlacement: (placement: "newLine" | "inline") => void;
   setDoubleClickToInsert: (enabled: boolean) => void;
   setAfterInsertAction: (action: "none" | "close" | "minimize") => void;
 
@@ -172,6 +174,7 @@ const DEFAULT_SETTINGS: ImagePanelSettings = {
   rememberPosition: true,
   defaultInsertSize: "original",
   defaultInsertAlignment: "inline",
+  defaultInsertPlacement: "newLine",
   doubleClickToInsert: true,
   afterInsertAction: "none"
 };
@@ -483,6 +486,11 @@ export const useImagePanelStore = create<ImagePanelState>()(
         set({ defaultInsertAlignment: alignment });
       },
 
+      setDefaultInsertPlacement: (placement) => {
+        loggers.image.verbose("设置默认插入位置", placement);
+        set({ defaultInsertPlacement: placement });
+      },
+
       setDoubleClickToInsert: (enabled) => {
         set({ doubleClickToInsert: enabled });
       },
@@ -537,6 +545,7 @@ export const useImagePanelStore = create<ImagePanelState>()(
         rememberPosition: state.rememberPosition,
         defaultInsertSize: state.defaultInsertSize,
         defaultInsertAlignment: state.defaultInsertAlignment,
+        defaultInsertPlacement: state.defaultInsertPlacement,
         doubleClickToInsert: state.doubleClickToInsert,
         afterInsertAction: state.afterInsertAction,
         // 位置（如果启用记忆）

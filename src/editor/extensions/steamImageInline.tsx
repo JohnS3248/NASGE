@@ -147,12 +147,36 @@ const SteamImageInline = Node.create({
     ];
   },
 
+  addCommands() {
+    return {
+      insertSteamImageInline:
+        (attrs: Record<string, unknown>) =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: {
+              sizePreset: "original",
+              alignment: "inline",
+              ...attrs
+            }
+          })
+    };
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(SteamImageInlineNodeView);
   }
 });
 
 export default SteamImageInline;
+
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    steamImageInline: {
+      insertSteamImageInline: (attrs: Record<string, unknown>) => ReturnType;
+    };
+  }
+}
 
 /**
  * 内联图片节点视图组件

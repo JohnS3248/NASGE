@@ -231,6 +231,7 @@ const WholeGuideEditor: React.FC = () => {
   const {
     defaultInsertSize,
     defaultInsertAlignment,
+    defaultInsertPlacement,
     afterInsertAction,
     close: closeImagePanel,
     minimize: minimizeImagePanel,
@@ -280,7 +281,7 @@ const WholeGuideEditor: React.FC = () => {
         resolvedImageNodeId = entity.id;
       }
 
-      editor.commands.insertSteamImage({
+      const insertAttrs = {
         imageNodeId: resolvedImageNodeId,
         previewId: image.previewId || null,
         fileName: image.fileName,
@@ -290,7 +291,12 @@ const WholeGuideEditor: React.FC = () => {
         ...(isScreenshot && image.imageUrl
           ? { source: "screenshot", imageUrl: image.imageUrl }
           : {}),
-      });
+      };
+      if (defaultInsertPlacement === "inline") {
+        editor.commands.insertSteamImageInline(insertAttrs);
+      } else {
+        editor.commands.insertSteamImage(insertAttrs);
+      }
     }
 
     if (afterInsertAction === "close") closeImagePanel();

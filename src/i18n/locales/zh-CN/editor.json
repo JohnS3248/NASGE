@@ -157,6 +157,9 @@
       "alignFloatLeft": "向左",
       "alignFloatRight": "向右",
       "alignInline": "内嵌",
+      "placement": "插入位置",
+      "placementNewLine": "换行后插入",
+      "placementInline": "在当前行插入",
       "hint": "改后下次拖入图片时生效"
     }
   },

@@ -157,6 +157,9 @@
       "alignFloatLeft": "Left",
       "alignFloatRight": "Right",
       "alignInline": "Inline",
+      "placement": "Placement",
+      "placementNewLine": "New line",
+      "placementInline": "Same line",
       "hint": "Applies on next drag insert"
     }
   },

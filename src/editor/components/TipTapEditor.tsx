@@ -527,7 +527,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
   }, [editor]);
 
   // 获取悬浮窗插入设置
-  const { defaultInsertSize, defaultInsertAlignment, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
+  const { defaultInsertSize, defaultInsertAlignment, defaultInsertPlacement, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
 
   // 处理从图片悬浮窗拖入的图片
   const handleNasgeImageDrop = useCallback(
@@ -582,7 +582,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           resolvedImageNodeId = entity.id;
         }
 
-        editor.commands.insertSteamImage({
+        const insertAttrs = {
           imageNodeId: resolvedImageNodeId,
           previewId: image.previewId || null,
           fileName: image.fileName,
@@ -593,13 +593,19 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
             source: "screenshot",
             imageUrl: image.imageUrl
           } : {})
-        });
+        };
+        if (defaultInsertPlacement === "inline") {
+          editor.commands.insertSteamImageInline(insertAttrs);
+        } else {
+          editor.commands.insertSteamImage(insertAttrs);
+        }
 
         loggers.image.verbose("插入图片节点", {
           fileName: image.fileName,
           previewId: image.previewId,
           sizePreset,
           alignment,
+          placement: defaultInsertPlacement,
           isScreenshot
         });
       }
@@ -611,7 +617,7 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
         minimizeImagePanel();
       }
     },
-    [editor, defaultInsertSize, defaultInsertAlignment, afterInsertAction, closeImagePanel, minimizeImagePanel]
+    [editor, defaultInsertSize, defaultInsertAlignment, defaultInsertPlacement, afterInsertAction, closeImagePanel, minimizeImagePanel]
   );
 
   useEffect(() => {

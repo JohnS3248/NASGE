@@ -307,7 +307,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   }, [contextMenu.payload, t]);
 
   // 处理从图片池拖入的 NASGE 内部图片（与 TipTapEditor 逻辑一致）
-  const { defaultInsertSize, defaultInsertAlignment, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
+  const { defaultInsertSize, defaultInsertAlignment, defaultInsertPlacement, afterInsertAction, close: closeImagePanel, minimize: minimizeImagePanel } = useImagePanelStore();
 
   const handleNasgeImageDrop = useCallback(
     (dragData: ImageDragData, dropPosition?: number) => {
@@ -352,7 +352,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
           resolvedImageNodeId = entity.id;
         }
 
-        editor.commands.insertSteamImage({
+        const insertAttrs = {
           imageNodeId: resolvedImageNodeId,
           previewId: image.previewId || null,
           fileName: image.fileName,
@@ -363,7 +363,12 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
             source: "screenshot",
             imageUrl: image.imageUrl
           } : {})
-        });
+        };
+        if (defaultInsertPlacement === "inline") {
+          editor.commands.insertSteamImageInline(insertAttrs);
+        } else {
+          editor.commands.insertSteamImage(insertAttrs);
+        }
       }
 
       if (afterInsertAction === "close") {
@@ -372,7 +377,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
         minimizeImagePanel();
       }
     },
-    [editor, defaultInsertSize, defaultInsertAlignment, afterInsertAction, closeImagePanel, minimizeImagePanel]
+    [editor, defaultInsertSize, defaultInsertAlignment, defaultInsertPlacement, afterInsertAction, closeImagePanel, minimizeImagePanel]
   );
 
   // 添加粘贴和拖拽事件监听器 — 统一走 addFilesToPool 管线（与 TipTapEditor 一致）
