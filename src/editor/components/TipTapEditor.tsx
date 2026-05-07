@@ -263,6 +263,45 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     setContextMenu(INITIAL_CONTEXT_MENU);
   }, []);
 
+  // 图片右键 — NodeView 内 onContextMenu 派发 CustomEvent,容器层在此监听
+  // pos / attrs 由 NodeView 的 props.getPos() / props.node.attrs 提供,与触发节点严格对应
+  useEffect(() => {
+    const el = editorContainerRef.current;
+    if (!el || !editor) return;
+    const handler = (e: Event) => {
+      if (!imageMenuConfig.enabled) return;
+      const ce = e as CustomEvent<{
+        pos: number;
+        attrs: Record<string, unknown>;
+        clientX: number;
+        clientY: number;
+      }>;
+      const { pos, attrs, clientX, clientY } = ce.detail;
+      // 视觉选中状态用同一个 pos,蓝框出现在被右键的图片上
+      editor.chain().focus().setNodeSelection(pos).run();
+      const imageNodeId =
+        (attrs.imageNodeId as string | null) ??
+        (attrs.previewId as string | null) ??
+        (attrs.fileName as string | null) ??
+        null;
+      if (!imageNodeId) return;
+      setContextMenu({
+        visible: true,
+        x: clientX,
+        y: clientY,
+        mode: "image",
+        payload: {
+          imageNodeId,
+          pos,
+          sizePreset: (attrs.sizePreset as ImageDisplayPreset) || "original",
+          alignment: (attrs.alignment as ImageAlignment) || "inline"
+        }
+      });
+    };
+    el.addEventListener("nasge-image-contextmenu", handler as EventListener);
+    return () => el.removeEventListener("nasge-image-contextmenu", handler as EventListener);
+  }, [editor, imageMenuConfig.enabled]);
+
   // 渲染后根据实际菜单尺寸调整位置，防止溢出视口
   useLayoutEffect(() => {
     const el = contextMenuRef.current;
@@ -288,47 +327,27 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
     }
   }, [contextMenu]);
 
-  // 查找图片节点的辅助函数
-  // data-image-node-id 可能是 imageNodeId 或 previewId，需要都检查
-  const findImageNodeByDataId = useCallback((targetId: string): number | null => {
-    if (!editor) return null;
-    let foundPos: number | null = null;
-    editor.state.doc.descendants((node, pos) => {
-      if (node.type.name === "steamImage" || node.type.name === "steamImageInline") {
-        // 检查 imageNodeId 或 previewId 是否匹配
-        if (node.attrs.imageNodeId === targetId || node.attrs.previewId === targetId) {
-          foundPos = pos;
-          return false; // 停止遍历
-        }
-      }
-      return true;
-    });
-    return foundPos;
-  }, [editor]);
+  // 图片选中 / 修改 / 删除统一用 contextMenu.payload.pos —
+  // 这个 pos 来自 NodeView onContextMenu 的 props.getPos()(单 source of truth),
+  // 与 imageNodeId 必然指向同一节点。不再依赖 posAtCoords / descendants 遍历查找。
 
   const applyImagePreset = useCallback(
     (preset: ImageDisplayPreset) => {
       if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
         return;
       }
-      // 优先使用存储的位置（精确定位被点击的图片）
-      // 回退到按 ID 搜索（兼容旧逻辑）
-      const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
+      const pos = contextMenu.payload.pos;
       const nodeId = contextMenu.payload.imageNodeId;
-      if (pos !== null) {
-        // 获取节点类型以确定使用哪个节点名称
-        const resolvedPos = editor.state.doc.resolve(pos);
-        const node = resolvedPos.nodeAfter;
-        const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
-        // 1. 更新 TipTap 节点属性
-        editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
-          sizePreset: preset
-        }).run();
-        // 2. 同步更新 Store（双写）
-        updateImageDisplay(nodeId, { preset });
-      }
+      if (pos == null) return;
+      const resolvedPos = editor.state.doc.resolve(pos);
+      const node = resolvedPos.nodeAfter;
+      const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
+      editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
+        sizePreset: preset
+      }).run();
+      updateImageDisplay(nodeId, { preset });
     },
-    [contextMenu, editor, findImageNodeByDataId, updateImageDisplay]
+    [contextMenu, editor, updateImageDisplay]
   );
 
   const applyImageAlignment = useCallback(
@@ -336,35 +355,53 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
       if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
         return;
       }
-      // 优先使用存储的位置（精确定位被点击的图片）
-      // 回退到按 ID 搜索（兼容旧逻辑）
-      const pos = contextMenu.payload.pos ?? findImageNodeByDataId(contextMenu.payload.imageNodeId);
+      const pos = contextMenu.payload.pos;
       const nodeId = contextMenu.payload.imageNodeId;
-      if (pos !== null) {
-        // 获取节点类型以确定使用哪个节点名称
-        const resolvedPos = editor.state.doc.resolve(pos);
-        const node = resolvedPos.nodeAfter;
-        const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
-        // 1. 更新 TipTap 节点属性
-        editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
-          alignment
-        }).run();
-        // 2. 同步更新 Store（双写）
-        updateImageDisplay(nodeId, { alignment });
-      }
+      if (pos == null) return;
+      const resolvedPos = editor.state.doc.resolve(pos);
+      const node = resolvedPos.nodeAfter;
+      const nodeTypeName = node?.type.name === "steamImageInline" ? "steamImageInline" : "steamImage";
+      editor.chain().focus().setNodeSelection(pos).updateAttributes(nodeTypeName, {
+        alignment
+      }).run();
+      updateImageDisplay(nodeId, { alignment });
     },
-    [contextMenu, editor, findImageNodeByDataId, updateImageDisplay]
+    [contextMenu, editor, updateImageDisplay]
   );
 
   const handleDeleteImage = useCallback(() => {
     if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
       return;
     }
-
+    // 用 NodeView 上传的 pos 显式选中再删,不依赖当前 selection(可能错位)
+    const pos = contextMenu.payload.pos;
     const nodeId = contextMenu.payload.imageNodeId;
-    editor.commands.focus();
-    editor.chain().focus().deleteSelection().run();
-    removeImageNode(nodeId);
+    if (pos == null) return;
+
+    // 拿要删节点的 previewId,用于删除后检查 doc 中是否还有相同 previewId 的节点引用
+    // 避免多张同 previewId 图共享 store entity 时 removeImageNode 一并删掉,导致剩余图变 orphan
+    const resolvedPos = editor.state.doc.resolve(pos);
+    const targetNode = resolvedPos.nodeAfter;
+    const previewIdToDelete = (targetNode?.attrs?.previewId as string | null) ?? null;
+
+    editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
+
+    let stillReferenced = false;
+    if (previewIdToDelete) {
+      editor.state.doc.descendants((n) => {
+        if (
+          (n.type.name === "steamImage" || n.type.name === "steamImageInline") &&
+          n.attrs.previewId === previewIdToDelete
+        ) {
+          stillReferenced = true;
+          return false;
+        }
+        return true;
+      });
+    }
+    if (!stillReferenced) {
+      removeImageNode(nodeId);
+    }
   }, [contextMenu, editor, removeImageNode]);
 
   const handleUploadImage = useCallback(async () => {
@@ -694,69 +731,9 @@ const TipTapEditor: React.FC<TipTapEditorProps> = ({
           }
 
           const target = event.target as HTMLElement;
-          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
-          if (imageElement) {
-            const imageNodeId = imageElement.dataset.imageNodeId;
-            if (imageNodeId) {
-              // 检查图片菜单总开关
-              if (!imageMenuConfig.enabled) {
-                return; // 使用浏览器原生菜单
-              }
-              event.preventDefault();
-              const coords = editor.view.posAtCoords({
-                left: event.clientX,
-                top: event.clientY
-              });
-
-              // 用 coords.pos 找到被点击的 steamImage 节点
-              let nodeSizePreset: ImageDisplayPreset = "original";
-              let nodeAlignment: ImageAlignment = "inline";
-              let targetPos: number | null = null;
-
-              if (coords?.pos != null) {
-                // 从点击位置向前搜索最近的 steamImage 或 steamImageInline 节点
-                const clickPos = coords.pos;
-                editor.state.doc.descendants((node, pos) => {
-                  if (node.type.name === "steamImage" || node.type.name === "steamImageInline") {
-                    // 检查点击位置是否在这个节点范围内
-                    const nodeEnd = pos + node.nodeSize;
-                    if (clickPos >= pos && clickPos <= nodeEnd) {
-                      nodeSizePreset = (node.attrs.sizePreset as ImageDisplayPreset) || "original";
-                      nodeAlignment = (node.attrs.alignment as ImageAlignment) || "inline";
-                      targetPos = pos;
-                      return false; // 找到后停止遍历
-                    }
-                  }
-                  return true;
-                });
-
-                // 设置选择（用找到的位置或原始位置）
-                editor
-                  .chain()
-                  .focus()
-                  .setNodeSelection(targetPos ?? clickPos)
-                  .run();
-              } else {
-                editor.commands.focus();
-              }
-
-              loggers.editor.verbose('右键菜单 按位置找到:', { nodeSizePreset, nodeAlignment, imageNodeId, targetPos, clickPos: coords?.pos });
-
-              setContextMenu({
-                visible: true,
-                x: event.clientX,
-                y: event.clientY,
-                mode: "image",
-                payload: {
-                  imageNodeId,
-                  pos: targetPos ?? coords?.pos ?? null, // 优先使用找到的精确位置
-                  sizePreset: nodeSizePreset,
-                  alignment: nodeAlignment
-                }
-              });
-              return;
-            }
-          }
+          // 图片右键已由 SteamImage / SteamImageInline NodeView 在 onContextMenu 内
+          // 通过 props.getPos() 拿 pos + 派发 nasge-image-contextmenu CustomEvent 处理,
+          // 容器层的 useEffect listener 接管菜单弹出。这里不再处理图片右键。
 
           // 检测是否在表格单元格内右键
           const tableCell = target?.closest<HTMLElement>("td, th");

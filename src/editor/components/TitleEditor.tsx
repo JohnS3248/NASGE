@@ -69,6 +69,7 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
   // 右键菜单状态
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(INITIAL_CONTEXT_MENU);
   const contextMenuRef = useRef<HTMLDivElement>(null);
+  const titleContainerRef = useRef<HTMLDivElement>(null);
   // 字符数限制信息
   const [characterInfo, setCharacterInfo] = useState(() => ({
     length: 0,
@@ -214,19 +215,77 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     }
   }, [contextMenu, editor, updateImageDisplay]);
 
-  // 删除图片（双写：TipTap 删除节点 + Store 移除记录）
+  // 图片右键 — NodeView 内 onContextMenu 派发 CustomEvent,容器层在此监听
+  // pos / attrs 由 NodeView 的 props.getPos() / props.node.attrs 提供,与触发节点严格对应
+  useEffect(() => {
+    const el = titleContainerRef.current;
+    if (!el || !editor) return;
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        pos: number;
+        attrs: Record<string, unknown>;
+        clientX: number;
+        clientY: number;
+      }>;
+      const { pos, attrs, clientX, clientY } = ce.detail;
+      editor.chain().focus().setNodeSelection(pos).run();
+      const imageNodeId =
+        (attrs.imageNodeId as string | null) ??
+        (attrs.previewId as string | null) ??
+        (attrs.fileName as string | null) ??
+        null;
+      if (!imageNodeId) return;
+      setContextMenu({
+        visible: true,
+        x: clientX,
+        y: clientY,
+        mode: "image",
+        payload: {
+          imageNodeId,
+          pos,
+          sizePreset: (attrs.sizePreset as ImageSizePreset) || "original",
+          alignment: (attrs.alignment as ImageAlignment) || "inline"
+        }
+      });
+    };
+    el.addEventListener("nasge-image-contextmenu", handler as EventListener);
+    return () => el.removeEventListener("nasge-image-contextmenu", handler as EventListener);
+  }, [editor]);
+
+  // 删除图片(双写:TipTap 删除节点 + 仅在 doc 中无其他同 previewId 节点引用时移除 Store 记录)
   const handleDeleteImage = useCallback(() => {
     if (!editor || contextMenu.mode !== "image" || !contextMenu.payload?.imageNodeId) {
       return;
     }
     const pos = contextMenu.payload.pos;
     const nodeId = contextMenu.payload.imageNodeId;
+
+    let previewIdToDelete: string | null = null;
     if (pos !== null) {
+      const targetNode = editor.state.doc.resolve(pos).nodeAfter;
+      previewIdToDelete = (targetNode?.attrs?.previewId as string | null) ?? null;
       editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
     } else {
       editor.chain().focus().deleteSelection().run();
     }
-    removeImageNode(nodeId);
+
+    // 多张同 previewId 图共享 store entity,删一张时只在最后一张被删时才清 store
+    let stillReferenced = false;
+    if (previewIdToDelete) {
+      editor.state.doc.descendants((n) => {
+        if (
+          (n.type.name === "steamImage" || n.type.name === "steamImageInline") &&
+          n.attrs.previewId === previewIdToDelete
+        ) {
+          stillReferenced = true;
+          return false;
+        }
+        return true;
+      });
+    }
+    if (!stillReferenced) {
+      removeImageNode(nodeId);
+    }
   }, [contextMenu, editor, removeImageNode]);
 
   // 上传图片
@@ -408,69 +467,9 @@ const TitleEditor: React.FC<TitleEditorProps> = ({
     <div className="relative flex flex-col bg-bg-input border border-border-accent rounded-xl p-5 shadow-xl">
       {/* 标题编辑器内容区 */}
       <div
+        ref={titleContainerRef}
         className="w-full text-accent text-lg font-normal outline-none"
         style={{ fontFamily: '"Motiva Sans", Arial, Helvetica, sans-serif', '--title-placeholder': `'${t('titleEditor.placeholder')}'` } as React.CSSProperties}
-        onContextMenu={(event) => {
-          if (!editor) return;
-
-          const target = event.target as HTMLElement;
-          const imageElement = target?.closest<HTMLElement>("[data-image-node-id]");
-
-          if (imageElement) {
-            const imageNodeId = imageElement.dataset.imageNodeId;
-            if (imageNodeId) {
-              event.preventDefault();
-
-              const coords = editor.view.posAtCoords({
-                left: event.clientX,
-                top: event.clientY
-              });
-
-              // 从节点 attrs 读取当前 preset/alignment（与 TipTapEditor 一致）
-              let nodeSizePreset: ImageSizePreset = "original";
-              let nodeAlignment: ImageAlignment = "inline";
-              let targetPos: number | null = null;
-
-              if (coords?.pos != null) {
-                const clickPos = coords.pos;
-                editor.state.doc.descendants((node, pos) => {
-                  if (node.type.name === "steamImage") {
-                    const nodeEnd = pos + node.nodeSize;
-                    if (clickPos >= pos && clickPos <= nodeEnd) {
-                      nodeSizePreset = (node.attrs.sizePreset as ImageSizePreset) || "original";
-                      nodeAlignment = (node.attrs.alignment as ImageAlignment) || "inline";
-                      targetPos = pos;
-                      return false;
-                    }
-                  }
-                  return true;
-                });
-
-                editor
-                  .chain()
-                  .focus()
-                  .setNodeSelection(targetPos ?? clickPos)
-                  .run();
-              } else {
-                editor.commands.focus();
-              }
-
-              setContextMenu({
-                visible: true,
-                x: event.clientX,
-                y: event.clientY,
-                mode: "image",
-                payload: {
-                  imageNodeId,
-                  pos: targetPos ?? coords?.pos ?? null,
-                  sizePreset: nodeSizePreset,
-                  alignment: nodeAlignment
-                }
-              });
-              return;
-            }
-          }
-        }}
       >
         <EditorContent editor={editor} />
       </div>

@@ -159,7 +159,8 @@ export default SteamImageInline;
  */
 const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
   node,
-  updateAttributes
+  updateAttributes,
+  getPos
 }) => {
   const imageNodeId = node.attrs.imageNodeId as string | null;
   const attrPreviewId = node.attrs.previewId as string | null;
@@ -338,10 +339,25 @@ const SteamImageInlineNodeView: React.FC<NodeViewProps> = ({
 
   const alt = imageEntity?.fileName ?? imageEntity?.originalName ?? steamPoolImage?.fileName ?? attrFileName ?? "内联图片";
 
+  // 右键直接拿当前 NodeView 的 pos(同 SteamImage,详见 steamImage.tsx handleContextMenu 注释)
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (typeof getPos !== "function") return;
+    const pos = getPos();
+    if (pos == null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const customEvent = new CustomEvent("nasge-image-contextmenu", {
+      bubbles: true,
+      detail: { pos, attrs: node.attrs, clientX: e.clientX, clientY: e.clientY }
+    });
+    e.currentTarget.dispatchEvent(customEvent);
+  }, [getPos, node.attrs]);
+
   return (
     <NodeViewWrapper
       as="span"
       className="nasge-image-inline-wrapper"
+      onContextMenu={handleContextMenu}
       data-image-node-id={imageNodeId ?? attrPreviewId ?? attrFileName ?? undefined}
       data-preview-id={attrPreviewId ?? undefined}
       data-size-preset={attrSizePreset || "original"}

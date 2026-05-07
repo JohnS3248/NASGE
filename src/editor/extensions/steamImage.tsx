@@ -194,7 +194,8 @@ type WrapperProps = NodeViewProps & {
 
 const SteamImageNodeView: React.FC<WrapperProps> = ({
   node,
-  updateAttributes
+  updateAttributes,
+  getPos
 }) => {
   const imageNodeId = node.attrs.imageNodeId as string | null;
   const attrPreviewId = node.attrs.previewId as string | null;
@@ -464,10 +465,26 @@ const SteamImageNodeView: React.FC<WrapperProps> = ({
 
   const imageError = imageEntity?.error;
 
+  // 右键直接拿当前 NodeView 的 pos(单 source of truth,不依赖容器层 posAtCoords + descendants 查找)
+  // 派发自定义事件冒泡到容器层 useEffect listener,容器层根据 pos + attrs 打开菜单
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    if (typeof getPos !== "function") return;
+    const pos = getPos();
+    if (pos == null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const customEvent = new CustomEvent("nasge-image-contextmenu", {
+      bubbles: true,
+      detail: { pos, attrs: node.attrs, clientX: e.clientX, clientY: e.clientY }
+    });
+    e.currentTarget.dispatchEvent(customEvent);
+  }, [getPos, node.attrs]);
+
   return (
     <NodeViewWrapper
       as="div"
       className="nasge-image-node-wrapper"
+      onContextMenu={handleContextMenu}
       data-preview-id={attrPreviewId ?? undefined}
       data-upload-id={undefined}
       data-image-node-id={imageNodeId ?? attrPreviewId ?? attrFileName ?? undefined}
